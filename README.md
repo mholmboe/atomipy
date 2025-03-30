@@ -1,4 +1,4 @@
-# Atomipy: Python Molecular Toolbox
+# Atomipy: The atom Toolbox in Python
 
 A modular Python toolbox for handling and analyzing molecular structures, particularly for mineral slabs with periodic boundary conditions. This toolbox is inspired by the MATLAB [atom Toolbox](https://github.com/mholmboe/atom) and provides similar functionality for working with PDB and Gromacs GRO files but with a streamlined Python interface.
 
