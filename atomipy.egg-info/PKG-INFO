@@ -1,0 +1,148 @@
+Metadata-Version: 2.4
+Name: atomipy
+Version: 0.1.0
+Summary: A Python toolbox for molecular structure analysis with periodic boundary conditions
+Home-page: https://github.com/mholmboe/atomipy
+Author: Michael Holmboe
+Author-email: your.email@example.com
+Classifier: Programming Language :: Python :: 3
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Classifier: Topic :: Scientific/Engineering :: Chemistry
+Classifier: Topic :: Scientific/Engineering :: Physics
+Requires-Python: >=3.6
+Description-Content-Type: text/markdown
+Requires-Dist: numpy
+Dynamic: author
+Dynamic: author-email
+Dynamic: classifier
+Dynamic: description
+Dynamic: description-content-type
+Dynamic: home-page
+Dynamic: requires-dist
+Dynamic: requires-python
+Dynamic: summary
+
+# Atomipy: Python Molecular Toolbox
+
+A modular Python toolbox for handling and analyzing molecular structures, particularly for mineral slabs with periodic boundary conditions. This toolbox is inspired by the MATLAB [atom Toolbox](https://github.com/mholmboe/atom) and provides similar functionality for working with PDB and Gromacs GRO files but with a streamlined Python interface.
+
+## Overview
+
+This toolbox is designed to import, export, and analyze molecular structures with a focus on mineral slabs containing different atom types (Si, Al, Fe, Mg, Ti, Li, F, O, H). It handles periodic and triclinic simulation cells, and provides functions for calculating bonds, angles, and distances while respecting periodic boundary conditions.
+
+The molecular structure information is stored in dictionaries where each atom has fields for coordinates, neighbors, bonds, angles, element type, and more.
+
+## Requirements
+
+- NumPy
+- SciPy (optional for some functionality)
+
+## Key Features
+
+- Import/export PDB and Gromacs GRO files
+- Handle triclinic simulation cells with periodic boundary conditions
+- Calculate bond distances and angles
+- Element type assignment
+- Coordination number analysis
+- MINFF forcefield atom typing
+- Distance matrices with PBC corrections
+
+## Function Documentation
+
+### File I/O
+
+- `import_pdb(file_path)`: Import a PDB file, returning a list of atom dictionaries and cell parameters
+- `import_gro(file_path)`: Import a Gromacs GRO file, including velocities if present
+- `write_pdb(atoms, cell, file_path)`: Write atoms to a PDB file
+- `write_gro(atoms, Box_dim, file_path)`: Write atoms to a Gromacs GRO file, including velocities if present
+
+### Atom Properties
+
+- `element(atom)`: Guess the chemical element for an atom based on its residue name
+- `mass()`: Returns a dictionary of atomic masses for different elements
+- `radius()`: Returns a dictionary of van der Waals radii for different elements
+
+### Structure Analysis
+
+- `dist_matrix(atoms, Box_dim)`: Calculate a full distance matrix between all atoms with PBC
+- `bond_angle(atoms, Box_dim, rmaxH=1.2, rmaxM=2.45)`: Compute bonds and angles for a given atomic structure
+- `write_cn(atoms, file_path)`: Calculate and write coordination numbers for each atom
+
+### Force Field
+
+- `minff(atom)`: Assign MINFF forcefield specific atom types to each atom
+
+## Data Structure
+
+All atomic information is stored in a list of dictionaries called `atoms`. Each atom dictionary contains the following fields:
+
+- `molid`: Molecule ID
+- `index`: Atom index
+- `resname`: Residue name
+- `x`, `y`, `z`: Coordinates
+- `vx`, `vy`, `vz`: Velocities (if present)
+- `neigh`: List of neighbor indices
+- `bonds`: List of pairs `(j, distance)` where j is the index of a bonded atom
+- `angles`: List of pairs `((j, k), angle)` where j,k are indices of atoms forming an angle with the central atom
+- `element`: Chemical element
+- `type`: Atom type
+- `fftype`: Force field specific atom type
+- `cn`: Coordination number
+
+The simulation cell is represented in two ways:
+- `Box_dim`: A 1x9 array used in Gromacs GRO files for triclinic cells
+- `cell`: A 1x6 array [a, b, c, alpha, beta, gamma] used in PDB files
+
+## Usage Examples
+
+```python
+# Import the entire package
+import atomipy as ap
+import numpy as np
+
+# Import a PDB file
+atoms, cell = ap.import_pdb("structure.pdb")
+
+# Guess elements for all atoms
+for i in range(len(atoms)):
+    atoms[i] = ap.element(atoms[i])
+
+# Compute box dimensions (if needed)
+a, b, c, alpha, beta, gamma = cell
+alpha_rad = np.radians(alpha)
+beta_rad = np.radians(beta)
+gamma_rad = np.radians(gamma)
+
+Box_dim = [
+    a, 0, 0,
+    b*np.cos(gamma_rad), b*np.sin(gamma_rad), 0,
+    c*np.cos(beta_rad), c*np.cos(alpha_rad)*np.sin(gamma_rad), c*np.sqrt(1 - np.cos(beta_rad)**2 - (np.cos(alpha_rad)*np.sin(gamma_rad))**2)
+]
+
+# Calculate bonds and angles
+atoms = ap.bond_angle(atoms, Box_dim)
+
+# Calculate and save coordination numbers
+ap.write_cn(atoms, "coordination_numbers.txt")
+
+# Export to GRO format
+ap.write_gro(atoms, Box_dim, "structure.gro")
+```
+
+## Backward Compatibility
+
+For backward compatibility, the package still provides the original function names with the 'atom' suffix as aliases:
+
+```python
+# These still work for backward compatibility
+from atomipy import import_atom_pdb, element_atom, bond_angle_atom
+```
+
+## Differences from MATLAB atom Toolbox
+
+This Python implementation is designed to provide similar functionality to the MATLAB atom Toolbox while following Python's conventions and making use of NumPy for efficient numerical operations. The data structure is dictionary-based rather than struct-based, and the function interfaces are designed for Python's style.
+
+## License
+
+This project is released under the MIT License.

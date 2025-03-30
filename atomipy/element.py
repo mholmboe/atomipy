@@ -1,0 +1,72 @@
+def element(atoms):
+    """Guess the chemical element for multiple atom entries.
+    
+    Uses explicit prefix matching on the 'type' field to determine the element,
+    similar to the MATLAB implementation. If 'type' is not available, falls back to
+    'atname' or 'resname'. Supports special cases like 'Ale', 'Alt', 'Fee', 'Fet', 'Ow', 'Hw'.
+    
+    Args:
+       atoms: A list of atom dictionaries, each with at least one of 'type', 'atname', or 'resname' keys.
+             Can also accept a single atom dictionary.
+
+    Returns:
+       The atoms list with updated 'element' field in each atom dictionary.
+       If a single atom was provided, returns that atom with the 'element' field updated.
+    """
+    # Handle the case where a single atom is provided
+    single_atom_input = False
+    if not isinstance(atoms, list):
+        atoms = [atoms]
+        single_atom_input = True
+    
+    # Process each atom in the list
+    for atom in atoms:
+        # First try to get the atom type, falling back to atname or resname
+        atomtype = atom.get('type', '').strip()
+        if not atomtype and 'atname' in atom:
+            atomtype = atom.get('atname', '').strip()
+        if not atomtype and 'resname' in atom:
+            atomtype = atom.get('resname', '').strip()
+        
+        # Convert to string and ensure case-insensitive comparison
+        atomtype_lower = atomtype.lower()
+        
+        # Use a series of explicit prefix checks similar to the MATLAB implementation
+        if atomtype_lower.startswith('si'):
+            atom['element'] = 'Si'
+        elif atomtype_lower.startswith('sc'):
+            atom['element'] = 'Si'  # Special case: SC -> Si
+        elif atomtype_lower.startswith('ale'):
+            atom['element'] = 'Ale'
+        elif atomtype_lower.startswith('alt'):
+            atom['element'] = 'Alt'
+        elif atomtype_lower.startswith('al'):
+            atom['element'] = 'Al'
+        elif atomtype_lower.startswith('mg'):
+            atom['element'] = 'Mg'
+        elif atomtype_lower.startswith('fee'):
+            atom['element'] = 'Fee'
+        elif atomtype_lower.startswith('fet'):
+            atom['element'] = 'Fet'
+        elif atomtype_lower.startswith('fe'):
+            atom['element'] = 'Fe'
+        elif atomtype_lower.startswith('f'):
+            atom['element'] = 'F'
+        elif atomtype_lower.startswith('li'):
+            atom['element'] = 'Li'
+        elif atomtype_lower.startswith('ow'):
+            atom['element'] = 'Ow'
+        elif atomtype_lower.startswith('hw'):
+            atom['element'] = 'Hw'
+        elif atomtype_lower.startswith('o'):
+            atom['element'] = 'O'
+        elif atomtype_lower.startswith('h'):
+            atom['element'] = 'H'
+        elif atomtype_lower.startswith('ti'):
+            atom['element'] = 'Ti'
+        else:
+            # If no match found, use the original atom type as the element
+            atom['element'] = atomtype
+    
+    # Return the input in the same format it was provided
+    return atoms[0] if single_atom_input else atoms
