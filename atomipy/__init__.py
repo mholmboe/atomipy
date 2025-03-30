@@ -8,10 +8,10 @@ from . import import_conf
 import_pdb = import_conf.pdb
 import_gro = import_conf.gro
 import_auto = import_conf.auto
-from . import write_module
-write_pdb = write_module.pdb
-write_gro = write_module.gro
-write_auto = write_module.auto
+from . import write_conf
+write_pdb = write_conf.pdb
+write_gro = write_conf.gro
+write_auto = write_conf.auto
 from . import write_itp
 
 # Atom property functions
