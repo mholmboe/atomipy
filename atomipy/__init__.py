@@ -3,11 +3,11 @@ atomipy: A Python toolbox for molecular structure analysis
 """
 
 # File I/O functions
-# Import functions from the new combined module
-from . import import_module
-import_pdb = import_module.pdb
-import_gro = import_module.gro
-import_auto = import_module.auto
+# Import functions from the import_conf module
+from . import import_conf
+import_pdb = import_conf.pdb
+import_gro = import_conf.gro
+import_auto = import_conf.auto
 from . import write_module
 write_pdb = write_module.pdb
 write_gro = write_module.gro
