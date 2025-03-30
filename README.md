@@ -45,7 +45,7 @@ The molecular structure information is stored in dictionaries where each atom ha
 
 - `dist_matrix(atoms, Box_dim)`: Calculate a full distance matrix between all atoms with PBC
 - `bond_angle(atoms, Box_dim, rmaxH=1.2, rmaxM=2.45)`: Compute bonds and angles for a given atomic structure
-- `write_cn(atoms, file_path)`: Calculate and write coordination numbers for each atom
+
 
 ### Coordinate Transformations
 
@@ -122,8 +122,6 @@ replicated_atoms, new_Box_dim = ap.replicate.replicate_cell(atoms, Box_dim, repl
 # Convert from triclinic to orthogonal coordinates if needed
 ortho_atoms = ap.ortho.triclinic_to_orthogonal(replicated_atoms, new_Box_dim)
 
-# Calculate and save coordination numbers
-ap.write_cn(replicated_atoms, "coordination_numbers.txt")
 
 # Export to GRO format
 ap.write_gro(replicated_atoms, new_Box_dim, "structure.gro")
