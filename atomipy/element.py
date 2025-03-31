@@ -22,11 +22,26 @@ def element(atoms):
     # Process each atom in the list
     for atom in atoms:
         # First try to get the atom type, falling back to atname or resname
-        atomtype = atom.get('type', '').strip()
+        atomtype = atom.get('type', '')
+        if atomtype is None:
+            atomtype = ''
+        else:
+            atomtype = atomtype.strip()
+            
         if not atomtype and 'atname' in atom:
-            atomtype = atom.get('atname', '').strip()
+            atname = atom.get('atname', '')
+            if atname is not None:
+                atomtype = atname.strip()
+                
+        if not atomtype and 'name' in atom:  # PDB files often use 'name' instead of 'atname'
+            name = atom.get('name', '')
+            if name is not None:
+                atomtype = name.strip()
+                
         if not atomtype and 'resname' in atom:
-            atomtype = atom.get('resname', '').strip()
+            resname = atom.get('resname', '')
+            if resname is not None:
+                atomtype = resname.strip()
         
         # Convert to string and ensure case-insensitive comparison
         atomtype_lower = atomtype.lower()

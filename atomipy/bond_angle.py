@@ -42,26 +42,58 @@ def bond_angle(atoms, Box_dim, rmaxH=1.2, rmaxM=2.45, same_element_bonds=False, 
     # Check the size of the system to determine which method to use
     # For large systems (>20000 atoms), cell_list_dist_matrix is more memory efficient
     # For smaller systems, dist_matrix is faster
-    if len(atoms) > 20000:
+    if len(atoms) > 15000:
         # Large system - use cell list method which is more memory efficient
+        print(f"Large system - using cell list method for the distance matrix")
         dmat, dx, dy, dz, _, _ = cell_list_dist_matrix(atoms, cutoff=max(rmaxH, rmaxM), Box_dim=Box_dim)
     else:
         # Smaller system - use standard distance matrix which is faster
+        print(f"Small system - calculating the full distance matrix")
         dmat, dx, dy, dz = dist_matrix(atoms, Box_dim=Box_dim)
     
     # Since dist_matrix doesn't provide precalculated bond lists, we'll create them based on cutoffs
     precalc_bond_list = []
     dist_list = []
     
+    # Try to import tqdm for progress bar
+    try:
+        from tqdm import tqdm
+        has_tqdm = True
+    except ImportError:
+        print("Note: Install tqdm package for progress bars (pip install tqdm)")
+        has_tqdm = False
+
     # Create bond lists based on the distance matrix and appropriate cutoffs
-    for i in range(N):
+    total_pairs = N * (N - 1) // 2  # Total number of pairs to check
+    pair_count = 0
+    
+    # Use tqdm if available, otherwise use a basic counter with percentage updates
+    if has_tqdm:
+        iterator = tqdm(range(N), desc="Finding bonds", unit="atom")
+    else:
+        print("Finding bonds...")
+        iterator = range(N)
+        last_percent = -1
+    
+    for i in iterator:
         for j in range(i+1, N):  # Only consider each pair once
+            pair_count += 1
+            
+            # If no tqdm, show percentage updates
+            if not has_tqdm and N > 1000:
+                percent = int(100 * pair_count / total_pairs)
+                if percent > last_percent and percent % 10 == 0:
+                    print(f"  {percent}% complete...")
+                    last_percent = percent
+                    
             if dmat[i, j] > 0:  # Skip diagonal and zero distances
-                # Determine if either atom is hydrogen
-                el_i = atoms[i].get('element', 'X')
-                el_j = atoms[j].get('element', 'X')
-                isH_i = el_i == 'H'
-                isH_j = el_j == 'H'
+                # Determine if either atom is hydrogen by checking if type starts with H/h
+                type_i = atoms[i].get('type', atoms[i].get('name', ''))
+                type_j = atoms[j].get('type', atoms[j].get('name', ''))
+                
+                # Get first character of type and check if it's 'H' or 'h'
+                isH_i = type_i and type_i[0].upper() == 'H'
+                isH_j = type_j and type_j[0].upper() == 'H'
                 
                 # Apply appropriate cutoff based on atom types
                 if isH_i or isH_j:

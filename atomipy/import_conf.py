@@ -1,5 +1,6 @@
 import numpy as np
 import os
+from . import element as element_module
 
 def pdb(file_path):
     """Import atoms from a PDB file.
@@ -23,9 +24,17 @@ def pdb(file_path):
                 cell = [a, b, c, alpha, beta, gamma]
             elif line.startswith("ATOM") or line.startswith("HETATM"):
                 index = int(line[6:11].strip())
-                # Use atom name from columns 12-16 as a preliminary guess for element
+                # Extract atom name and type information from columns 12-16
                 atom_name = line[12:16].strip()
+                atom_type = atom_name.strip() # Store the full atom name as type
+                
+                # Extract residue name from columns 17-20
                 resname = line[17:20].strip()
+                
+                # Extract element from columns 76-78 if available (standard PDB format)
+                element_from_pdb = None
+                if len(line) >= 78:
+                    element_from_pdb = line[76:78].strip()
                 # Extract residue sequence number (columns 23-26) to use as molecule ID
                 try:
                     # PDB format has residue sequence number in columns 23-26
@@ -39,6 +48,7 @@ def pdb(file_path):
                 atom = {
                     "molid": molid,
                     "index": index,
+                    "name": atom_name,  # Store atom name from PDB (columns 12-16)
                     "resname": resname,
                     "x": x,
                     "y": y,
@@ -46,11 +56,15 @@ def pdb(file_path):
                     "neigh": [],
                     "bonds": [],
                     "angles": [],
-                    "element": None,
-                    "type": None,
+                    "element": element_from_pdb,  # Will be properly set by element function later
+                    "type": atom_type,   # Set the atom type based on name
                     "fftype": None
                 }
                 atoms.append(atom)
+    
+    # Now use the element.py function to properly determine elements
+    element_module.element(atoms)
+    
     return atoms, cell
 
 

@@ -242,12 +242,3 @@ def triclinic_to_orthogonal(atoms, triclinic_box_dim, return_box=False):
         return atoms, orthogonal_box_dim
     return atoms
 
-
-# For backward compatibility with the original triclinic_atom function
-def triclinic_atom(atom, box_dim, angleparam, angletype):
-    """
-    Legacy function for compatibility with the original triclinic_atom.
-    
-    See orthogonal_to_triclinic for documentation on parameters.
-    """
-    return orthogonal_to_triclinic(atom, box_dim, angleparam, angletype)

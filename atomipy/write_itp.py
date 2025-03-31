@@ -65,10 +65,7 @@ def write_itp(atoms, file_path, Box_dim=None, molecule_name=None, nrexcl=1, comm
     
     # Add debug output for atom coordinates and box dimensions
     print(f"write_itp: Using box dimensions: {Box_dim}")
-    print(f"write_itp: Sample atoms (first 3 with coordinates):")
-    for i, atom in enumerate(atoms[:3]):
-        print(f"  Atom {i+1}: ({atom.get('x', 'None')}, {atom.get('y', 'None')}, {atom.get('z', 'None')}), Element: {atom.get('element', 'None')}, Type: {atom.get('type', 'None')}")
-    
+ 
     # Make sure Box_dim is correctly formatted
     if isinstance(Box_dim, list):
         Box_dim = np.array(Box_dim, dtype=float)

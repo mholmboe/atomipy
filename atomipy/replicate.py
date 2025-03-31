@@ -8,14 +8,21 @@ box dimensions.
 
 import copy
 import numpy as np
-from .fract import cartesian_to_fractional, fractional_to_cartesian, get_cell_vectors
+from .fract import (cartesian_to_fractional, fractional_to_cartesian, get_cell_vectors,
+                    direct_cartesian_to_fractional, direct_fractional_to_cartesian)
 from .cell_utils import Box_dim2Cell, Cell2Box_dim
+from . import write_conf # Import for debug writing
 
-
-def replicate_cell(atoms, box_dim=None, cell=None, replicate=[1, 1, 1], keep_molid=True, 
-                  keep_resname=True, renumber_index=True):
+def replicate_system(atoms, box_dim=None, cell=None, replicate=[1, 1, 1], keep_molid=True, 
+                   keep_resname=True, renumber_index=True):
     """
-    Replicates a unit cell along specified directions.
+    Replicates a unit cell along specified directions using crystallographic approach.
+    
+    This function implements the standard crystallographic replication process:
+    1. Convert input coordinates to fractional coordinates (unit cube)
+    2. Stack the unit cell n1×n2×n3 times in a,b,c directions
+    3. Scale the cell parameters accordingly (preserving angles)
+    4. Convert fractional coordinates back to cartesian
     
     Parameters
     ----------
@@ -46,23 +53,28 @@ def replicate_cell(atoms, box_dim=None, cell=None, replicate=[1, 1, 1], keep_mol
         The replicated atoms list with updated coordinates.
     new_box_dim : list
         The updated box dimensions for the replicated cell.
+    new_cell : list
+        The replicated cell parameters as [a, b, c, alpha, beta, gamma].
         
     Examples
     --------
-    # Replicate 2x2x1:
-    new_atoms, new_box = ap.replicate.replicate_cell(atoms, box_dim=[10, 10, 10], replicate=[2, 2, 1])
+    # Replicate 2x2x1 using cell parameters:
+    new_atoms, new_box, new_cell = ap.replicate.replicate_system(
+        atoms, cell=[10, 10, 10, 90, 90, 90], replicate=[2, 2, 1]
+    )
     
-    # Replicate 2x2x2 and assign new molecule IDs:
-    new_atoms, new_box = ap.replicate.replicate_cell(
+    # Replicate 2x2x2 with box dimensions and assign new molecule IDs:
+    new_atoms, new_box, new_cell = ap.replicate.replicate_system(
         atoms, box_dim=[10, 10, 10], replicate=[2, 2, 2], keep_molid=False
     )
     """
     if box_dim is None and cell is None:
         raise ValueError("Either box_dim or cell must be provided")
     
-    # If only cell is provided, derive box_dim from it
-    if box_dim is None:
-        box_dim = Cell2Box_dim(cell)
+    # Step 1: Get original cell parameters
+    if cell is None:
+        # Convert box dimensions to cell parameters
+        cell = Box_dim2Cell(box_dim)
     
     # Handle integer input for replicate
     if isinstance(replicate, int):
@@ -72,113 +84,171 @@ def replicate_cell(atoms, box_dim=None, cell=None, replicate=[1, 1, 1], keep_mol
     if len(replicate) != 3:
         raise ValueError("replicate must be a list/array of length 3")
     
-    # Convert to fractional coordinates
-    frac_coords, atoms_with_frac = cartesian_to_fractional(atoms, box_dim=box_dim, add_to_atoms=True)
+    # Calculate box dimensions from cell parameters (for coordinate conversion)
+    box_dim = Cell2Box_dim(cell)
     
-    # Create list to store all replicated atoms
+    # Step 2: Convert to fractional coordinates (unit cube)
+    # Using the new fract.py module which converts through orthogonal coordinates
+    frac_coords, atoms_with_frac = cartesian_to_fractional(atoms, cell=cell, add_to_atoms=True)
+    
+    # Step 3: Create storage for replicated atoms
     replicated_atoms = []
     
-    # Generate all replicas
-    max_index = 0
-    max_molid = 0
-    max_resid = 0
+    # Find maximum values for renumbering
+    max_index = max([atom.get('index', 0) for atom in atoms], default=0)
+    max_molid = max([atom.get('molid', 0) for atom in atoms], default=0)
+    max_resid = max([atom.get('resid', 0) for atom in atoms], default=0)
     
-    # Find maximum values of index, molid, resid for renumbering
-    for atom in atoms:
-        if 'index' in atom and atom['index'] > max_index:
-            max_index = atom['index']
-        if 'molid' in atom and atom['molid'] > max_molid:
-            max_molid = atom['molid']
-        if 'resid' in atom and atom['resid'] > max_resid:
-            max_resid = atom['resid']
+    # Store original cartesian coordinates for each atom (to handle special cases)
+    original_coords = {}
+    for i, atom in enumerate(atoms):
+        original_coords[i] = {
+            'x': atom.get('x', 0.0),
+            'y': atom.get('y', 0.0),
+            'z': atom.get('z', 0.0)
+        }
     
-    # Generate replicas
-    for i in range(replicate[0]):
+    # --- Step 4: Sequential Replication --- 
+    current_replication = copy.deepcopy(atoms_with_frac)
+    num_atoms_base = len(atoms)
+    max_idx_base = max_index
+    max_molid_base = max_molid
+    max_resid_base = max_resid
+    
+    # Stage 1: Replicate along X (a-vector)
+    if replicate[0] > 1:
+        replicated_x = []
+        atoms_to_replicate_x = copy.deepcopy(current_replication)
+        num_atoms_stage = len(atoms_to_replicate_x)
+        max_idx_stage = max((atom.get('index', 0) for atom in atoms_to_replicate_x), default=-1)
+        max_molid_stage = max((atom.get('molid', 0) for atom in atoms_to_replicate_x), default=-1)
+        max_resid_stage = max((atom.get('resid', 0) for atom in atoms_to_replicate_x), default=-1)
+        
+        for i in range(replicate[0]):
+            replica = copy.deepcopy(atoms_to_replicate_x)
+            offset_idx = i * (max_idx_stage + 1)
+            offset_molid = i * (max_molid_stage + 1)
+            offset_resid = i * (max_resid_stage + 1)
+            
+            for atom in replica:
+                atom['xfrac'] += i
+                if renumber_index and 'index' in atom:
+                    atom['index'] += offset_idx
+                if not keep_molid and 'molid' in atom:
+                    atom['molid'] += offset_molid
+                if 'resid' in atom:
+                    atom['resid'] += offset_resid
+            replicated_x.extend(replica)
+        current_replication = replicated_x
+
+    # Stage 2: Replicate along Y (b-vector)
+    if replicate[1] > 1:
+        replicated_xy = []
+        atoms_to_replicate_y = copy.deepcopy(current_replication) # Result from Stage 1
+        num_atoms_stage = len(atoms_to_replicate_y)
+        max_idx_stage = max((atom.get('index', 0) for atom in atoms_to_replicate_y), default=-1)
+        max_molid_stage = max((atom.get('molid', 0) for atom in atoms_to_replicate_y), default=-1)
+        max_resid_stage = max((atom.get('resid', 0) for atom in atoms_to_replicate_y), default=-1)
+
         for j in range(replicate[1]):
-            for k in range(replicate[2]):
-                # Skip the original cell if all offsets are 0
-                if i == 0 and j == 0 and k == 0:
-                    replica = copy.deepcopy(atoms_with_frac)
-                else:
-                    replica = copy.deepcopy(atoms_with_frac)
-                    
-                    # Update indices and IDs if needed
-                    for atom in replica:
-                        # Update fractional coordinates
-                        atom['xfrac'] += i
-                        atom['yfrac'] += j
-                        atom['zfrac'] += k
-                        
-                        # Update atom index
-                        if renumber_index and 'index' in atom:
-                            atom['index'] += (i * replicate[1] * replicate[2] + 
-                                             j * replicate[2] + k) * (max_index + 1)
-                        
-                        # Update molecule ID if not keeping original
-                        if not keep_molid and 'molid' in atom:
-                            atom['molid'] += (i * replicate[1] * replicate[2] + 
-                                             j * replicate[2] + k) * (max_molid + 1)
-                        
-                        # Update residue ID (always update for proper PDB/GRO format)
-                        if 'resid' in atom:
-                            atom['resid'] += (i * replicate[1] * replicate[2] + 
-                                             j * replicate[2] + k) * (max_resid + 1)
-                        
-                        # Residue name remains unchanged if keep_resname is True (default)
-                
-                # Add replica to the list
-                replicated_atoms.extend(replica)
+            replica = copy.deepcopy(atoms_to_replicate_y)
+            offset_idx = j * (max_idx_stage + 1)
+            offset_molid = j * (max_molid_stage + 1)
+            offset_resid = j * (max_resid_stage + 1)
+            
+            for atom in replica:
+                atom['yfrac'] += j
+                if renumber_index and 'index' in atom:
+                    atom['index'] += offset_idx
+                if not keep_molid and 'molid' in atom:
+                    atom['molid'] += offset_molid
+                if 'resid' in atom:
+                    atom['resid'] += offset_resid
+            replicated_xy.extend(replica)
+        current_replication = replicated_xy
+
+    # Stage 3: Replicate along Z (c-vector)
+    if replicate[2] > 1:
+        replicated_xyz = []
+        atoms_to_replicate_z = copy.deepcopy(current_replication) # Result from Stage 2
+        num_atoms_stage = len(atoms_to_replicate_z)
+        max_idx_stage = max((atom.get('index', 0) for atom in atoms_to_replicate_z), default=-1)
+        max_molid_stage = max((atom.get('molid', 0) for atom in atoms_to_replicate_z), default=-1)
+        max_resid_stage = max((atom.get('resid', 0) for atom in atoms_to_replicate_z), default=-1)
+
+        for k in range(replicate[2]):
+            replica = copy.deepcopy(atoms_to_replicate_z)
+            offset_idx = k * (max_idx_stage + 1)
+            offset_molid = k * (max_molid_stage + 1)
+            offset_resid = k * (max_resid_stage + 1)
+            
+            for atom in replica:
+                atom['zfrac'] += k
+                if renumber_index and 'index' in atom:
+                    atom['index'] += offset_idx
+                if not keep_molid and 'molid' in atom:
+                    atom['molid'] += offset_molid
+                if 'resid' in atom:
+                    atom['resid'] += offset_resid
+            replicated_xyz.extend(replica)
+        current_replication = replicated_xyz
+
+    replicated_atoms = current_replication # Final result after all stages
+    # --------------------------------------
     
-    # Scale the box dimensions
-    if len(box_dim) == 3:
-        # Orthogonal box
-        new_box_dim = [
-            box_dim[0] * replicate[0],
-            box_dim[1] * replicate[1],
-            box_dim[2] * replicate[2]
-        ]
-    elif len(box_dim) == 6:
-        # Could be [lx, ly, lz, xy, xz, yz] or [lx, ly, lz, alpha, beta, gamma]
-        if all(angle > 0 and angle < 180 for angle in box_dim[3:6]):
-            # [lx, ly, lz, alpha, beta, gamma]
-            new_box_dim = [
-                box_dim[0] * replicate[0],
-                box_dim[1] * replicate[1],
-                box_dim[2] * replicate[2],
-                box_dim[3], box_dim[4], box_dim[5]  # Angles stay the same
-            ]
-        else:
-            # [lx, ly, lz, xy, xz, yz]
-            # For triclinic boxes with tilt factors, we need to scale both lengths and tilt factors
-            new_box_dim = [
-                box_dim[0] * replicate[0],
-                box_dim[1] * replicate[1],
-                box_dim[2] * replicate[2],
-                box_dim[3] * replicate[0],  # xy scales with x
-                box_dim[4] * replicate[0],  # xz scales with x
-                box_dim[5] * replicate[1]   # yz scales with y
-            ]
-    elif len(box_dim) == 9:
-        # GROMACS format: [lx, ly, lz, 0, 0, xy, 0, xz, yz]
-        new_box_dim = [
-            box_dim[0] * replicate[0],  # lx
-            box_dim[1] * replicate[1],  # ly
-            box_dim[2] * replicate[2],  # lz
-            box_dim[3],                 # 0
-            box_dim[4],                 # 0
-            box_dim[5] * replicate[0],  # xy scales with x
-            box_dim[6],                 # 0
-            box_dim[7] * replicate[0],  # xz scales with x
-            box_dim[8] * replicate[1]   # yz scales with y
-        ]
-    else:
-        raise ValueError(f"Invalid box_dim length: {len(box_dim)}. Expected 3, 6, or 9.")
+    # Step 5: Create replicated cell by scaling the original cell parameters
+    new_cell = [
+        cell[0] * replicate[0],  # a - scale by replication in x
+        cell[1] * replicate[1],  # b - scale by replication in y
+        cell[2] * replicate[2],  # c - scale by replication in z
+        cell[3],                 # alpha - angles remain unchanged
+        cell[4],                 # beta - angles remain unchanged
+        cell[5]                  # gamma - angles remain unchanged
+    ]
     
-    # Convert back to cartesian coordinates
-    cart_coords = fractional_to_cartesian(replicated_atoms, box_dim=new_box_dim, add_to_atoms=True)
+    # Step 6: Generate new box dimensions from the replicated cell
+    new_box_dim = Cell2Box_dim(new_cell)
     
-    # Return the replicated atoms and new box dimensions
-    return replicated_atoms, new_box_dim
+    # Step 7: For triclinic cells, we need to be careful with the coordinate transformation
+    # to preserve atomic planes
+    
+    # First, convert the fractional coordinates to integers (which unit cell they belong to)
+    # and offsets within the unit cell (0-1 range)
+    for atom in replicated_atoms:
+        # Calculate which unit cell this atom belongs to in each direction
+        ix = int(atom['xfrac'])
+        iy = int(atom['yfrac'])
+        iz = int(atom['zfrac'])
+        
+        # Calculate the fractional offset within that unit cell (0-1 range)
+        x_offset = atom['xfrac'] - ix
+        y_offset = atom['yfrac'] - iy
+        z_offset = atom['zfrac'] - iz
+        
+        # For proper replication that preserves planes, we calculate the new position
+        # using the unit cell indices and the original fractional coordinates
+        atom['xfrac'] = (ix + x_offset) / replicate[0]
+        atom['yfrac'] = (iy + y_offset) / replicate[1] 
+        atom['zfrac'] = (iz + z_offset) / replicate[2]
+    
+    # Step 8: Convert replicated atoms back to cartesian coordinates
+    # using the new (scaled) cell parameters directly for crystallographic accuracy
+    cart_coords = direct_fractional_to_cartesian(replicated_atoms, cell=new_cell, add_to_atoms=True)
+    
+    # Clean up temporary attributes used during replication
+    for atom in replicated_atoms:
+        if '_original_idx' in atom:
+            del atom['_original_idx']
+    
+    # As a final check, recalculate cell parameters from box dimensions to ensure consistency
+    # This is redundant but serves as a sanity check
+    new_cell = Box_dim2Cell(new_box_dim)
+    
+    # Round box dimensions to 5 decimal places
+    new_box_dim = [round(float(val), 5) for val in new_box_dim]
+    
+    # Return the replicated atoms, new box dimensions, and replicated cell parameters
+    return replicated_atoms, new_box_dim, new_cell
 
 
 def replicate_atom(atoms, box_dim=None, cell=None, replicate=[1, 1, 1], dim_order='xyz', 
@@ -186,7 +256,7 @@ def replicate_atom(atoms, box_dim=None, cell=None, replicate=[1, 1, 1], dim_orde
     """
     Legacy function for compatibility with old replicate_atom functionality.
     
-    This function calls replicate_cell internally but maintains the same interface
+    This function calls replicate_system internally but maintains the same interface
     as the original replicate_atom function.
     
     Parameters
@@ -220,8 +290,8 @@ def replicate_atom(atoms, box_dim=None, cell=None, replicate=[1, 1, 1], dim_orde
     The dim_order parameter is accepted for backward compatibility but is ignored.
     The replication is always performed in all three dimensions simultaneously.
     """
-    # Call replicate_cell with the appropriate parameters
-    replicated_atoms, new_box_dim = replicate_cell(
+    # Call replicate_system with the appropriate parameters
+    replicated_atoms, new_box_dim, _ = replicate_system(
         atoms=atoms,
         box_dim=box_dim,
         cell=cell,
