@@ -4,8 +4,8 @@ from datetime import datetime
 from .bond_angle import bond_angle
 
 
-def write_itp(atoms, file_path, Box_dim=None, molecule_name=None, nrexcl=3, comment=None, 
-          rmaxH=1.25, rmaxM=2.45, explicit_bonds=0, explicit_angles=1, KANGLE=500):
+def write_itp(atoms, file_path, Box_dim=None, molecule_name=None, nrexcl=1, comment=None, 
+          rmaxH=1.2, rmaxM=2.45, explicit_bonds=0, explicit_angles=1, KANGLE=500):
     """
     Write atoms to a Gromacs molecular topology (.itp) file.
     
@@ -63,8 +63,72 @@ def write_itp(atoms, file_path, Box_dim=None, molecule_name=None, nrexcl=3, comm
     if Box_dim is None:
         raise ValueError("Box_dim is required to calculate bonds and angles using bond_angle function")
     
+    # Add debug output for atom coordinates and box dimensions
+    print(f"write_itp: Using box dimensions: {Box_dim}")
+    print(f"write_itp: Sample atoms (first 3 with coordinates):")
+    for i, atom in enumerate(atoms[:3]):
+        print(f"  Atom {i+1}: ({atom.get('x', 'None')}, {atom.get('y', 'None')}, {atom.get('z', 'None')}), Element: {atom.get('element', 'None')}, Type: {atom.get('type', 'None')}")
+    
+    # Make sure Box_dim is correctly formatted
+    if isinstance(Box_dim, list):
+        Box_dim = np.array(Box_dim, dtype=float)
+    
     # Call the bond_angle function with the provided rmaxH and rmaxM parameters
-    updated_atoms, Bond_index, Angle_index = bond_angle(atoms, Box_dim, rmaxH=rmaxH, rmaxM=rmaxM)
+    # Note: bond_angle function expects coordinates in Angstroms
+    # Important: Use same_molecule_only=False to allow bonds between different molecules
+    # Keep same_element_bonds=False (default) which is correct for mineral structures
+    print(f"write_itp: Calling bond_angle with rmaxH={rmaxH}, rmaxM={rmaxM}, same_molecule_only=False")
+    updated_atoms, Bond_index, Angle_index = bond_angle(atoms, Box_dim, rmaxH=rmaxH, rmaxM=rmaxM, same_molecule_only=False)
+    print(f"write_itp: bond_angle found {len(Bond_index)} bonds and {len(Angle_index)} angles")
+    
+    # Convert bond and angle indices to 1-based if they're not already
+    # Each bond is [atom1_idx, atom2_idx, distance]
+    # Each angle is [atom1_idx, atom2_idx, atom3_idx, angle_value]
+    
+    # Check if Bond_index is not empty and contains 0-based indices
+    if isinstance(Bond_index, np.ndarray) and Bond_index.size > 0:
+        # For numpy arrays, check the first element's first value
+        if np.min(Bond_index[:, 0]) == 0:  # Check if minimum index is 0 (0-based)
+            Bond_index = np.array([
+                [int(i)+1, int(j)+1, dist] for i, j, dist in Bond_index
+            ])
+            print("Converted Bond_index from numpy array to 1-based indexing")
+    elif Bond_index and len(Bond_index) > 0:
+        # For Python lists
+        if min(int(bond[0]) for bond in Bond_index) == 0:
+            Bond_index = [[int(i)+1, int(j)+1, dist] for i, j, dist in Bond_index]
+            print("Converted Bond_index from list to 1-based indexing")
+    
+    # Similar check for Angle_index
+    if isinstance(Angle_index, np.ndarray) and Angle_index.size > 0:
+        # For numpy arrays, check the first element's first value
+        if np.min(Angle_index[:, 0]) == 0:  # Check if minimum index is 0 (0-based)
+            # Convert all indices to 1-based, preserving other data
+            # First determine shape to handle correctly
+            cols = Angle_index.shape[1]
+            new_angles = []
+            for angle in Angle_index:
+                # First 3 elements are always atom indices
+                new_angle = [int(angle[0])+1, int(angle[1])+1, int(angle[2])+1]
+                # Add any remaining values unchanged (e.g., angle value)
+                if cols > 3:
+                    new_angle.extend(angle[3:])
+                new_angles.append(new_angle)
+            Angle_index = np.array(new_angles)
+            print(f"Converted Angle_index from numpy array to 1-based indexing (shape: {Angle_index.shape})")
+    elif Angle_index and len(Angle_index) > 0:
+        # For Python lists
+        if min(int(angle[0]) for angle in Angle_index) == 0:
+            new_angles = []
+            for angle in Angle_index:
+                # First 3 elements are always atom indices
+                new_angle = [int(angle[0])+1, int(angle[1])+1, int(angle[2])+1]
+                # Add any remaining values unchanged (e.g., angle value)
+                if len(angle) > 3:
+                    new_angle.extend(angle[3:])
+                new_angles.append(new_angle)
+            Angle_index = new_angles
+            print("Converted Angle_index from list to 1-based indexing")
     
     # Find atom indices for special types (similar to MATLAB script)
     ind_H = [i for i, atom in enumerate(atoms, 1) if atom.get('type', '').startswith('H')]
@@ -72,6 +136,12 @@ def write_itp(atoms, file_path, Box_dim=None, molecule_name=None, nrexcl=3, comm
     ind_Al = [i for i, atom in enumerate(atoms, 1) if atom.get('type', '').startswith('Al')]
     ind_Si = [i for i, atom in enumerate(atoms, 1) if atom.get('type', '').startswith('Si')]
     ind_Mgo = [i for i, atom in enumerate(atoms, 1) if atom.get('type', '').startswith('Mg')]
+    
+    # Filter Bond_index to only include bonds with at least one hydrogen atom
+    if Bond_index is not None and len(Bond_index) > 0:
+        total_bonds = len(Bond_index)
+        Bond_index = [bond for bond in Bond_index if int(bond[0]) in ind_H or int(bond[1]) in ind_H]
+        print(f"write_itp: Filtered to {len(Bond_index)} hydrogen bonds (from {total_bonds} total bonds)")
     
     # Calculate total charge
     total_charge = sum(atom.get('charge', 0.0) for atom in atoms)
@@ -90,6 +160,7 @@ def write_itp(atoms, file_path, Box_dim=None, molecule_name=None, nrexcl=3, comm
         # Add info about bonds and angles if available
         if Bond_index is not None and Angle_index is not None:
             f.write(f"; Structure with {nAtoms} atoms, {len(Bond_index)} bonds, {len(Angle_index)} angles\n")
+            print(f"write_itp: Writing {len(Bond_index)} bonds and {len(Angle_index)} angles to file")
         
         f.write("\n")
         
@@ -99,11 +170,11 @@ def write_itp(atoms, file_path, Box_dim=None, molecule_name=None, nrexcl=3, comm
         
         # Use first 3 chars of molecule name if possible
         mol_name_short = molecule_name[:3] if len(molecule_name) >= 3 else molecule_name
-        f.write(f"{mol_name_short.upper()}      {nrexcl}\n\n")
+        f.write(f"{mol_name_short.upper()}         {nrexcl}\n\n")
         
         # Write atoms section
         f.write("[ atoms ]\n")
-        f.write("; id   attype  resnr resname  atname   cgnr  charge      mass\n")
+        f.write("; id   attype  resnr resname  atname   cgnr        charge      mass\n")
         
         for i, atom in enumerate(atoms, 1):
             # Get values with defaults for missing fields
@@ -129,7 +200,7 @@ def write_itp(atoms, file_path, Box_dim=None, molecule_name=None, nrexcl=3, comm
             mass = round(atom.get('mass', 0.0), 6)
             
             # Write the atom line
-            f.write(f"{i:<7} {at_type:<7} {res_nr:<7} {res_name:<7} {at_name:<7} {i:<7} {charge:<12.6f} {mass:<12.6f}\n")
+            f.write(f"{i:<7} {at_type:<7} {res_nr:<7} {res_name:<7} {at_name:<7} {i:<7}  {charge:>10.6f}    {mass:>7.4f}\n")
         
         # Write bonds section if we have bonds
         if Bond_index is not None and len(Bond_index) > 0:
@@ -139,20 +210,17 @@ def write_itp(atoms, file_path, Box_dim=None, molecule_name=None, nrexcl=3, comm
             else:
                 f.write("; i     j       funct\n")
             
-            # Sort bonds by first atom index
+            # Sort bonds by first atom index (they're already filtered to H-bonds)
             Bond_index = sorted(Bond_index, key=lambda x: x[0])
+            print(f"write_itp: First 3 H-bonds: {Bond_index[:3] if len(Bond_index) >= 3 else Bond_index}")
             
             for bond in Bond_index:
                 a1, a2, dist = int(bond[0]), int(bond[1]), float(bond[2])
                 
                 if explicit_bonds == 1:
-                    # Determine bond parameters based on atom types
-                    if a1 in ind_H or a2 in ind_H:
-                        r = 0.09572  # H bond length in nm
-                        kb = 441050  # Force constant
-                    else:
-                        r = dist / 10  # Convert Å to nm
-                        kb = 0  # Default force constant
+                    # H-O bonds use specific parameters
+                    r = 0.09572  # H bond length in nm (standard value for OH bonds)
+                    kb = 441050  # Force constant
                     
                     # Write bond with parameters
                     at1_type = atoms[a1-1].get('fftype', atoms[a1-1].get('type', ''))
@@ -213,7 +281,7 @@ def write_itp(atoms, file_path, Box_dim=None, molecule_name=None, nrexcl=3, comm
                     f.write(f"{a1:<5} {a2:<5} {a3:<5} {1:<5} ; {angle_val:<6.2f} {at1_type}-{at2_type}-{at3_type}\n")
         
         # Write position restraints section
-        f.write("\n#ifdef POSRES_XY_MMT_1  \n")
+        f.write("\n#ifdef POSRES  \n")
         f.write("[ position_restraints ]\n")
         f.write("; atom  type      fx      fy      fz\n")
         
