@@ -1,9 +1,0 @@
-__pycache__/
-*.py[cod]
-*.class
-dist/
-build/
-*.egg-info/
-env/
-alternative_scripts/
-Old_files/
