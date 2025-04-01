@@ -1,5 +1,13 @@
 import numpy as np
 
+# Try to import tqdm for progress bar
+try:
+    from tqdm import tqdm
+    has_tqdm = True
+except ImportError:
+    print("Note: Install tqdm package for progress bars (pip install tqdm)")
+    has_tqdm = False
+
 def dist_matrix(atoms, Box_dim=None):
     """Calculate the distance matrix between atoms following the MATLAB implementation approach.
     
@@ -20,6 +28,7 @@ def dist_matrix(atoms, Box_dim=None):
         This implementation follows the approach in the MATLAB dist_matrix_MATLAB.m function,
         using per-atom iteration.
     """
+    
     if Box_dim is None:
         raise ValueError("Box_dim must be provided")
     
@@ -44,11 +53,28 @@ def dist_matrix(atoms, Box_dim=None):
     dx = np.zeros((n_atoms, n_atoms), dtype=np.float32)
     dy = np.zeros((n_atoms, n_atoms), dtype=np.float32)
     dz = np.zeros((n_atoms, n_atoms), dtype=np.float32)
+
+    # Setup progress tracking
+    total_distances_processed = 0
     
     # Calculate distance matrix
     if len(Box_dim) == 3:
         # Orthogonal box approach
-        for i in range(n_atoms):
+        # Setup progress bar
+        if has_tqdm:
+            atom_iterator = tqdm(range(n_atoms), desc="Finding dists", unit="atom")
+        else:
+            print("Finding distances...")
+            atom_iterator = range(n_atoms)
+            last_percent = -1
+            
+        for i in atom_iterator:
+            # Update progress percentage for non-tqdm case
+            if not has_tqdm and n_atoms > 100:
+                percent = int(100 * i / n_atoms)
+                if percent > last_percent and percent % 10 == 0:
+                    print(f"  {percent}% complete...")
+                    last_percent = percent
             # Calculate distance components
             rx = xyz[i, 0] - xyz[:, 0]
             ry = xyz[i, 1] - xyz[:, 1]
@@ -74,7 +100,21 @@ def dist_matrix(atoms, Box_dim=None):
             dz[:, i] = -rz
     else:
         # Triclinic box approach
-        for i in range(n_atoms):
+        # Setup progress bar
+        if has_tqdm:
+            atom_iterator = tqdm(range(n_atoms), desc="Finding dists", unit="atom")
+        else:
+            print("Finding distances...")
+            atom_iterator = range(n_atoms)
+            last_percent = -1
+            
+        for i in atom_iterator:
+            # Update progress percentage for non-tqdm case
+            if not has_tqdm and n_atoms > 100:
+                percent = int(100 * i / n_atoms)
+                if percent > last_percent and percent % 10 == 0:
+                    print(f"  {percent}% complete...")
+                    last_percent = percent
             # Calculate initial distance components
             rx = xyz[i, 0] - xyz[:, 0]
             ry = xyz[i, 1] - xyz[:, 1]

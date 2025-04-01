@@ -16,20 +16,31 @@ using the atomipy package. It demonstrates how to:
 import atomipy as ap
 import numpy as np
 import os
+from atomipy.cell_utils import Cell2Box_dim
+from atomipy.minff import minff  # Directly import the minff function
 
 def main():
     """Main function to demonstrate atomipy molecular modeling workflow"""
     print("AtomiPy Demo")
     print("======================================\n")
 
-    # Step 1: Load a structure file (GRO format)
+    # Step 1: Load a structure file in both PDB and GRO formats
     # ------------------------------------------
-    input_file = "Kaolinite_GII_0.0487.gro"
-    print(f"Loading structure from: {input_file}")
+    gro_file = "Kaolinite_GII_0.0487.gro"
     
-    # Read the GRO file - this returns a list of atom dictionaries and box dimensions
-    atoms, box_dim = ap.import_conf.gro(input_file)
-    print(f"Successfully loaded {len(atoms)} atoms")
+    print(f"Loading GRO structure from: {gro_file}")
+    # Read the GRO file - this returns a list of atom dictionaries and cell parameters
+    atoms, box_dim = ap.import_conf.gro(gro_file)
+    print(f"Successfully loaded {len(atoms)} atoms from GRO")
+    print(f"Box dimensions: {box_dim}")
+
+
+    # Convert cell parameters to box dimensions
+    # gro_box_dim = Cell2Box_dim(cell)
+    
+    # Use the GRO structure for the rest of the script
+    # atoms = atoms
+    # box_dim = cell
     
     # Step 2: Assign chemical elements
     # -------------------------------
@@ -53,7 +64,7 @@ def main():
     # The replicate function converts coordinates to fractional, replicates the unit cell,
     # then converts back to cartesian coordinates
     # Calculate replication based on desired size (approximately 25 Å in each dimension)
-    target_size = 50  # Target size in Angstroms
+    target_size = 40  # Target size in Angstroms
     # Use the first 3 values from box_dim which represent x, y, z dimensions
     replicate_dims = np.ceil(np.array([target_size / box_dim[0], 
                                        target_size / box_dim[1], 
@@ -92,13 +103,17 @@ def main():
     
     print(f"Found {len(Bond_index)} bonds and {len(Angle_index)} angles")
     
+    # Write the system with bonds to a GRO file
+    print("\nSaving structure with bond information...")
+    ap.write_conf.gro(replicated_atoms, replicated_box_dim, "bonded_structure.gro")
+    
     # Step 6: Assign MINFF atom types for force field
     # ---------------------------------------------
     print("\nAssigning specialized atom types using MINFF...")
     # MINFF classifies atoms based on their chemical environment
     # For example, oxygen atoms can be: Oh (hydroxyl), Op (bridging), Ow (water)
     # This function modifies atoms in-place (doesn't return anything)
-    ap.minff(replicated_atoms, replicated_box_dim)
+    minff(replicated_atoms, replicated_box_dim)  # Use the directly imported minff function
     minff_atoms = replicated_atoms
     box_dim = replicated_box_dim
     
@@ -125,10 +140,20 @@ def main():
         Box_dim=box_dim
     )
     
+    # Step 8: Write final GRO file
+    # ---------------------------
+    print("Writing final structure to preem.gro...")
+    ap.write_conf.gro(
+        minff_atoms,
+        box_dim,
+        "preem.gro"
+    )
+    
     print("\nDone! Generated files:")
     print("1. replicated_structure.gro - Structure in GROMACS format")
     print("2. replicated_structure.pdb - Structure in PDB format")
     print("3. molecular_topology.itp - GROMACS topology file with H-bonds")
+    print("4. preem.gro - Final structure with MINFF typing and charges")
 
 if __name__ == "__main__":
     main()

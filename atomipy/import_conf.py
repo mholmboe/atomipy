@@ -48,7 +48,6 @@ def pdb(file_path):
                 atom = {
                     "molid": molid,
                     "index": index,
-                    "name": atom_name,  # Store atom name from PDB (columns 12-16)
                     "resname": resname,
                     "x": x,
                     "y": y,
@@ -77,7 +76,7 @@ def gro(file_path):
     Returns:
        atoms: list of dictionaries, each with keys: molid, index, resname, x, y, z, vx, vy, vz, neigh, bonds, angles, element, type, fftype.
                 Coordinates (x, y, z) are converted to Angstroms.
-       Box_dim: a 1x9 list representing the triclinic cell dimensions in Angstroms.
+       Box_dim: a 1x3 list for orthogonal cells or a 1x9 list representing the triclinic cell dimensions in Angstroms.
     """
     atoms = []
     Box_dim = None
@@ -125,7 +124,6 @@ def gro(file_path):
             "molid": molid,
             "index": index,
             "resname": resname,
-            "atname": atname,  # Add atom name
             "x": x,
             "y": y,
             "z": z,
@@ -136,7 +134,7 @@ def gro(file_path):
             "bonds": [],
             "angles": [],
             "element": None,
-            "type": atname,  # Use atom name as initial type
+            "type": atname,  # Store atom name in type field
             "fftype": None,
             "is_nm": False  # Mark that coordinates are now in Angstroms
         }
@@ -152,7 +150,7 @@ def gro(file_path):
 
     if len(values) == 3:
         # Only box lengths are provided, assume orthorhombic
-        Box_dim = [values[0], 0, 0, 0, values[1], 0, 0, 0, values[2]]
+        Box_dim = [values[0],values[1], values[2]]
     elif len(values) == 9:
         Box_dim = values
     else:
