@@ -25,12 +25,12 @@ def pdb(atoms, cell, file_path):
             # Format the ATOM record according to PDB specification
             index = atom.get('index', i)
             
-            # Get atom name: use atname if available, otherwise element
+            # Get atom name from 'type' field, fall back to element
             # PDB atom names (cols 13-16). Rules: up to 4 chars.
             # - Alignment is tricky: usually left-aligned for elements <= 2 chars,
             #   right-aligned (?) or starting col 13 for longer names.
             #   Let's try space-padding and left-alignment for simplicity first.
-            raw_atomname = atom.get('atname', atom.get('element', 'X'))
+            raw_atomname = atom.get('type', atom.get('element', 'X'))
             if len(raw_atomname) == 1: # Single char element, place in col 14
                 pdb_atomname = f" {raw_atomname}  "
             elif len(raw_atomname) > 4: # Truncate
@@ -79,7 +79,9 @@ def gro(atoms, Box_dim, file_path):
 
     Args:
        atoms: list of atom dictionaries with coordinates in Angstroms.
-       Box_dim: 1x9 list representing triclinic cell dimensions in Angstroms.
+       Box_dim: 1x3 or 1x9 list representing cell dimensions in Angstroms.
+                For orthogonal boxes, a 1x3 array [a, b, c] is sufficient.
+                For triclinic boxes, a 1x9 array [a, b, c, 0, 0, cos(γ), 0, cos(α), cos(β)] is required.
        file_path: output filepath.
     """
     # Conversion factor from Angstroms to nm
@@ -96,10 +98,9 @@ def gro(atoms, Box_dim, file_path):
             resnum = atom.get('molid', 1)  # Use molecule ID as residue number in GRO format
             resname = atom.get('resname', 'UNK')
             
-            # Use atom name if available, otherwise use element or first character of resname
-            if 'atname' in atom and atom['atname']:
-                atomname = atom['atname']
-            else:    
+            # Use 'type' field for atom name, fall back to element or first character of resname
+            atomname = atom.get('type')
+            if atomname is None:
                 atomname = atom.get('element') if atom.get('element') is not None else resname[0]
                 
             index = atom.get('index', i)
@@ -128,8 +129,20 @@ def gro(atoms, Box_dim, file_path):
         if Box_dim is not None:
             # Convert box dimensions from Angstroms to nm
             box_dim_nm = [val * angstrom_to_nm for val in Box_dim]
-            # Use three spaces as separator for box dimensions
-            box_str = '   '.join(f"{val:.5f}" for val in box_dim_nm)
+            
+            # Handle different Box_dim formats
+            if len(Box_dim) == 3:  # Orthogonal box with just 3 dimensions
+                # For orthogonal boxes, GROMACS expects just 3 values
+                box_str = '   '.join(f"{val:.5f}" for val in box_dim_nm[:3])
+            elif len(Box_dim) == 9:  # Triclinic box with 9 dimensions
+                # For triclinic boxes, GROMACS expects all 9 values
+                box_str = '   '.join(f"{val:.5f}" for val in box_dim_nm)
+            else:
+                # Handle unexpected Box_dim length
+                print(f"Warning: Box_dim has unexpected length {len(Box_dim)}. Expected 3 or 9.")
+                # Default to using whatever was provided
+                box_str = '   '.join(f"{val:.5f}" for val in box_dim_nm)
+                
             f.write(box_str + "\n")
         else:
             f.write("\n")

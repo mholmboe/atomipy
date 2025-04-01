@@ -52,17 +52,19 @@ def element(atoms):
         elif atomtype_lower.startswith('sc'):
             atom['element'] = 'Si'  # Special case: SC -> Si
         elif atomtype_lower.startswith('ale'):
-            atom['element'] = 'Ale'
-        elif atomtype_lower.startswith('alt'):
-            atom['element'] = 'Alt'
+            atom['element'] = 'Al'
+        elif atomtype_lower.startswith('al'):
+            atom['element'] = 'Al'
         elif atomtype_lower.startswith('al'):
             atom['element'] = 'Al'
         elif atomtype_lower.startswith('mg'):
             atom['element'] = 'Mg'
+        elif atomtype_lower.startswith('ca'):
+            atom['element'] = 'Ca'
         elif atomtype_lower.startswith('fee'):
-            atom['element'] = 'Fee'
+            atom['element'] = 'Fe'
         elif atomtype_lower.startswith('fet'):
-            atom['element'] = 'Fet'
+            atom['element'] = 'Fe'
         elif atomtype_lower.startswith('fe'):
             atom['element'] = 'Fe'
         elif atomtype_lower.startswith('f'):

@@ -42,6 +42,7 @@ def assign_formal_charges(atoms):
             water_charge += atom['charge']
         else:
             # Assign half the formal charge based on the most common oxidation state
+            # Set the atoms chemical element names
             atom['charge'] = get_half_formal_charge(element or atom_type)
             other_charge += atom['charge']
     
@@ -141,8 +142,23 @@ def get_half_formal_charge(element_or_type):
         Float charge value (half of the most common oxidation state)
     """
     # Extract element symbol from atom type if needed
-    element = element_or_type.strip('0123456789+-').split('_')[0]
-    element = element[:2] if len(element) > 1 and element[1].islower() else element[0]
+    if not element_or_type:
+        return 0.0
+    
+    # Try to extract a valid element symbol
+    # First, remove any numbers, symbols, and get the first part before any underscore
+    element_str = str(element_or_type).strip('0123456789+-').split('_')[0]
+    
+    # Ensure element_str is at most 2 characters
+    element_str = element_str[:2]
+    
+    # Standard case handling for element symbols: first letter capitalized, rest lowercase
+    if len(element_str) == 2:
+        # Two-letter elements (e.g., Al, Si, Fe)
+        element = element_str[0].upper() + element_str[1].lower()
+    else:
+        # Single letter elements (e.g., H, O, N)
+        element = element_str[0].upper()
     
     # Common oxidation states for elements (most frequent oxidation state)
     oxidation_states = {
@@ -224,10 +240,27 @@ def get_half_formal_charge(element_or_type):
     }
     
     # Get oxidation state and halve it
+    # Make a case-insensitive dictionary by converting all keys to uppercase
+    oxidation_states_upper = {k.upper(): v for k, v in oxidation_states.items()}
     element_upper = element.upper()
-    if element_upper in oxidation_states:
-        return oxidation_states[element_upper] / 2.0
     
+    # Try direct match first
+    if element_upper in oxidation_states_upper:
+        return oxidation_states_upper[element_upper] / 2.0
+        
+    # Handle special MINFF types with variations
+    if element_upper.startswith('AL'):
+        return oxidation_states['Al'] / 2.0
+    elif element_upper.startswith('SI'):
+        return oxidation_states['Si'] / 2.0
+    
+    # Try to match just the first 1-2 characters for chemical symbols
+    # Most element symbols are 1-2 characters
+    if len(element_upper) > 2 and element_upper[:2] in oxidation_states_upper:
+        return oxidation_states_upper[element_upper[:2]] / 2.0
+    elif len(element_upper) > 1 and element_upper[:1] in oxidation_states_upper:
+        return oxidation_states_upper[element_upper[:1]] / 2.0
+        
     # Default case
     print(f"Warning: No oxidation state defined for element '{element}'. Assuming charge 0.0")
     return 0.0

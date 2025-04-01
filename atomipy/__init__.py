@@ -1,5 +1,10 @@
 """
-atomipy: A Python toolbox for molecular structure analysis
+atomipy: The atom Toolbox in Python
+
+This package provides tools for working with molecular structures, particularly
+focused on mineral systems with periodic boundary conditions. It supports both
+orthogonal and triclinic simulation cells, and provides efficient distance
+calculations, bond/angle detection, and structure manipulation functions.
 """
 
 # File I/O functions
@@ -24,6 +29,7 @@ except ImportError:
 
 # Structure analysis functions
 from .dist_matrix import dist_matrix
+from .cell_list_dist_matrix import cell_list_dist_matrix
 from .bond_angle import bond_angle
 
 # Cell and coordinate transformation functions

@@ -2,6 +2,7 @@ import numpy as np
 from .bond_angle import bond_angle
 from .charge_minff import charge_minff
 from .charge_formal import assign_formal_charges
+from .element import element  # Correct function name is 'element' not 'set_element'
 from .mass import set_atomic_masses
 
 def minff(atoms, Box_dim, ffname='minff', rmaxlong=2.45, rmaxH=1.2):
@@ -24,6 +25,13 @@ def minff(atoms, Box_dim, ffname='minff', rmaxlong=2.45, rmaxH=1.2):
     Returns:
         The updated atoms list with 'fftype' fields assigned.
     """
+    # Set the atoms chemical element names
+    atoms = element(atoms)  # Use correct function name 'element'
+
+   # First assign formal charges to all atoms (especially for ions and water)
+    # This sets appropriate charges based on atom types and residue names
+    atoms = assign_formal_charges(atoms)
+
     # Set atom masses using the mass.py module
     atoms = set_atomic_masses(atoms)
     
@@ -33,50 +41,50 @@ def minff(atoms, Box_dim, ffname='minff', rmaxlong=2.45, rmaxH=1.2):
     for _ in range(2):  # Run the typing process twice
         # First, ensure all atoms have element types defined
         for atom in atoms:
-            if 'element' not in atom:
-                # Try to extract element from atom type
-                atom_type = atom.get('type', 'X')
-                
-                # Convert to lowercase for case-insensitive comparison
-                atom_type_lower = atom_type.lower()
-                
-                # Map atom types to elements based on first 1-3 characters
-                if atom_type_lower.startswith('si'):  
-                    atom['element'] = 'Si'
-                elif atom_type_lower.startswith('sc'):  
-                    atom['element'] = 'Si'
-                elif atom_type_lower.startswith('ale'): 
-                    atom['element'] = 'Ale'
-                elif atom_type_lower.startswith('alt'): 
-                    atom['element'] = 'Alt'
-                elif atom_type_lower.startswith('al'):  
-                    atom['element'] = 'Al'
-                elif atom_type_lower.startswith('mg'):  
-                    atom['element'] = 'Mg'
-                elif atom_type_lower.startswith('fee'): 
-                    atom['element'] = 'Fee'
-                elif atom_type_lower.startswith('fet'): 
-                    atom['element'] = 'Fet'
-                elif atom_type_lower.startswith('fe'):  
-                    atom['element'] = 'Fe'
-                elif atom_type_lower.startswith('f'):   
-                    atom['element'] = 'F'
-                elif atom_type_lower.startswith('li'):  
-                    atom['element'] = 'Li'
-                elif atom_type_lower.startswith('ow'):  
-                    atom['element'] = 'Ow'
-                elif atom_type_lower.startswith('hw'):  
-                    atom['element'] = 'Hw'
-                elif atom_type_lower.startswith('o'):   
-                    atom['element'] = 'O'
-                elif atom_type_lower.startswith('h'):   
-                    atom['element'] = 'H'
-                elif atom_type_lower.startswith('ti'):   
-                    atom['element'] = 'Ti'
-                elif atom_type_lower.startswith('ca'):   
-                    atom['element'] = 'Ca'
-                else:
-                    atom['element'] = atom_type
+            #if 'element' not in atom:
+            # Try to extract element from atom type
+            atom_type = atom.get('type', 'X')
+            
+            # Convert to lowercase for case-insensitive comparison
+            atom_type_lower = atom_type.lower()
+            
+            # Map atom types to elements based on first 1-3 characters
+            if atom_type_lower.startswith('si'):  
+                atom['element'] = 'Si'
+            elif atom_type_lower.startswith('sc'):  
+                atom['element'] = 'Si'
+            elif atom_type_lower.startswith('ale'): 
+                atom['element'] = 'Ale'
+            elif atom_type_lower.startswith('alt'): 
+                atom['element'] = 'Alt'
+            elif atom_type_lower.startswith('al'):  
+                atom['element'] = 'Al'
+            elif atom_type_lower.startswith('mg'):  
+                atom['element'] = 'Mg'
+            elif atom_type_lower.startswith('fee'): 
+                atom['element'] = 'Fee'
+            elif atom_type_lower.startswith('fet'): 
+                atom['element'] = 'Fet'
+            elif atom_type_lower.startswith('fe'):  
+                atom['element'] = 'Fe'
+            elif atom_type_lower.startswith('f'):   
+                atom['element'] = 'F'
+            elif atom_type_lower.startswith('li'):  
+                atom['element'] = 'Li'
+            elif atom_type_lower.startswith('ow'):  
+                atom['element'] = 'Ow'
+            elif atom_type_lower.startswith('hw'):  
+                atom['element'] = 'Hw'
+            elif atom_type_lower.startswith('o'):   
+                atom['element'] = 'O'
+            elif atom_type_lower.startswith('h'):   
+                atom['element'] = 'H'
+            elif atom_type_lower.startswith('ti'):   
+                atom['element'] = 'Ti'
+            elif atom_type_lower.startswith('ca'):   
+                atom['element'] = 'Ca'
+            else:
+                atom['element'] = atom_type
         
         # Initialize atom types and fftypes to match element type
         for atom in atoms:
@@ -229,14 +237,15 @@ def minff(atoms, Box_dim, ffname='minff', rmaxlong=2.45, rmaxH=1.2):
                 
                 if o_neighbors == 6:  # Octahedral Fe
                     if avg_bond_dist < 2.07:  # Fe3+ site
-                        atom['fftype'] = 'Feo3'
+                        atom['fftype'] = 'Feo'
                     else:  # Fe2+ site
-                        atom['fftype'] = 'Feo2'
+                        atom['fftype'] = 'Fe2'
                 elif o_neighbors == 4:  # Tetrahedral Fe
                     if avg_bond_dist < 2.0:  # Fe3+ site (typical distance cutoff for tetrahedral)
-                        atom['fftype'] = 'Fet3'
+                        atom['fftype'] = 'Fet'
                     else:  # Fe2+ site
-                        atom['fftype'] = 'Fet2'
+                        atom['fftype'] = 'Fe2'
+                        input()
                 elif coord_num > 6:
                     atom['fftype'] = 'Fe_ov'  # Over-coordinated
                 elif coord_num < 4:
@@ -427,10 +436,6 @@ def minff(atoms, Box_dim, ffname='minff', rmaxlong=2.45, rmaxH=1.2):
         # Update atom types to match their new fftype
         for atom in atoms:
             atom['type'] = atom['fftype']
-
-    # First assign formal charges to all atoms (especially for ions and water)
-    # This sets appropriate charges based on atom types and residue names
-    atoms = assign_formal_charges(atoms)
     
     # Apply charges based on the MINFF forcefield after atom typing is complete
     atom_labels = ['Al', 'Alt', 'Ale', 'Tio', 'Feo', 'Fet', 'Fee', 'Fe3e', 'Fe2', 'Fe2e', 

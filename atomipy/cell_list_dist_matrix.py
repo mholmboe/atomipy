@@ -1,6 +1,14 @@
 import numpy as np
 from .cell_utils import Box_dim2Cell
 
+# Try to import tqdm for progress bar
+try:
+    from tqdm import tqdm
+    has_tqdm = True
+except ImportError:
+    print("Note: Install tqdm package for progress bars (pip install tqdm)")
+    has_tqdm = False
+
 # Optional numba support for JIT compilation
 try:
     import numba
@@ -159,8 +167,20 @@ def cell_list_dist_matrix(atoms, cutoff=2.45, Box_dim=None, Cell=None, rmaxH=1.2
     Y_dist = np.zeros((N, N), dtype=np.float32)
     Z_dist = np.zeros((N, N), dtype=np.float32)
     
+    # Setup progress tracking
+    total_distances_processed = 0
+    estimated_total = numCells * 27  # Approximate maximum number of cell neighbor combinations
+    
+    # Setup progress bar
+    if has_tqdm:
+        cell_iterator = tqdm(range(numCells), desc="Finding dists", unit="cell")
+    else:
+        print("Finding dists...")
+        cell_iterator = range(numCells)
+        last_percent = -1
+    
     # Loop over cells/neighbors & compute distances
-    for cID in range(numCells):
+    for cID in cell_iterator:
         atomListC = cellList[cID]
         if not atomListC:
             continue
@@ -180,6 +200,13 @@ def cell_list_dist_matrix(atoms, cutoff=2.45, Box_dim=None, Cell=None, rmaxH=1.2
             atomListN = cellList[neighborCellLin]
             if not atomListN:
                 continue
+                
+            # Update progress percentage for non-tqdm case
+            if not has_tqdm and numCells > 100:
+                percent = int(100 * cID / numCells)
+                if percent > last_percent and percent % 10 == 0:
+                    print(f"  {percent}% complete...")
+                    last_percent = percent
                 
             # Avoid double-counting
             if neighborCellLin < cID:
@@ -220,6 +247,9 @@ def cell_list_dist_matrix(atoms, cutoff=2.45, Box_dim=None, Cell=None, rmaxH=1.2
                         # Store pair & distance
                         bond_list.append([iAtom, jAtom])
                         dist_list.append(d)
+                        
+                        # Update progress tracking counter
+                        total_distances_processed += 1
                         
                         # Fill NxN distance matrix
                         dist_matrix[iAtom, jAtom] = d

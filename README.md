@@ -10,21 +10,24 @@ The molecular structure information is stored in dictionaries where each atom ha
 
 ## Requirements
 
-- NumPy
-- SciPy (optional for some functionality)
+- NumPy (>=1.18.0)
+- tqdm (>=4.45.0) - for progress bars
+- Numba (>=0.50.0, optional) - for performance optimization via JIT compilation
 
 ## Key Features
 
 - Import/export PDB and Gromacs GRO files
-- Handle triclinic simulation cells with periodic boundary conditions
+- Handle both orthogonal and triclinic simulation cells with periodic boundary conditions
 - Calculate bond distances and angles
 - Element type assignment
 - Coordination number analysis
 - MINFF forcefield atom typing
-- Distance matrices with PBC corrections
+- Distance matrices with PBC corrections (using both full matrix and efficient cell-list algorithms)
+- Progress tracking for computationally intensive calculations
 - Formal charge assignment for ions and water
 - Coordinate transformations (orthogonal/triclinic, fractional/cartesian)
 - Supercell replication with proper handling of triclinic cells
+- Support for case-insensitive element matching in charge assignments
 
 ## Function Documentation
 
@@ -90,7 +93,35 @@ The simulation cell is represented in two ways:
 - `Box_dim`: A 1x9 array used in Gromacs GRO files for triclinic cells
 - `cell`: A 1x6 array [a, b, c, alpha, beta, gamma] used in PDB files
 
-## Usage Examples
+## Example Scripts
+
+### run_atomi.py
+
+The `run_atomi.py` script demonstrates a comprehensive workflow for processing mineral structures using atomipy. This script serves as an excellent starting point for users new to the package.
+
+#### What the script does:
+
+1. **Imports a GRO structure file** (Kaolinite_GII_0.0487.gro) containing mineral coordinates and box dimensions
+2. **Assigns chemical elements** to each atom using chemical knowledge-based rules
+3. **Creates a supercell** by replicating the unit cell to reach a target size (40 Å in each dimension)
+4. **Saves the replicated structure** in both GRO and PDB formats
+5. **Calculates bonds and angles** based on distance criteria with periodic boundary awareness
+6. **Assigns specialized MINFF atom types** based on their chemical environment and coordination
+7. **Generates a molecular topology file** (ITP) for use in molecular dynamics simulations
+8. **Writes the final structure** with all assigned properties to output files
+
+#### Running the script:
+
+Simply execute `python run_atomi.py` from the command line. The script requires a GRO file named "Kaolinite_GII_0.0487.gro" in the same directory.
+
+#### Output files:
+
+- `replicated_structure.gro` - The enlarged supercell in GROMACS format
+- `replicated_structure.pdb` - The enlarged supercell in PDB format
+- `molecular_topology.itp` - GROMACS topology file with bond and angle definitions
+- `preem.gro` - Final structure with MINFF typing and calculated properties
+
+### Other Examples
 
 ```python
 # Import the entire package

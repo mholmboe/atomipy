@@ -215,20 +215,14 @@ def balance_charges(atoms, target_total_charge=None):
         The updated list of atoms with balanced charges
     """
     # Calculate current total charge
-    if resname is not None:
-        current_total = sum(atoms[i].get('charge', 0) for i in target_atoms)
-    else:
-        current_total = sum(atom.get('charge', 0) for atom in atoms)
+    current_total = sum(atom.get('charge', 0) for atom in atoms)
     
     # If target_total_charge is None, use nearest integer to current total
     if target_total_charge is None:
         target_total_charge = round(current_total)
     
-    # Find oxygen atoms to distribute charge correction (filtered by resname if specified)
-    if resname is not None:
-        ox_indices = [i for i in target_atoms if 'type' in atoms[i] and atoms[i]['type'].lower().startswith('o')]
-    else:
-        ox_indices = [i for i, atom in enumerate(atoms) if 'type' in atom and atom['type'].lower().startswith('o')]
+    # Find oxygen atoms to distribute charge correction
+    ox_indices = [i for i, atom in enumerate(atoms) if 'type' in atom and atom['type'].lower().startswith('o')]
     
     if ox_indices:
         # Calculate charge adjustment per oxygen atom
@@ -239,10 +233,7 @@ def balance_charges(atoms, target_total_charge=None):
             atoms[i]['charge'] += charge_adjust
             
         # Verify final charge
-        if resname is not None:
-            final_total = sum(atoms[i].get('charge', 0) for i in target_atoms)
-        else:
-            final_total = sum(atom.get('charge', 0) for atom in atoms)
+        final_total = sum(atom.get('charge', 0) for atom in atoms)
         print(f"Final total charge: {final_total} (target was {target_total_charge})")
     else:
         print("Warning: No oxygen atoms found for charge balancing.")
