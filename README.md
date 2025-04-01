@@ -4,7 +4,7 @@ A modular Python toolbox for handling and analyzing molecular structures, partic
 
 ## Overview
 
-This toolbox is designed to import, export, and analyze molecular structures with a focus on mineral slabs containing different atom types (Si, Al, Fe, Mg, Ti, Li, F, O, H). It handles periodic and triclinic simulation cells, and provides functions for calculating bonds, angles, and distances while respecting periodic boundary conditions, and hence is ideal for generating molecular topology files for the [**MINFF**](https://github.com/mholmboe/minff) forcefield.
+This toolbox is designed to import, export, and analyze molecular structures with a focus on mineral slabs containing different elements (Si, Al, Fe, Mg, Ca, Ti, Li, F, O, H). It handles periodic and triclinic simulation cells, and provides functions for calculating bonds, angles, and distances while respecting periodic boundary conditions, and hence is ideal for generating molecular topology files for mineral bulk/slab systems that can be modelled using the [**MINFF**](https://github.com/mholmboe/minff) forcefield.
 
 The molecular structure information is stored in dictionaries where each atom has fields for coordinates, neighbors, bonds, angles, element type, and more.
 
