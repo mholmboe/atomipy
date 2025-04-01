@@ -1,10 +1,10 @@
 # Atomipy: The atom Toolbox in Python
 
-A modular Python toolbox for handling and analyzing molecular structures, particularly for mineral slabs with periodic boundary conditions. This toolbox is inspired by the MATLAB [atom Toolbox](https://github.com/mholmboe/atom) and provides similar functionality for working with PDB and Gromacs GRO files but with a streamlined Python interface.
+A modular Python toolbox for handling and analyzing molecular structures, particularly for mineral slabs with periodic boundary conditions. This toolbox is a light version of the MATLAB [atom Toolbox](https://github.com/mholmboe/atom) and can mainly be used to generate molecular topology files for the [**MINFF**](https://github.com/mholmboe/minff) forcefield with a streamlined Python interface.
 
 ## Overview
 
-This toolbox is designed to import, export, and analyze molecular structures with a focus on mineral slabs containing different atom types (Si, Al, Fe, Mg, Ti, Li, F, O, H). It handles periodic and triclinic simulation cells, and provides functions for calculating bonds, angles, and distances while respecting periodic boundary conditions.
+This toolbox is designed to import, export, and analyze molecular structures with a focus on mineral slabs containing different atom types (Si, Al, Fe, Mg, Ti, Li, F, O, H). It handles periodic and triclinic simulation cells, and provides functions for calculating bonds, angles, and distances while respecting periodic boundary conditions, and hence is ideal for generating molecular topology files for the [**MINFF**](https://github.com/mholmboe/minff) forcefield.
 
 The molecular structure information is stored in dictionaries where each atom has fields for coordinates, neighbors, bonds, angles, element type, and more.
 
