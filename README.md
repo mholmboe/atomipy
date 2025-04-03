@@ -1,4 +1,4 @@
-# Atomipy: The atom Toolbox in Python
+# atomipy: The atom Toolbox in Python
 
 A modular Python toolbox for handling and analyzing molecular structures, particularly for mineral slabs with periodic boundary conditions. This toolbox is a light version of the MATLAB [atom Toolbox](https://github.com/mholmboe/atom) and can mainly be used to generate molecular topology files for the [**MINFF**](https://github.com/mholmboe/minff) forcefield with a streamlined Python interface.
 
@@ -7,12 +7,6 @@ A modular Python toolbox for handling and analyzing molecular structures, partic
 This toolbox is designed to import, export, and analyze molecular structures with a focus on mineral slabs containing different elements (Si, Al, Fe, Mg, Ca, Ti, Li, F, O, H). It handles periodic and triclinic simulation cells, and provides functions for calculating bonds, angles, and distances while respecting periodic boundary conditions, and hence is ideal for generating molecular topology files for mineral bulk/slab systems that can be modelled using the [**MINFF**](https://github.com/mholmboe/minff) forcefield.
 
 The molecular structure information is stored in dictionaries where each atom has fields for coordinates, neighbors, bonds, angles, element type, and more.
-
-## Requirements
-
-- NumPy (>=1.18.0)
-- tqdm (>=4.45.0) - for progress bars
-- Numba (>=0.50.0, optional) - for performance optimization via JIT compilation
 
 ## Key Features
 
@@ -29,6 +23,102 @@ The molecular structure information is stored in dictionaries where each atom ha
 - Coordinate transformations (orthogonal/triclinic, fractional/cartesian)
 - Supercell replication with proper handling of triclinic cells
 - Support for case-insensitive element matching in charge assignments
+
+## Requirements
+
+- NumPy (>=1.18.0)
+- tqdm (>=4.45.0) - for progress bars
+- Numba (>=0.50.0, optional) - for performance optimization via JIT compilation
+
+## Installation
+
+If you're new to Python, follow these simple steps to get started with atomipy:
+
+### Step 1: Install Python
+
+1. Download and install Python from [python.org](https://www.python.org/downloads/) (version 3.7 or newer recommended)
+2. During installation on Windows, make sure to check "Add Python to PATH"
+
+### Step 2: Install Atomipy
+
+#### Method 1: Install from GitHub (recommended)
+
+1. Open a terminal or command prompt
+2. Install Git if you don't have it already: [git-scm.com](https://git-scm.com/downloads)
+3. Clone the repository and install:
+   ```bash
+   git clone https://github.com/mholmboe/atomipy.git
+   cd atomipy
+   pip install -e .
+   ```
+
+#### Method 2: Manual Installation
+
+1. Download this repository as a ZIP file (click the green "Code" button on GitHub and select "Download ZIP")
+2. Extract the ZIP file to a folder on your computer
+3. Open a terminal or command prompt
+4. Navigate to the extracted folder:
+   ```bash
+   cd path/to/extracted/atomipy
+   ```
+5. Install the package and its dependencies:
+   ```bash
+   pip install -e .
+   ```
+
+### Step 3: Verify Installation
+
+To verify that atomipy is installed correctly, run this simple test:
+
+```python
+# Create a file named test_atomipy.py with these contents:
+import atomipy as ap
+print("Atomipy installed successfully!")
+```
+
+Then run it with:
+```bash
+python test_atomipy.py
+```
+
+## Getting Started for Python Beginners
+
+Here's a simple example to help you get started with Atomipy:
+
+```python
+# Create a file named my_first_atomipy.py with these contents:
+import atomipy as ap
+
+# Step 1: Load a structure file
+print("Loading a GRO file...")
+atoms, box_dim = ap.import_gro("example.gro")  # Replace with your GRO file
+print(f"Loaded {len(atoms)} atoms")
+
+# Step 2: Assign elements based on atom names
+print("Assigning elements to atoms...")
+for i in range(len(atoms)):
+    atoms[i] = ap.element(atoms[i])
+
+# Step 3: Calculate bonds and angles
+print("Calculating bonds and angles...")
+atoms = ap.bond_angle(atoms, box_dim)
+
+# Step 4: Save as a new file
+print("Saving processed structure...")
+ap.write_gro(atoms, box_dim, "processed.gro")
+print("Done!")
+```
+
+Run this script with:
+```bash
+python my_first_atomipy.py
+```
+
+### Common Issues for Beginners
+
+- **ModuleNotFoundError**: Make sure you've installed all required packages.
+- **File not found errors**: Check that your file paths are correct and that the files exist.
+- **No module named 'atomipy'**: Make sure you've installed the package correctly.
 
 ## Function Documentation
 
@@ -99,6 +189,74 @@ All atomic information is stored in a list of dictionaries called `atoms`. Each 
 The simulation cell is represented in two ways:
 - `Box_dim`: A 1x9 array used in Gromacs GRO files for triclinic cells
 - `cell`: A 1x6 array [a, b, c, alpha, beta, gamma] used in PDB files
+
+## Common Workflow Examples
+
+Here are some common workflows that demonstrate how to use Atomipy for specific tasks:
+
+### Basic Structure Processing
+
+```python
+import atomipy as ap
+
+# Load a structure
+atoms, box_dim = ap.import_gro("my_structure.gro")
+
+# Assign elements
+for atom in atoms:
+    atom = ap.element(atom)
+
+# Calculate bonds and angles
+atoms, bonds, angles = ap.bond_angle(atoms, box_dim)
+
+# Save processed structure
+ap.write_gro(atoms, box_dim, "processed.gro")
+```
+
+### Creating a Topology File for Molecular Dynamics
+
+```python
+import atomipy as ap
+
+# Load structure
+atoms, box_dim = ap.import_gro("my_mineral.gro")
+
+# Process the structure (elements, bonds, etc.)
+for atom in atoms:
+    atom = ap.element(atom)
+
+# Assign MINFF atom types
+ap.minff(atoms, box_dim)
+
+# Write a topology file for different simulation programs
+# For GROMACS:
+ap.write_itp(atoms, box_dim, "topology.itp")
+
+# For LAMMPS:
+ap.lmp(atoms, box_dim, "topology.lmp")
+
+# For NAMD:
+ap.psf(atoms, box_dim, "topology.psf")
+```
+
+### Creating a Supercell
+
+```python
+import atomipy as ap
+
+# Load structure
+atoms, box_dim = ap.import_gro("unit_cell.gro")
+
+# Process atoms
+for atom in atoms:
+    atom = ap.element(atom)
+
+# Create a 2x2x2 supercell
+replicated_atoms, new_box_dim = ap.replicate.replicate_cell(atoms, box_dim, replicate=[2, 2, 2])
+
+# Save the supercell
+ap.write_gro(replicated_atoms, new_box_dim, "supercell.gro")
+```
 
 ## Example Scripts
 
