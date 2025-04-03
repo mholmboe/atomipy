@@ -39,7 +39,7 @@ If you're new to Python, follow these simple steps to get started with atomipy:
 1. Download and install Python from [python.org](https://www.python.org/downloads/) (version 3.7 or newer recommended)
 2. During installation on Windows, make sure to check "Add Python to PATH"
 
-### Step 2: Install Atomipy
+### Step 2: Install atomipy
 
 #### Method 1: Install from GitHub (recommended)
 
@@ -73,7 +73,7 @@ To verify that atomipy is installed correctly, run this simple test:
 ```python
 # Create a file named test_atomipy.py with these contents:
 import atomipy as ap
-print("Atomipy installed successfully!")
+print("atomipy installed successfully!")
 ```
 
 Then run it with:
@@ -83,7 +83,7 @@ python test_atomipy.py
 
 ## Getting Started for Python Beginners
 
-Here's a simple example to help you get started with Atomipy:
+Here's a simple example to help you get started with atomipy:
 
 ```python
 # Create a file named my_first_atomipy.py with these contents:
@@ -147,8 +147,9 @@ python my_first_atomipy.py
 
 ### Structure Analysis
 
-- `dist_matrix(atoms, Box_dim)`: Calculate a full distance matrix between all atoms with PBC
 - `bond_angle(atoms, Box_dim, rmaxH=1.2, rmaxM=2.45)`: Compute bonds and angles for a given atomic structure
+- `dist_matrix(atoms, Box_dim)`: Calculate a full distance matrix between all atoms with PBC
+- `cell_list_dist_matrix(atoms, Box_dim)`: Calculate a sparse distance matrix between all atoms with PBC
 
 
 ### Coordinate Transformations
