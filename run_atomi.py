@@ -8,16 +8,14 @@ using the atomipy package. It demonstrates how to:
 2. Identify chemical elements
 3. Create a supercell
 4. Calculate bonds and angles
-5. Assign specialized MINFF atom types
+5. Assign atomtypes according to MINFF
 6. Generate a molecular topology file
 """
 
 # Import the atomipy package and other required libraries
 import atomipy as ap
 import numpy as np
-import os
-from atomipy.cell_utils import Cell2Box_dim
-from atomipy.minff import minff  # Directly import the minff function
+
 
 def main():
     """Main function to demonstrate atomipy molecular modeling workflow"""
@@ -30,13 +28,13 @@ def main():
     
     print(f"Loading GRO structure from: {gro_file}")
     # Read the GRO file - this returns a list of atom dictionaries and cell parameters
-    atoms, box_dim = ap.import_conf.gro(gro_file)
+    atoms, box_dim = ap.import_gro(gro_file)
     print(f"Successfully loaded {len(atoms)} atoms from GRO")
     print(f"Box dimensions: {box_dim}")
 
 
     # Convert cell parameters to box dimensions
-    # gro_box_dim = Cell2Box_dim(cell)
+    # gro_box_dim = ap.Cell2Box_dim(cell)
     
     # Use the GRO structure for the rest of the script
     # atoms = atoms
@@ -64,7 +62,7 @@ def main():
     # The replicate function converts coordinates to fractional, replicates the unit cell,
     # then converts back to cartesian coordinates
     # Calculate replication based on desired size (approximately 25 Å in each dimension)
-    target_size = 40  # Target size in Angstroms
+    target_size = 30  # Target size in Angstroms
     # Use the first 3 values from box_dim which represent x, y, z dimensions
     replicate_dims = np.ceil(np.array([target_size / box_dim[0], 
                                        target_size / box_dim[1], 
@@ -72,7 +70,7 @@ def main():
     print(f"Replicate dimensions: {replicate_dims} (target size: {target_size} Å)")
     print(f"\nCreating a {replicate_dims[0]}x{replicate_dims[1]}x{replicate_dims[2]} supercell...")
     
-    replicated_atoms, replicated_box_dim, replicated_cell = ap.replicate.replicate_system(
+    replicated_atoms, replicated_box_dim, replicated_cell = ap.replicate_system(
         atoms, 
         box_dim, 
         replicate=replicate_dims,
@@ -85,8 +83,8 @@ def main():
     # Step 4: Write the replicated structure to files
     # ----------------------------------------------
     print("\nSaving replicated structure...")
-    ap.write_conf.gro(replicated_atoms, replicated_box_dim, "replicated_structure.gro")
-    ap.write_conf.pdb(replicated_atoms, replicated_cell, "replicated_structure.pdb")
+    ap.write_gro(replicated_atoms, replicated_box_dim, "replicated_structure.gro")
+    ap.write_pdb(replicated_atoms, replicated_cell, "replicated_structure.pdb")
     
     # Step 5: Calculate bonds and angles in the structure
     # -------------------------------------------------
@@ -105,7 +103,7 @@ def main():
     
     # Write the system with bonds to a GRO file
     print("\nSaving structure with bond information...")
-    ap.write_conf.gro(replicated_atoms, replicated_box_dim, "bonded_structure.gro")
+    ap.write_gro(replicated_atoms, replicated_box_dim, "bonded_structure.gro")
     
     # Step 6: Assign MINFF atom types for force field
     # ---------------------------------------------
@@ -113,7 +111,7 @@ def main():
     # MINFF classifies atoms based on their chemical environment
     # For example, oxygen atoms can be: Oh (hydroxyl), Op (bridging), Ow (water)
     # This function modifies atoms in-place (doesn't return anything)
-    minff(replicated_atoms, replicated_box_dim)  # Use the directly imported minff function
+    ap.minff(replicated_atoms, replicated_box_dim)  
     minff_atoms = replicated_atoms
     box_dim = replicated_box_dim
     
@@ -129,31 +127,49 @@ def main():
     
     # Step 7: Generate a molecular topology file
     # ----------------------------------------
-    print("\nGenerating molecular topology file...")
+    print("\nGenerating molecular topology files...")
     # The topology (.itp) file contains all information needed for simulation:
     # - Atom definitions (type, charge, mass)
     # - Bond connections (only hydrogen bonds with current settings)
     # - Angle definitions
-    ap.write_itp.write_itp(
+    ap.write_itp(
         minff_atoms, 
-        "molecular_topology.itp", 
-        Box_dim=box_dim
+        Box_dim=box_dim,
+        file_path="molecular_topology.itp"
+    )
+    
+    # Also generate a PSF topology file for use with other molecular dynamics packages
+    print("Writing PSF topology file...")
+    ap.write_psf(
+        minff_atoms,
+        Box_dim=box_dim,
+        file_path="molecular_topology.psf"
+    )
+    
+    # Also generate a LAMMPS topology file for use with other molecular dynamics packages
+    print("Writing LAMMPS topology file...")
+    ap.write_lmp(
+        minff_atoms,
+        Box_dim=box_dim,
+        file_path="molecular_topology.data"
     )
     
     # Step 8: Write final GRO file
     # ---------------------------
     print("Writing final structure to preem.gro...")
-    ap.write_conf.gro(
-        minff_atoms,
-        box_dim,
-        "preem.gro"
+    ap.write_gro(
+        minff_atoms,    
+        Box_dim=box_dim,
+        file_path="preem.gro"
     )
     
     print("\nDone! Generated files:")
     print("1. replicated_structure.gro - Structure in GROMACS format")
     print("2. replicated_structure.pdb - Structure in PDB format")
     print("3. molecular_topology.itp - GROMACS topology file with H-bonds")
-    print("4. preem.gro - Final structure with MINFF typing and charges")
+    print("4. molecular_topology.psf - PSF topology file")
+    print("5. molecular_topology.data - LAMMPS topology file")
+    print("6. preem.gro - Final structure with MINFF typing and charges")
 
 if __name__ == "__main__":
     main()

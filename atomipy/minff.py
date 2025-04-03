@@ -184,17 +184,42 @@ def minff(atoms, Box_dim, ffname='minff', rmaxlong=2.45, rmaxH=1.2):
             # Magnesium assignments
             elif el == 'Mg':
                 if coord_num == 6:
+
+                    atom['fftype'] = 'Mgo'
+
                     # Check if there are more Mg than Si (e.g. in forsterite)
+                    h_count = sum(1 for a in atoms if a.get('element') == 'H')
                     mg_count = sum(1 for a in atoms if a.get('element') == 'Mg')
                     si_count = sum(1 for a in atoms if a.get('element') == 'Si')
+                    al_count = sum(1 for a in atoms if a.get('element') == 'Al')
+                    fe_count = sum(1 for a in atoms if a.get('element') == 'Fe')
+                    
                     if mg_count > si_count:
                         atom['fftype'] = 'Mgo'  # E.g. in forsterite
-                    else:
-                        atom['fftype'] = 'Mg'
+                        if mg_count < h_count:
+                            atom['fftype'] = 'Mgh'  # Ex. Brucite
+                    elif mg_count <= si_count:
+                        atom['fftype'] = 'Mgh'  # E.g. in Talc, Hectorite
+                        if al_count > mg_count or fe_count > mg_count:
+                            atom['fftype'] = 'Mgo'  # Ex. Mica, Smectite
+
                 elif coord_num > 6:
                     atom['fftype'] = 'Mg_ov'  # Over-coordinated
                 elif coord_num < 6:
                     atom['fftype'] = 'Mg_un'  # Under-coordinated
+
+
+                #       if sum(strncmpi([atom.type],'Mg',2))>sum(strncmpi([atom.type],'Si',2))
+                #            atom(i).fftype={'Mgo'}; % Ex Fosterite
+                #            if sum(strncmpi([atom.type],'Mg',2))<sum(strncmpi([atom.type],'H',1))
+                #                atom(i).fftype={'Mgh'}; % Ex. Brucite
+                #            end
+                #        elseif sum(strncmpi([atom.type],'Mg',2))<sum(strncmpi([atom.type],'Si',2))
+                #            atom(i).fftype={'Mgh'}; % Talc, Hectorite
+                #            if sum(strncmpi([atom.type],'Al',2))>sum(strncmpi([atom.type],'Mg',2))
+                #                atom(i).fftype={'Mgo'}; % Mica, smectite
+                #            end
+                #        end
 
             # Titanium assignments
             elif el == 'Ti':
@@ -225,6 +250,10 @@ def minff(atoms, Box_dim, ffname='minff', rmaxlong=2.45, rmaxH=1.2):
                     print(f"Ca atom over coordinated (atom index: {atom.get('index', '?')})")
                     print(f"Neighbors: {neighbor_types}")
                     atom['fftype'] = 'Cao_ov'  # Over-coordinated
+                elif coord_num < 6:
+                    print(f"Ca atom under coordinated (atom index: {atom.get('index', '?')})")
+                    print(f"Neighbors: {neighbor_types}")
+                    atom['fftype'] = 'Cao_un'  # Under-coordinated
                 else:
                     # Fall back for other cases
                     print(f"Ca with unusual coordination (atom index: {atom.get('index', '?')})")
@@ -262,7 +291,7 @@ def minff(atoms, Box_dim, ffname='minff', rmaxlong=2.45, rmaxH=1.2):
                     print(f"Fs atom over coordinated (atom index: {atom.get('index', '?')})")
                     print(f"Neighbors: {neighbor_types}")
                     atom['fftype'] = 'Fs_ov'  # Over-coordinated
-                elif coord_num > 0 and coord_num < 3:
+                elif coord_num < 3:
                     print(f"Fs atom under coordinated (atom index: {atom.get('index', '?')})")
                     print(f"Neighbors: {neighbor_types}")
                     atom['fftype'] = 'Fs_un'  # Under-coordinated

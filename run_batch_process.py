@@ -15,7 +15,6 @@ import atomipy as ap
 import numpy as np
 import os
 import glob
-from atomipy.minff import minff  # Directly import the minff function
 
 def main():
     """Main function to batch process GRO files"""
@@ -26,8 +25,9 @@ def main():
     os.makedirs("output", exist_ok=True)
     
     # Open the charges summary file
-    with open("output/charge_summary.txt", "w") as summary_file:
+    with open("output/charge_summary.txt", "w") as summary_file, open("output/atom_type_changes.txt", "w") as type_changes_file:
         summary_file.write("Filename\tTotal Charge\tAtom Count\tAtom Types\n")
+        type_changes_file.write("Filename\tChanged Atom Count\tAtom Type Changes\n")
         
         # Loop through all preem{1-45}.gro files in the conf directory
         for i in range(1, 46):
@@ -46,6 +46,11 @@ def main():
             try:
                 atoms, box_dim = ap.import_conf.gro(input_file)
                 print(f"Successfully loaded {len(atoms)} atoms")
+                
+                # Store original atom types before processing
+                original_types = []
+                for atom in atoms:
+                    original_types.append(atom.get('type', ''))
             except Exception as e:
                 print(f"Error loading {input_file}: {e}")
                 continue
@@ -86,7 +91,7 @@ def main():
             print("\nAssigning specialized atom types using MINFF...")
             # MINFF classifies atoms based on their chemical environment
             # This function modifies atoms in-place (doesn't return anything)
-            minff(atoms, box_dim)  # Use the directly imported minff function
+            ap.minff(atoms, box_dim)  # Use the minff function from the ap package
             
             # Calculate total charge
             total_charge = sum(atom.get('charge', 0.0) for atom in atoms)
@@ -108,23 +113,40 @@ def main():
             # Write to the summary file
             summary_file.write(f"{input_file}\t{total_charge:.6f}\t{len(atoms)}\t{type_summary[:-1]}\n")
             
+            # Compare original atom types with new atom types after MINFF assignment
+            new_types = [atom.get('type', '') for atom in atoms]
+            type_changes = []
+            for idx, (orig, new) in enumerate(zip(original_types, new_types)):
+                if orig != new:
+                    type_changes.append(f"Atom {idx+1}: {orig} → {new}")
+            
+            # Write type changes to file
+            if type_changes:
+                changes_summary = "; ".join(type_changes[:10])
+                if len(type_changes) > 10:
+                    changes_summary += f"; ...and {len(type_changes)-10} more"
+                type_changes_file.write(f"{input_file}\t{len(type_changes)}\t{changes_summary}\n")
+            else:
+                type_changes_file.write(f"{input_file}\t0\tNo changes\n")
+            
             # Step 5: Generate output files
             # ---------------------------
             # Output GRO file
             output_gro = f"output/pypreem{i}.gro"
             print(f"\nWriting processed structure to {output_gro}...")
-            ap.write_conf.gro(atoms, box_dim, output_gro)
+            ap.write_gro(atoms, box_dim, output_gro)
             
             # Output ITP file
             output_itp = f"output/pymin{i}.itp"
             print(f"Generating molecular topology file {output_itp}...")
-            ap.write_itp.write_itp(atoms, output_itp, Box_dim=box_dim)
+            ap.write_itp(atoms, Box_dim=box_dim, file_path=output_itp)
             
             print(f"Completed processing {input_file}")
     
     print("\nAll processing complete!")
     print("Output files have been saved to the 'output' directory.")
     print("Charge summary has been saved to 'output/charge_summary.txt'.")
+    print("Atom type changes have been saved to 'output/atom_type_changes.txt'.")
 
 if __name__ == "__main__":
     main()
