@@ -16,12 +16,13 @@ The molecular structure information is stored in dictionaries where each atom ha
 
 ## Key Features
 
+- MINFF forcefield atom typing
 - Import/export PDB and Gromacs GRO files
+- Generating topology files for MINFF forcefield, for Gromacs (.itp), NAMD (.psf) and LAMMPS (.data)
 - Handle both orthogonal and triclinic simulation cells with periodic boundary conditions
 - Calculate bond distances and angles
 - Element type assignment
 - Coordination number analysis
-- MINFF forcefield atom typing
 - Distance matrices with PBC corrections (using both full matrix and efficient cell-list algorithms)
 - Progress tracking for computationally intensive calculations
 - Formal charge assignment for ions and water
@@ -37,6 +38,16 @@ The molecular structure information is stored in dictionaries where each atom ha
 - `import_gro(file_path)`: Import a Gromacs GRO file, including velocities if present
 - `write_pdb(atoms, cell, file_path)`: Write atoms to a PDB file
 - `write_gro(atoms, Box_dim, file_path)`: Write atoms to a Gromacs GRO file, including velocities if present
+
+### Force Field
+
+- `minff(atom)`: Assign MINFF forcefield specific atom types to each atom
+
+### Molecular Topology
+
+- `write_itp(atoms, Box_dim, file_path)`: Write a Gromacs topology file
+- `write_psf(atoms, Box_dim, file_path)`: Write a NAMD topology file
+- `write_data(atoms, Box_dim, file_path)`: Write a LAMMPS topology file
 
 ### Atom Properties
 
@@ -67,10 +78,6 @@ The molecular structure information is stored in dictionaries where each atom ha
 
 - `charge_formal.assign_formal_charges(atoms)`: Assign formal charges to ions and water molecules
 - `charge_minff.charge_minff(atoms)`: Assign MINFF charges to atoms
-
-### Force Field
-
-- `minff(atom)`: Assign MINFF forcefield specific atom types to each atom
 
 ## Data Structure
 
@@ -157,7 +164,6 @@ ortho_atoms = ap.ortho.triclinic_to_orthogonal(replicated_atoms, new_Box_dim)
 # Export to GRO format
 ap.write_gro(replicated_atoms, new_Box_dim, "structure.gro")
 ```
-
 
 
 ## Differences from MATLAB atom Toolbox
