@@ -16,8 +16,6 @@ using the atomipy package. It demonstrates how to:
 import atomipy as ap
 import numpy as np
 import os
-from atomipy.cell_utils import Cell2Box_dim
-from atomipy.minff import minff  # Directly import the minff function
 
 def main():
     """Main function to demonstrate atomipy molecular modeling workflow"""
@@ -30,10 +28,10 @@ def main():
     
     print(f"Loading PDB structure from: {pdb_file}")
     # Read the PDB file - this returns a list of atom dictionaries and cell parameters
-    pdb_atoms, cell = ap.import_conf.pdb(pdb_file)
+    pdb_atoms, cell = ap.import_pdb(pdb_file)
     print(f"Successfully loaded {len(pdb_atoms)} atoms from PDB")
     # Convert cell parameters to box dimensions
-    pdb_box_dim = Cell2Box_dim(cell)
+    pdb_box_dim = ap.Cell2Box_dim(cell)
     
     # Use the PDB structure for the rest of the script
     atoms = pdb_atoms
@@ -69,7 +67,7 @@ def main():
     print(f"Replicate dimensions: {replicate_dims} (target size: {target_size} Å)")
     print(f"\nCreating a {replicate_dims[0]}x{replicate_dims[1]}x{replicate_dims[2]} supercell...")
     
-    replicated_atoms, replicated_box_dim, replicated_cell = ap.replicate.replicate_system(
+    replicated_atoms, replicated_box_dim, replicated_cell = ap.replicate_system(
         atoms, 
         box_dim, 
         replicate=replicate_dims,
@@ -82,8 +80,8 @@ def main():
     # Step 4: Write the replicated structure to files
     # ----------------------------------------------
     print("\nSaving replicated structure...")
-    ap.write_conf.gro(replicated_atoms, replicated_box_dim, "replicated_structure.gro")
-    ap.write_conf.pdb(replicated_atoms, replicated_cell, "replicated_structure.pdb")
+    ap.write_gro(replicated_atoms, replicated_box_dim, "replicated_structure.gro")
+    ap.write_pdb(replicated_atoms, replicated_cell, "replicated_structure.pdb")
     
     # Step 5: Calculate bonds and angles in the structure
     # -------------------------------------------------
@@ -102,7 +100,7 @@ def main():
     
     # Write the system with bonds to a GRO file
     print("\nSaving structure with bond information...")
-    ap.write_conf.gro(replicated_atoms, replicated_box_dim, "bonded_structure.gro")
+    ap.write_gro(replicated_atoms, replicated_box_dim, "bonded_structure.gro")
     
     # Step 6: Assign MINFF atom types for force field
     # ---------------------------------------------
@@ -110,7 +108,7 @@ def main():
     # MINFF classifies atoms based on their chemical environment
     # For example, oxygen atoms can be: Oh (hydroxyl), Op (bridging), Ow (water)
     # This function modifies atoms in-place (doesn't return anything)
-    minff(replicated_atoms, replicated_box_dim)  # Use the directly imported minff function
+    ap.minff(replicated_atoms, replicated_box_dim)  # Use minff from the ap package
     minff_atoms = replicated_atoms
     box_dim = replicated_box_dim
     
@@ -131,16 +129,16 @@ def main():
     # - Atom definitions (type, charge, mass)
     # - Bond connections (only hydrogen bonds with current settings)
     # - Angle definitions
-    ap.write_itp.write_itp(
+    ap.write_itp(
         minff_atoms, 
-        "molecular_topology.itp", 
+        file_path="molecular_topology.itp", 
         Box_dim=box_dim
     )
     
     # Step 8: Write final GRO file
     # ---------------------------
     print("Writing final structure to preem.gro...")
-    ap.write_conf.gro(
+    ap.write_gro(
         minff_atoms,
         box_dim,
         "preem.gro"
