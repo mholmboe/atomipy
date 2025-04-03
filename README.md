@@ -10,16 +10,16 @@ The molecular structure information is stored in dictionaries where each atom ha
 
 ## Key Features
 
-- MINFF forcefield atom typing
+- Support for multiple forcefields: MINFF and CLAYFF atom typing and parameter assignment
 - Import/export PDB and Gromacs GRO files
-- Generating topology files for MINFF forcefield, for Gromacs (.itp), NAMD (.psf) and LAMMPS (.data)
+- Generating topology files for MINFF and CLAYFF forcefields, for Gromacs (.itp), NAMD (.psf) and LAMMPS (.data)
 - Handle both orthogonal and triclinic simulation cells with periodic boundary conditions
 - Calculate bond distances and angles
 - Element type assignment
 - Coordination number analysis
 - Distance matrices with PBC corrections (using both full matrix and efficient cell-list algorithms)
 - Progress tracking for computationally intensive calculations
-- Formal charge assignment for ions and water
+- Consolidated charge module with support for formal, MINFF, and CLAYFF charge assignments
 - Coordinate transformations (orthogonal/triclinic, fractional/cartesian)
 - Supercell replication with proper handling of triclinic cells
 - Support for case-insensitive element matching in charge assignments
@@ -226,18 +226,21 @@ atoms, box_dim = ap.import_gro("my_mineral.gro")
 for atom in atoms:
     atom = ap.element(atom)
 
-# Assign MINFF atom types
+# Assign forcefield atom types (choose either MINFF or CLAYFF)
+# For MINFF:
 ap.minff(atoms, box_dim)
+# OR for CLAYFF:
+# ap.clayff(atoms, box_dim)
 
 # Write a topology file for different simulation programs
 # For GROMACS:
 ap.write_itp(atoms, box_dim, "topology.itp")
 
 # For LAMMPS:
-ap.lmp(atoms, box_dim, "topology.lmp")
+ap.write_lmp(atoms, box_dim, "topology.lmp") 
 
 # For NAMD:
-ap.psf(atoms, box_dim, "topology.psf")
+ap.write_psf(atoms, box_dim, "topology.psf")
 ```
 
 ### Creating a Supercell
@@ -261,9 +264,13 @@ ap.write_gro(replicated_atoms, new_box_dim, "supercell.gro")
 
 ## Example Scripts
 
-### run_atomi.py
+### Example Scripts
 
-The `run_atomi.py` script demonstrates a comprehensive workflow for processing mineral structures using atomipy. This script serves as an excellent starting point for users new to the package.
+The package includes example scripts that demonstrate comprehensive workflows for processing mineral structures using atomipy:
+
+#### run_minff_atomi.py and run_clayff_atomi.py
+
+These scripts demonstrate workflows for using MINFF and CLAYFF forcefields respectively. Both serve as excellent starting points for users new to the package.
 
 #### What the script does:
 
@@ -276,9 +283,9 @@ The `run_atomi.py` script demonstrates a comprehensive workflow for processing m
 7. **Generates a molecular topology file** (ITP) for use in molecular dynamics simulations
 8. **Writes the final structure** with all assigned properties to output files
 
-#### Running the script:
+#### Running the scripts:
 
-Simply execute `python run_atomi.py` from the command line. The script requires a GRO file named "Kaolinite_GII_0.0487.gro" in the same directory.
+Simply execute `python run_minff_atomi.py` or `python run_clayff_atomi.py` from the command line. The scripts require a GRO file named "Kaolinite_GII_0.0487.gro" in the same directory.
 
 #### Output files:
 
@@ -305,10 +312,15 @@ for i in range(len(atoms)):
 Box_dim = ap.cell_utils.Cell2Box_dim(cell)
 
 # Calculate bonds and angles
-atoms = ap.bond_angle(atoms, Box_dim)
+atoms, bonds, angles = ap.bond_angle(atoms, Box_dim)
 
-# Assign formal charges for ions and water
-atoms = ap.charge_formal.assign_formal_charges(atoms)
+# Assign charges using one of the available methods
+# For formal charges (ions and water):
+atoms = ap.assign_formal_charges(atoms)
+# For MINFF charges:
+# atoms = ap.charge_minff(atoms, Box_dim)
+# For CLAYFF charges:
+# atoms = ap.charge_clayff(atoms, Box_dim)
 
 # Convert to fractional coordinates
 frac_coords, atoms = ap.fract.cartesian_to_fractional(atoms, Box_dim)

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-run_atomi.py - A beginner-friendly script to demonstrate atomipy functionality
+run_minff_atomi.py - A beginner-friendly script to demonstrate atomipy functionality
 
 This simple script shows the basic workflow for processing clay mineral structures
 using the atomipy package. It demonstrates how to:
@@ -16,15 +16,17 @@ using the atomipy package. It demonstrates how to:
 import atomipy as ap
 import numpy as np
 
-
 def main():
     """Main function to demonstrate atomipy molecular modeling workflow"""
-    print("AtomiPy Demo")
+    print("atomipy demo")
     print("======================================\n")
 
     # Step 1: Load a structure file in both PDB and GRO formats
     # ------------------------------------------
+    import os
     gro_file = "Kaolinite_GII_0.0487.gro"
+    # Use absolute path to ensure file is found regardless of working directory
+    gro_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), gro_file)
     
     print(f"Loading GRO structure from: {gro_file}")
     # Read the GRO file - this returns a list of atom dictionaries and cell parameters
@@ -61,7 +63,7 @@ def main():
     # Replicate 5x3x4 times in x, y, z directions
     # The replicate function converts coordinates to fractional, replicates the unit cell,
     # then converts back to cartesian coordinates
-    # Calculate replication based on desired size (approximately 25 Å in each dimension)
+    # Calculate replication based on desired size (approximately 30 Å in each dimension)
     target_size = 30  # Target size in Angstroms
     # Use the first 3 values from box_dim which represent x, y, z dimensions
     replicate_dims = np.ceil(np.array([target_size / box_dim[0], 
