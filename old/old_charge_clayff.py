@@ -1,19 +1,19 @@
 """
-This module provides charge assignment functions following the MINFF forcefield methodology.
+This module provides charge assignment functions following the CLAYFF forcefield methodology.
 
-The charge_minff function assigns and balances charges for atoms according to the MINFF
+The charge_clayff function assigns and balances charges for atoms according to the CLAYFF
 forcefield rules, particularly for isomorphic substitution sites.
 """
 
 import numpy as np
 from .bond_angle import bond_angle
 
-def charge_minff(atoms, box_dim, atom_labels=None, charges=None, resname=None):
+def charge_clayff(atoms, box_dim, atom_labels=None, charges=None, resname=None):
     """
-    Assign charges to atoms based on MINFF forcefield principles.
+    Assign charges to atoms based on CLAYFF forcefield principles.
     
-    This function follows the approach of the MATLAB charge_minff_MATLAB.m function,
-    which smears out the charge at isomorphic substitution sites according to MINFF
+    This function follows the approach of the MATLAB charge_clayff_MATLAB.m function,
+    which smears out the charge at isomorphic substitution sites according to CLAYFF
     principles. It first assigns specific charges to specified atom types, then 
     distributes the remaining charges across oxygen atoms.
     
@@ -30,7 +30,7 @@ def charge_minff(atoms, box_dim, atom_labels=None, charges=None, resname=None):
     
     Example:
         # Set specific charges for mineral atoms (resname='MIN') only
-        atoms = ap.charge_minff.charge_minff(atoms, box_dim, 
+        atoms = ap.charge_clayff.charge_clayff(atoms, box_dim, 
                                              ['Al', 'Mg', 'Si', 'H'], 
                                              [1.575, 1.36, 2.1, 0.425],
                                              resname='MIN')
@@ -81,7 +81,6 @@ def charge_minff(atoms, box_dim, atom_labels=None, charges=None, resname=None):
     
     # Find oxygen and fluorine atoms (filtered by resname if specified)
     ox_indices = [i for i in target_atoms if 'type' in atoms[i] and atoms[i]['type'].lower().startswith('o')]
-    fs_indices = [i for i in target_atoms if 'type' in atoms[i] and atoms[i]['type'].lower().startswith('fs')]
     
     # Ensure we have bond information
     if 'bonds' not in atoms[0] and 'neigh' not in atoms[0]:
@@ -108,7 +107,7 @@ def charge_minff(atoms, box_dim, atom_labels=None, charges=None, resname=None):
                 z = 3
             elif atom_type.startswith('fe2'):
                 z = 2
-            elif atom_type.startswith('fe'):
+            elif atom_type.startswith('fe3'):
                 z = 3
             elif atom_type.startswith('f'):  # Fs
                 z = 3
@@ -136,53 +135,17 @@ def charge_minff(atoms, box_dim, atom_labels=None, charges=None, resname=None):
             
         # Set oxygen charge
         atoms[i]['charge'] = -2.00 + zsum
+
+
+    # Find water hydrogen and oxygen atoms
+    hw_indices = [i for i in target_atoms if 'type' in atoms[i] and atoms[i]['type'].lower().startswith('hw')]
+    ow_indices = [i for i in target_atoms if 'type' in atoms[i] and atoms[i]['type'].lower().startswith('ow')]
     
-    # Process fluorine atoms (similar to oxygen)
-    for i in fs_indices:
-        # Get bonded atom indices
-        neighbors = atoms[i].get('neigh', [])
-        if not neighbors:
-            continue
-        
-        # Calculate charge based on neighbors
-        zsum = 0.0
-        for j in neighbors:
-            # Determine formal charge of neighbor based on type
-            atom_type = atoms[j].get('type', '').lower()
-            
-            # Determine formal valence Z
-            if atom_type.startswith('si'):
-                z = 4
-            elif atom_type.startswith('al'):
-                z = 3
-            elif atom_type.startswith('fe2'):
-                z = 2
-            elif atom_type.startswith('fe'):
-                z = 3
-            elif atom_type.startswith('ti'):
-                z = 4
-            elif atom_type.startswith('li'):
-                z = 1
-            elif atom_type.startswith('mg'):
-                z = 2
-            elif atom_type.startswith('ca'):
-                z = 2
-            elif atom_type.startswith('h'):
-                z = 1
-            else:
-                z = 0
-                
-            # Get current charge and coordination number
-            zp = atoms[j].get('charge', 0)
-            cn = len(atoms[j].get('neigh', []))
-            if cn == 0:  # Avoid division by zero
-                cn = 1
-                
-            # Contribution to charge balance
-            zsum += (z - zp) / cn
-            
-        # Set fluorine charge
-        atoms[i]['charge'] = -1.00 + zsum
+    # Set SPC/E hydrogen and oxygen charges
+    for i in hw_indices:
+        atoms[i]['charge'] = 0.4238
+    for i in ow_indices:
+        atoms[i]['charge'] = -0.8476
     
     # Calculate total charge (only for atoms matching the resname filter)
     if resname is not None:

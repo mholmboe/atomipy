@@ -1,0 +1,191 @@
+{% extends "base.html" %}
+
+{% block title %}atomipy - Processing Results{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-10">
+        <div class="card shadow">
+            <div class="card-header bg-success text-white">
+                <h2 class="text-center mb-0">Processing Complete</h2>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-success">
+                    <i class="bi bi-check-circle-fill"></i> Your molecular structure has been successfully processed with atomipy!
+                </div>
+
+                <!-- MINFF Files -->
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <h3 class="text-center mb-3">MINFF Forcefield Files</h3>
+                    </div>
+                    
+                    <!-- MINFF Structure Files -->
+                    <div class="col-md-6">
+                        <div class="card mb-3">
+                            <div class="card-header bg-primary text-white">
+                                <h4 class="mb-0">MINFF Structure Files</h4>
+                            </div>
+                            <div class="card-body">
+                                <p>These files contain your structure with MINFF atom types assigned:</p>
+                                <ul class="list-group">
+                                    {% if files.minff_structures %}
+                                        {% for file in files.minff_structures %}
+                                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                                            {{ file }}
+                                            <a href="{{ url_for('download_file', session_id=session_id, filename=file) }}" class="btn btn-sm btn-outline-primary">
+                                                <i class="bi bi-download"></i> Download
+                                            </a>
+                                        </li>
+                                        {% endfor %}
+                                    {% else %}
+                                        <li class="list-group-item">No MINFF structure files available</li>
+                                    {% endif %}
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- MINFF Topology Files -->
+                    <div class="col-md-6">
+                        <div class="card mb-3">
+                            <div class="card-header bg-info text-white">
+                                <h4 class="mb-0">MINFF Topology Files</h4>
+                            </div>
+                            <div class="card-body">
+                                <p>These files contain molecular topology information for MINFF:</p>
+                                <ul class="list-group">
+                                    {% if files.minff_topologies %}
+                                        {% for file in files.minff_topologies %}
+                                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                                            {{ file }}
+                                            <a href="{{ url_for('download_file', session_id=session_id, filename=file) }}" class="btn btn-sm btn-outline-info">
+                                                <i class="bi bi-download"></i> Download
+                                            </a>
+                                        </li>
+                                        {% endfor %}
+                                    {% else %}
+                                        <li class="list-group-item">No MINFF topology files available</li>
+                                    {% endif %}
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- CLAYFF Files -->
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <h3 class="text-center mb-3">CLAYFF Forcefield Files</h3>
+                    </div>
+                    
+                    <!-- CLAYFF Structure Files -->
+                    <div class="col-md-6">
+                        <div class="card mb-3">
+                            <div class="card-header bg-success text-white">
+                                <h4 class="mb-0">CLAYFF Structure Files</h4>
+                            </div>
+                            <div class="card-body">
+                                <p>These files contain your structure with CLAYFF atom types assigned:</p>
+                                <ul class="list-group">
+                                    {% if files.clayff_structures %}
+                                        {% for file in files.clayff_structures %}
+                                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                                            {{ file }}
+                                            <a href="{{ url_for('download_file', session_id=session_id, filename=file) }}" class="btn btn-sm btn-outline-success">
+                                                <i class="bi bi-download"></i> Download
+                                            </a>
+                                        </li>
+                                        {% endfor %}
+                                    {% else %}
+                                        <li class="list-group-item">No CLAYFF structure files available</li>
+                                    {% endif %}
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- CLAYFF Topology Files -->
+                    <div class="col-md-6">
+                        <div class="card mb-3">
+                            <div class="card-header bg-warning text-dark">
+                                <h4 class="mb-0">CLAYFF Topology Files</h4>
+                            </div>
+                            <div class="card-body">
+                                <p>These files contain molecular topology information for CLAYFF:</p>
+                                <ul class="list-group">
+                                    {% if files.clayff_topologies %}
+                                        {% for file in files.clayff_topologies %}
+                                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                                            {{ file }}
+                                            <a href="{{ url_for('download_file', session_id=session_id, filename=file) }}" class="btn btn-sm btn-outline-warning">
+                                                <i class="bi bi-download"></i> Download
+                                            </a>
+                                        </li>
+                                        {% endfor %}
+                                    {% else %}
+                                        <li class="list-group-item">No CLAYFF topology files available</li>
+                                    {% endif %}
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Other Files -->
+                {% if files.other_files %}
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="card mb-3">
+                            <div class="card-header bg-secondary text-white">
+                                <h4 class="mb-0">Other Files</h4>
+                            </div>
+                            <div class="card-body">
+                                <p>Additional files generated during processing:</p>
+                                <ul class="list-group">
+                                    {% for file in files.other_files %}
+                                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                                        {{ file }}
+                                        <a href="{{ url_for('download_file', session_id=session_id, filename=file) }}" class="btn btn-sm btn-outline-secondary">
+                                            <i class="bi bi-download"></i> Download
+                                        </a>
+                                    </li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <div class="alert alert-info mt-3">
+                    <h5>File Details:</h5>
+                    <ul>
+                        <li><strong>.gro</strong> - GROMACS structure format (use with .itp files)</li>
+                        <li><strong>.pdb</strong> - Protein Data Bank format (universal format)</li>
+                        <li><strong>.itp</strong> - GROMACS topology format (defines bonds, angles, atom types)</li>
+                        <li><strong>.psf</strong> - NAMD/CHARMM topology format</li>
+                        <li><strong>.data</strong> - LAMMPS data file (combined structure and topology)</li>
+                    </ul>
+                    <p class="mt-2 mb-0"><strong>Note:</strong> Both MINFF and CLAYFF forcefield files are generated for you to choose from, regardless of which one you selected as primary.</p>
+                </div>
+
+                <div class="d-grid gap-2 col-md-8 mx-auto mt-4">
+                    <div class="row">
+                        <div class="col-md-6 mb-2">
+                            <a href="{{ url_for('index') }}" class="btn btn-primary w-100">
+                                <i class="bi bi-arrow-left"></i> Process Another File
+                            </a>
+                        </div>
+                        <div class="col-md-6 mb-2">
+                            <a href="{{ url_for('download_zip', session_id=session_id) }}" class="btn btn-success w-100">
+                                <i class="bi bi-file-earmark-zip"></i> Download All Files as ZIP
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

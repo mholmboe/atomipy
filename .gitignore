@@ -19,3 +19,9 @@ build/
 
 # OS specific
 .DS_Store
+
+# Local scripts
+update_github_repo.sh
+
+# Web application
+

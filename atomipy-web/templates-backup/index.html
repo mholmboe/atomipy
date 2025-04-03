@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block title %}atomipy - Molecular Structure Processor{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h2 class="text-center mb-0">MINFF Atom Type Assignment & Topology Generator</h2>
+            </div>
+            <div class="card-body">
+                <div class="text-center mb-4">
+                    <p class="lead">Upload a GRO or PDB file to process with atomipy</p>
+                    <p>Your file will be processed to assign MINFF atom types and generate topology files</p>
+                </div>
+
+                <form action="{{ url_for('upload_file') }}" method="post" enctype="multipart/form-data" class="mb-4">
+                    <div class="mb-3">
+                        <label for="file" class="form-label">Select a molecular structure file</label>
+                        <input class="form-control" type="file" id="file" name="file" accept=".gro,.pdb" required>
+                        <div class="form-text">Supported formats: .gro, .pdb</div>
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="bi bi-cloud-upload"></i> Process File
+                        </button>
+                    </div>
+                </form>
+
+                <div class="alert alert-info">
+                    <h5>What will be processed:</h5>
+                    <ul>
+                        <li>Element assignment based on atom and residue names</li>
+                        <li>Bond and angle calculation with periodic boundary conditions</li>
+                        <li>MINFF forcefield atom type assignment</li>
+                        <li>Generation of processed structure files (.gro, .pdb)</li>
+                        <li>Generation of topology files (.itp for GROMACS, .psf for NAMD, .data for LAMMPS)</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
