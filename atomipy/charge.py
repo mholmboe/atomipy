@@ -167,6 +167,7 @@ def charge_minff(atoms, box_dim, atom_labels=None, charges=None, resname=None):
                     metal_indices.append(i)
 
     ox_indices = [i for i in target_atoms if 'type' in atoms[i] and atoms[i]['type'].lower().startswith('o')]
+    fs_indices = [i for i in target_atoms if 'type' in atoms[i] and atoms[i]['type'].lower().startswith('fs')]
 
     if 'bonds' not in atoms[0] and 'neigh' not in atoms[0]:
         atoms, _, _ = bond_angle(atoms, box_dim, rmaxH=1.2, rmaxM=2.45)
@@ -184,7 +185,19 @@ def charge_minff(atoms, box_dim, atom_labels=None, charges=None, resname=None):
                 z = 3
             elif neighbor_type.startswith('fe2'):
                 z = 2
+            elif neighbor_type.startswith('feo2'):
+                z = 2
+            elif neighbor_type.startswith('fet2'):
+                z = 2
+            elif neighbor_type.startswith('fee2'):
+                z = 2
             elif neighbor_type.startswith('fe3'):
+                z = 3
+            elif neighbor_type.startswith('feo3'):
+                z = 3
+            elif neighbor_type.startswith('fet3'):
+                z = 3
+            elif neighbor_type.startswith('fee3'):
                 z = 3
             elif neighbor_type.startswith('ti'):
                 z = 4
@@ -202,6 +215,65 @@ def charge_minff(atoms, box_dim, atom_labels=None, charges=None, resname=None):
             cn = len(atoms[j].get('neigh', [])) or 1
             zsum += (z - zp) / cn
         atoms[i]['charge'] = -2.00 + zsum
+
+        # Process fluorine atoms (similar to oxygen)
+    for i in fs_indices:
+        # Get bonded atom indices
+        neighbors = atoms[i].get('neigh', [])
+        if not neighbors:
+            continue
+        
+        # Calculate charge based on neighbors
+        zsum = 0.0
+        for j in neighbors:
+            # Determine formal charge of neighbor based on type
+            neighbor_type = atoms[j].get('type', '').lower()
+            
+            # Determine formal valence Z
+            if neighbor_type.startswith('si'):
+                z = 4
+            elif neighbor_type.startswith('al'):
+                z = 3
+            elif neighbor_type.startswith('fe2'):
+                z = 2
+            elif neighbor_type.startswith('feo2'):
+                z = 2
+            elif neighbor_type.startswith('fet2'):
+                z = 2
+            elif neighbor_type.startswith('fee2'):
+                z = 2
+            elif neighbor_type.startswith('fe3'):
+                z = 3
+            elif neighbor_type.startswith('feo3'):
+                z = 3
+            elif neighbor_type.startswith('fet3'):
+                z = 3
+            elif neighbor_type.startswith('fee3'):
+                z = 3
+            elif neighbor_type.startswith('ti'):
+                z = 4
+            elif neighbor_type.startswith('li'):
+                z = 1
+            elif neighbor_type.startswith('mg'):
+                z = 2
+            elif neighbor_type.startswith('ca'):
+                z = 2
+            elif neighbor_type.startswith('h'):
+                z = 1
+            else:
+                z = 0
+                
+            # Get current charge and coordination number
+            zp = atoms[j].get('charge', 0)
+            cn = len(atoms[j].get('neigh', []))
+            if cn == 0:  # Avoid division by zero
+                cn = 1
+                
+            # Contribution to charge balance
+            zsum += (z - zp) / cn
+            
+        # Set fluorine charge
+        atoms[i]['charge'] = -1.00 + zsum
 
     hw_indices = [i for i in target_atoms if 'type' in atoms[i] and atoms[i]['type'].lower().startswith('hw')]
     ow_indices = [i for i in target_atoms if 'type' in atoms[i] and atoms[i]['type'].lower().startswith('ow')]
@@ -282,9 +354,9 @@ def charge_clayff(atoms, box_dim, atom_labels=None, charges=None, resname=None):
                 z = 4
             elif neighbor_type.startswith('al'):
                 z = 3
-            elif neighbor_type.startswith('fe2'):
+            elif 'fe' in neighbor_type and '2' in neighbor_type:
                 z = 2
-            elif neighbor_type.startswith('fe3'):
+            elif 'fe' in neighbor_type and '3' in neighbor_type:
                 z = 3
             elif neighbor_type.startswith('f'):  # Adjusted for CLAYFF
                 z = 3

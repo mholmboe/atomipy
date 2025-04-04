@@ -25,3 +25,8 @@ update_github_repo.sh
 
 # Web application
 
+# Misc
+old/
+conf/
+output/
+launch_app.sh
