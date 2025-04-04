@@ -1,0 +1,33 @@
+# Python packaging
+*.egg-info/
+atomipy.egg-info/
+
+# Virtual environments
+env/
+venv/
+.venv/
+
+# Python cache files
+__pycache__/
+*.py[cod]
+*.class
+
+# Distribution / packaging
+dist/
+build/
+*.egg
+
+# OS specific
+.DS_Store
+
+# Local scripts
+update_github_repo.sh
+
+# Web application
+
+# Misc
+old/
+conf/
+output/
+launch_app.sh
+
