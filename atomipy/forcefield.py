@@ -60,6 +60,8 @@ def minff(atoms, Box_dim, ffname='minff', rmaxlong=2.45, rmaxH=1.2):
                 atom['element'] = 'Al'
             elif atom_type_lower.startswith('mg'):  
                 atom['element'] = 'Mg'
+            elif atom_type_lower.startswith('ca'):  
+                atom['element'] = 'Ca'
             elif atom_type_lower.startswith('fee'): 
                 atom['element'] = 'Fee'
             elif atom_type_lower.startswith('fet'): 
@@ -80,8 +82,6 @@ def minff(atoms, Box_dim, ffname='minff', rmaxlong=2.45, rmaxH=1.2):
                 atom['element'] = 'H'
             elif atom_type_lower.startswith('ti'):   
                 atom['element'] = 'Ti'
-            elif atom_type_lower.startswith('ca'):   
-                atom['element'] = 'Ca'
             else:
                 atom['element'] = atom_type
         
@@ -139,10 +139,9 @@ def minff(atoms, Box_dim, ffname='minff', rmaxlong=2.45, rmaxH=1.2):
             coord_num = atom.get('coord_num', 0)
             
             # Determine fftype based on element and coordination environment
-            el = atom['element']
             
             # Lithium assignments
-            if el == 'Li':
+            if atom.get('type', '').lower().startswith('li'):
                 if coord_num == 6:
                     atom['fftype'] = 'Lio'
                 elif coord_num == 4:
@@ -153,7 +152,7 @@ def minff(atoms, Box_dim, ffname='minff', rmaxlong=2.45, rmaxH=1.2):
                     atom['fftype'] = 'Lio_un'  # Under-coordinated
             
             # Silicon assignments
-            elif el == 'Si':
+            elif atom.get('type', '').lower().startswith('si'):
                 o_neighbors = neighbor_types.count('O')
                 if o_neighbors == 4:
                     atom['fftype'] = 'Sit'
@@ -167,7 +166,7 @@ def minff(atoms, Box_dim, ffname='minff', rmaxlong=2.45, rmaxH=1.2):
                     atom['fftype'] = 'Si_un'  # Under-coordinated
             
             # Aluminum assignments
-            elif el == 'Al':
+            elif atom.get('type', '').lower().startswith('al'):
                 o_neighbors = neighbor_types.count('O')
                 if o_neighbors == 6:
                     atom['fftype'] = 'Alo'     # Octahedral Al
@@ -181,7 +180,7 @@ def minff(atoms, Box_dim, ffname='minff', rmaxlong=2.45, rmaxH=1.2):
                     atom['fftype'] = 'Al_un'  # Under-coordinated
             
             # Magnesium assignments
-            elif el == 'Mg':
+            elif atom.get('type', '').lower().startswith('mg'):
                 if coord_num == 6:
 
                     atom['fftype'] = 'Mgo'
@@ -208,7 +207,7 @@ def minff(atoms, Box_dim, ffname='minff', rmaxlong=2.45, rmaxH=1.2):
                     atom['fftype'] = 'Mg_un'  # Under-coordinated
 
             # Titanium assignments
-            elif el == 'Ti':
+            elif atom.get('type', '').lower().startswith('ti'):
                 o_neighbors = neighbor_types.count('O')
                 if coord_num == 6:
                     atom['fftype'] = 'Tio'  # Rutile/anatase type (TiO2)
@@ -220,7 +219,7 @@ def minff(atoms, Box_dim, ffname='minff', rmaxlong=2.45, rmaxH=1.2):
                     atom['fftype'] = 'Ti_un'  # Under-coordinated
                     
             # Calcium assignments
-            elif el == 'Ca':
+            elif atom.get('type', '').lower().startswith('ca'):
                 o_neighbors = neighbor_types.count('O')
                 f_neighbors = neighbor_types.count('F')
                 
@@ -246,20 +245,25 @@ def minff(atoms, Box_dim, ffname='minff', rmaxlong=2.45, rmaxH=1.2):
                     print(f"Neighbors: {neighbor_types}")
             
             # Iron assignments with Fe3+/Fe2+ distinction based on bond distance
-            elif el == 'Fe':
+            elif atom.get('type', '').lower().startswith('fe'):
                 o_neighbors = neighbor_types.count('O')
                 avg_bond_dist = atom.get('avg_bond_dist', 0)
                 
                 if o_neighbors == 6:  # Octahedral Fe
                     if avg_bond_dist < 2.07:  # Fe3+ site
-                        atom['fftype'] = 'Fe3o'
+                        atom['fftype'] = 'Feo3'
                     else:  # Fe2+ site
-                        atom['fftype'] = 'Fe2o'
+                        atom['fftype'] = 'Feo2'
+                elif o_neighbors == 5:  # Edge Fe
+                    if avg_bond_dist < 2.0:  # Fe3+ site
+                        atom['fftype'] = 'Fee3'
+                    else:  # Fe2+ site
+                        atom['fftype'] = 'Fee2'
                 elif o_neighbors == 4:  # Tetrahedral Fe
                     if avg_bond_dist < 2.0:  # Fe3+ site (typical distance cutoff for tetrahedral)
-                        atom['fftype'] = 'Fe3t'
+                        atom['fftype'] = 'Fet3'
                     else:  # Fe2+ site
-                        atom['fftype'] = 'Fe2t'
+                        atom['fftype'] = 'Fet2'
                         print(f"Do you really have a tetrahedral Fe2+ site?")
                 elif coord_num > 6:
                     atom['fftype'] = 'Fe_ov'  # Over-coordinated
@@ -267,7 +271,7 @@ def minff(atoms, Box_dim, ffname='minff', rmaxlong=2.45, rmaxH=1.2):
                     atom['fftype'] = 'Fe_un'  # Under-coordinated
             
             # Fluoride assignments
-            elif el == 'F':
+            elif atom.get('type', '').lower().startswith('f'):
                 if coord_num == 3:
                     atom['fftype'] = 'Fs'
                 elif coord_num == 4:
@@ -286,14 +290,14 @@ def minff(atoms, Box_dim, ffname='minff', rmaxlong=2.45, rmaxH=1.2):
                     print(f"Neighbors: {neighbor_types}")
             
             # Hydrogen assignments
-            elif el == 'H':
+            elif atom.get('type', '').lower().startswith('h'):
                 if coord_num == 1:
                     atom['fftype'] = 'H'
                 elif coord_num > 1:
                     atom['fftype'] = 'H_ov'  # Over-coordinated
             
             # Oxygen assignments - based on neighbor pattern
-            elif el == 'O':
+            elif atom.get('type', '').lower().startswith('o'):
                 # Begin with basic cases based on key neighbor patterns
                 if neighbors_str == 'AlAlAl' or neighbors_str == 'AlAlAlAl':
                     atom['fftype'] = 'Ob'
@@ -453,11 +457,11 @@ def minff(atoms, Box_dim, ffname='minff', rmaxlong=2.45, rmaxH=1.2):
             atom['type'] = atom['fftype']
     
     # Apply charges based on the MINFF forcefield after atom typing is complete
-    atom_labels = ['Alo', 'Alt', 'Ale', 'Tio', 'Feo', 'Fet', 'Fee', 'Fe3e', 'Fe2', 'Fe2e', 
-                  'Na', 'K', 'Cs', 'Mgo', 'Mgh', 'Mge', 'Cao', 'Cah', 'Sit', 'Si', 
+    atom_labels = ['Alo', 'Alt', 'Ale', 'Tio', 'Feo3', 'Fet3', 'Fee3', 'Feo2', 'Fet2', 'Fee2', 'Fs',
+                  'Na', 'K', 'Cs', 'Mgo', 'Mgh', 'Mge', 'Cao', 'Cah', 'Sit', 
                   'Sio', 'Site', 'Lio', 'H']
-    charges = [1.782, 1.782, 1.985, 2.48, 1.5, 1.5, 1.75, 1.75, 1.184, 1.32, 
-               1.0, 1.0, 1.0, 1.562, 1.74, 1.635, 1.66, 1.52, 1.884, 1.884, 
+    charges = [1.782, 1.782, 1.985, 2.48, 1.5, 1.5, 1.75, 1.184, 1.184, 1.32, -0.76,
+               1.0, 1.0, 1.0, 1.562, 1.74, 1.635, 1.66, 1.52, 1.884, 
                1.884, 2.413, 0.86, 0.4]
     # By default, apply charges to all atoms (set resname=None)
     # To limit charge assignment to specific residues, provide a resname (e.g., 'MIN')
@@ -796,7 +800,7 @@ def clayff(atoms, Box_dim, ffname='clayff', rmaxlong=2.45, rmaxH=1.2):
                     print(f"Neighbors: {neighbor_types}")
             
             # Iron assignments with Fe3+/Fe2+ distinction based on bond distance
-            elif el == 'Fe':
+            elif atom.get('type', '').lower().startswith('fe'):
                 o_neighbors = neighbor_types.count('O')
                 avg_bond_dist = atom.get('avg_bond_dist', 0)
                 

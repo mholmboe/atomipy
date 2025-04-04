@@ -30,7 +30,7 @@ def main():
         type_changes_file.write("Filename\tChanged Atom Count\tAtom Type Changes\n")
         
         # Loop through all preem{1-45}.gro files in the conf directory
-        for i in range(1, 46):
+        for i in range(1,46): #(1, 46):
             input_file = f"conf/preem{i}.gro"
             
             # Skip if the file doesn't exist
