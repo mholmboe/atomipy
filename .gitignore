@@ -31,3 +31,5 @@ conf/
 output/
 launch_app.sh
 
+# Web App Directory
+atomipy-web/
