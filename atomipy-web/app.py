@@ -24,8 +24,15 @@ from atomipy.charge import charge_minff, charge_clayff, assign_formal_charges, b
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.urandom(24)
-app.config['UPLOAD_FOLDER'] = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'uploads')
-app.config['RESULTS_FOLDER'] = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'results')
+
+# Use /tmp for writable storage on App Engine, otherwise use local folders
+if os.environ.get('GAE_ENV', '').startswith('standard'):
+    app.config['UPLOAD_FOLDER'] = '/tmp/uploads'
+    app.config['RESULTS_FOLDER'] = '/tmp/results'
+else:
+    app.config['UPLOAD_FOLDER'] = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'uploads')
+    app.config['RESULTS_FOLDER'] = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'results')
+
 app.config['ALLOWED_EXTENSIONS'] = {'gro', 'pdb'}
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16 MB max upload size
 
@@ -159,19 +166,6 @@ def upload_file():
                     flash('Invalid forcefield type selected')
                     return redirect(url_for('index'))
                 
-                # Apply charges automatically based on the selected forcefield
-                if ff_type == 'minff':
-                    print("Applying MINFF charges automatically...")
-                    atoms = charge_minff(atoms, box_dim)
-                    print("MINFF charges applied successfully")
-                elif ff_type == 'clayff':
-                    print("Applying CLAYFF charges automatically...")
-                    atoms = charge_clayff(atoms, box_dim)
-                    print("CLAYFF charges applied successfully")
-                else:
-                    flash('Invalid forcefield selected')
-                    return redirect(url_for('index'))
-                
                 # Comprehensive debug of the structure
                 print(f"Type of atoms after processing: {type(atoms)}")
                 
@@ -286,16 +280,6 @@ def upload_file():
                         else:
                             alt_atoms = alt_result
                             alt_box_dim = original_box_dim
-                    
-                    # Apply the appropriate charges for the alternative forcefield
-                    if alt_ff_type == 'minff':
-                        print("Applying MINFF charges automatically to alternative atoms...")
-                        alt_atoms = charge_minff(alt_atoms, alt_box_dim)
-                        print("MINFF charges applied successfully to alternative atoms")
-                    elif alt_ff_type == 'clayff':
-                        print("Applying CLAYFF charges automatically to alternative atoms...")
-                        alt_atoms = charge_clayff(alt_atoms, alt_box_dim)
-                        print("CLAYFF charges applied successfully to alternative atoms")
                     
                     # Save structure files for alternative forcefield
                     print(f"Writing GRO file for {alt_ff_type}...")
