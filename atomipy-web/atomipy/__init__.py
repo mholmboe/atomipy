@@ -12,11 +12,13 @@ calculations, bond/angle detection, and structure manipulation functions.
 from . import import_conf
 import_pdb = import_conf.pdb
 import_gro = import_conf.gro
+import_xyz = import_conf.xyz
 import_auto = import_conf.auto
 
 from . import write_conf
 write_pdb = write_conf.pdb
 write_gro = write_conf.gro
+write_xyz = write_conf.xyz
 write_auto = write_conf.auto
 
 # Topology file generation
@@ -69,8 +71,8 @@ __version__ = "0.5.0"
 
 # Expose key functions at the package level
 __all__ = [
-    'import_pdb', 'import_gro', 'import_auto',
-    'write_pdb', 'write_gro', 'write_auto',
+    'import_pdb', 'import_gro', 'import_xyz', 'import_auto',
+    'write_pdb', 'write_gro', 'write_xyz', 'write_auto',
     'write_itp', 'write_psf', 'write_lmp',
     'element', 'radius', 'mass',
     'dist_matrix', 'cell_list_dist_matrix', 'bond_angle',

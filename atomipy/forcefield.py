@@ -304,7 +304,7 @@ def get_structure_stats(atoms, total_charge, ffname, Box_dim=None, Cell=None, lo
     
     return result
 
-def minff(atoms, Box_dim, ffname='minff', rmaxlong=2.45, rmaxH=1.2, log=False):
+def minff(atoms, Box_dim, ffname='minff', rmaxlong=2.45, rmaxH=1.2, log=False, log_file=None):
     """Assign MINFF forcefield specific atom types to atoms based on their coordination environment.
     
     This function updates the 'fftype' field based on the atom's element and its bonding environment,
@@ -320,6 +320,9 @@ def minff(atoms, Box_dim, ffname='minff', rmaxlong=2.45, rmaxH=1.2, log=False):
         ffname: The forcefield name, default is 'minff'.
         rmaxlong: Maximum bond distance for non-hydrogen bonds, default is 2.45 Å.
         rmaxH: Maximum bond distance for hydrogen bonds, default is 1.2 Å.
+        log: If True, generate statistics and write to a log file, default is False.
+        log_file: Optional path to a log file. If provided and log is True, statistics will be
+                 written to this file instead of the default filename.
     
     Returns:
         The updated atoms list with 'fftype' fields assigned.
@@ -879,19 +882,20 @@ def minff(atoms, Box_dim, ffname='minff', rmaxlong=2.45, rmaxH=1.2, log=False):
     
     # Generate and output structure statistics if log is enabled
     if log:
-        log_file = f"{ffname}_structure_stats.log"
+        # Use provided log_file path or generate default name if not provided
+        log_path = log_file if log_file is not None else f"{ffname}_structure_stats.log"
         # Convert Box_dim to Cell parameters for additional statistics
         from .cell_utils import Box_dim2Cell
         Cell = Box_dim2Cell(Box_dim)
         
-        stats = get_structure_stats(atoms, total_charge, ffname, Box_dim=Box_dim, Cell=Cell, log_file=log_file)
-        print(f"Structure statistics written to {log_file}")
+        stats = get_structure_stats(atoms, total_charge, ffname, Box_dim=Box_dim, Cell=Cell, log_file=log_path)
+        print(f"Structure statistics written to {log_path}")
     
     return atoms, all_neighbors
 
 
 
-def clayff(atoms, Box_dim, ffname='clayff', rmaxlong=2.45, rmaxH=1.2, log=False):
+def clayff(atoms, Box_dim, ffname='clayff', rmaxlong=2.45, rmaxH=1.2, log=False, log_file=None):
     """Assign CLAYFF forcefield specific atom types to atoms based on their coordination environment.
     
     This function updates the 'fftype' field based on the atom's element and its bonding environment,
@@ -1419,12 +1423,13 @@ def clayff(atoms, Box_dim, ffname='clayff', rmaxlong=2.45, rmaxH=1.2, log=False)
     
     # Generate and output structure statistics if log is enabled
     if log:
-        log_file = f"{ffname}_structure_stats.log"
+        # Use provided log_file path or generate default name if not provided
+        log_path = log_file if log_file is not None else f"{ffname}_structure_stats.log"
         # Convert Box_dim to Cell parameters for additional statistics
         from .cell_utils import Box_dim2Cell
         Cell = Box_dim2Cell(Box_dim)
         
-        stats = get_structure_stats(atoms, total_charge, ffname, Box_dim=Box_dim, Cell=Cell, log_file=log_file)
-        print(f"Structure statistics written to {log_file}")
+        stats = get_structure_stats(atoms, total_charge, ffname, Box_dim=Box_dim, Cell=Cell, log_file=log_path)
+        print(f"Structure statistics written to {log_path}")
     
     return atoms, all_neighbors

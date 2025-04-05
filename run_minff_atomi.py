@@ -30,8 +30,9 @@ def main():
     
     print(f"Loading PDB structure from: {pdb_file}")
     # Read the PDB file - this returns a list of atom dictionaries and cell parameters
-    atoms, box_dim = ap.import_pdb(pdb_file)
+    atoms, cell, box_dim = ap.import_pdb(pdb_file)
     print(f"Successfully loaded {len(atoms)} atoms from PDB")
+    print(f"Cell parameters: {cell}")
     print(f"Box dimensions: {box_dim}")
 
 
@@ -113,7 +114,7 @@ def main():
     # MINFF classifies atoms based on their chemical environment
     # For example, oxygen atoms can be: Oh (hydroxyl), Op (bridging), Ow (water)
     # Generate detailed structure statistics and save to a log file
-    ap.minff(replicated_atoms, replicated_box_dim, log=True)  
+    ap.minff(replicated_atoms, replicated_box_dim, log=True, log_file="minff_structure_stats.log")  
     minff_atoms = replicated_atoms
     box_dim = replicated_box_dim
     
@@ -161,17 +162,16 @@ def main():
     print("Writing final structure to preem.gro...")
     ap.write_gro(
         minff_atoms,    
-        Box_dim=box_dim,
-        file_path="preem.gro"
+        box_dim,
+        "preem.gro"
     )
     
     print("\nDone! Generated files:")
     print("1. replicated_structure.gro - Structure in GROMACS format")
-    print("2. replicated_structure.pdb - Structure in PDB format")
-    print("3. molecular_topology.itp - GROMACS topology file with H-bonds")
-    print("4. molecular_topology.psf - PSF topology file")
-    print("5. molecular_topology.data - LAMMPS topology file")
-    print("6. preem.gro - Final structure with MINFF typing and charges")
+    print("2. molecular_topology.itp - GROMACS topology file with H-bonds")
+    print("3. molecular_topology.psf - PSF topology file")
+    print("4. molecular_topology.data - LAMMPS topology file")
+    print("5. preem.gro - Final structure with MINFF typing and charges")
     print("7. minff_structure_stats.log - Detailed system statistics including dimensions, density, bonds, and angles")
 
 if __name__ == "__main__":
