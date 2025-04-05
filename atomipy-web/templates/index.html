@@ -1,0 +1,196 @@
+{% extends "base.html" %}
+
+{% block title %}atomipy - Molecular Structure Processor{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h2 class="text-center mb-0">Simple Forcefield Atom Type Assignment & Topology Generator</h2>
+            </div>
+            <div class="card-body">
+                <div class="text-center mb-4">
+                    <p class="lead">Upload a GRO or PDB file to process with atomipy</p>
+                    <p>Your file will be processed (slowly) to assign atom types and generate topology files</p>
+                </div>
+
+                <form id="upload-form" action="{{ url_for('start_processing_task') }}" method="post" enctype="multipart/form-data" class="mb-4">
+                    <div class="mb-3">
+                        <label for="file" class="form-label">Select a molecular structure file</label>
+                        <input class="form-control" type="file" id="file" name="file" accept=".gro,.pdb" required>
+                        <div class="form-text">Supported formats: .gro, .pdb</div>
+                    </div>
+                    
+                    <!-- Forcefield Selection -->
+                    <div class="mb-3">
+                        <label class="form-label">Select Forcefield Type</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="forcefield" id="minff" value="minff" checked>
+                            <label class="form-check-label" for="minff">
+                                MINFF (Mineral Force Field, note the angle terms)
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="forcefield" id="clayff" value="clayff">
+                            <label class="form-check-label" for="clayff">
+                                CLAYFF (From Cygan et al., 2004, check for errors)
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <!-- Output Topology Format Selection -->
+                    <div class="mb-3">
+                        <label class="form-label">Select Output Topology Formats:</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="output_formats" id="format_itp" value="itp" checked>
+                            <label class="form-check-label" for="format_itp">
+                                GROMACS (.itp)
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="output_formats" id="format_psf" value="psf">
+                            <label class="form-check-label" for="format_psf">
+                                CHARMM/NAMD (.psf)
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="output_formats" id="format_lmp" value="lmp">
+                            <label class="form-check-label" for="format_lmp">
+                                LAMMPS (.data)
+                            </label>
+                        </div>
+                        <div class="form-text">Select at least one format.</div>
+                    </div>
+
+                    <!-- Removed charge assignment selection as it's now automatic -->
+
+                    
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="bi bi-cloud-upload"></i> Process File
+                        </button>
+                    </div>
+                </form>
+
+                <!-- Progress Bar Section (Initially Hidden) -->
+                <div id="progress-section" style="display: none;" class="mt-4">
+                    <h5>Processing...</h5>
+                    <div class="progress">
+                        <div id="progress-bar" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                    </div>
+                    <p id="progress-status" class="mt-2 text-muted">Starting...</p>
+                </div>
+
+                <div class="alert alert-info">
+                    <h5>What will be processed:</h5>
+                    <ul>
+                        <li>Element assignment based on atoms and their neighbours</li>
+                        <li>Bond and angle calculation with periodic boundary conditions</li>
+                        <li>Forcefield atom type assignment (MINFF or CLAYFF)</li>
+                        <li>Automatic charge assignment based on the selected forcefield</li>
+                        <li>Generation of processed structure files (.gro, .pdb)</li>
+                        <li>Generation of topology files (.itp for GROMACS, .psf for CHARMM/NAMD, .data for LAMMPS)</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const form = document.querySelector('form');
+    const progressSection = document.getElementById('progress-section');
+    const progressBar = document.getElementById('progress-bar');
+    const progressStatus = document.getElementById('progress-status');
+    const submitButton = form.querySelector('button[type="submit"]');
+
+    form.addEventListener('submit', function(event) {
+        event.preventDefault(); // Prevent default form submission
+
+        // Show progress bar and disable button
+        progressSection.style.display = 'block';
+        progressBar.style.width = '0%';
+        progressBar.setAttribute('aria-valuenow', 0);
+        progressBar.textContent = '0%';
+        progressStatus.textContent = 'Uploading file...';
+        submitButton.disabled = true;
+        submitButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processing...';
+
+        const formData = new FormData(form);
+        let taskId = null;
+        let pollInterval = null;
+
+        // Function to reset UI
+        function resetUI() {
+            progressSection.style.display = 'none';
+            submitButton.disabled = false;
+            submitButton.innerHTML = '<i class="bi bi-cloud-upload"></i> Process File';
+            if (pollInterval) {
+                clearInterval(pollInterval);
+            }
+        }
+
+        // --- Start the background task ---
+        fetch('{{ url_for("start_processing_task") }}', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => {
+            if (!response.ok) {
+                // Try to get error message from JSON response
+                return response.json().then(err => { throw new Error(err.error || `HTTP error! status: ${response.status}`) });
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.error) {
+                 throw new Error(data.error);
+            }
+            taskId = data.task_id;
+            progressStatus.textContent = 'Processing started. Waiting for updates...';
+            
+            // --- Start polling for status ---
+            pollInterval = setInterval(() => {
+                fetch(`/status/${taskId}`)
+                .then(response => response.json())
+                .then(statusData => {
+                    progressBar.style.width = statusData.progress + '%';
+                    progressBar.setAttribute('aria-valuenow', statusData.progress);
+                    progressBar.textContent = statusData.progress + '%';
+                    progressStatus.textContent = statusData.step || statusData.status; // Show step if available
+
+                    if (statusData.status === 'Complete') {
+                        clearInterval(pollInterval);
+                        progressStatus.textContent = 'Processing complete! Redirecting...';
+                        // Redirect to a route that handles the final redirect based on task completion
+                        window.location.href = `/task_result/${taskId}`;
+                        // UI reset will happen on page reload
+                    } else if (statusData.status === 'Error') {
+                        clearInterval(pollInterval);
+                        progressStatus.textContent = `Error: ${statusData.message || 'Unknown error occurred.'}`;
+                        // Optionally add an alert
+                        alert(`Processing failed: ${statusData.message || 'Unknown error occurred.'}`);
+                        resetUI(); 
+                    }
+                })
+                .catch(pollError => {
+                    console.error('Polling error:', pollError);
+                    progressStatus.textContent = 'Error checking status. Please try again.';
+                    clearInterval(pollInterval);
+                    resetUI();
+                });
+            }, 2000); // Poll every 2 seconds
+        })
+        .catch(error => {
+            console.error('Submission error:', error);
+            progressStatus.textContent = `Error: ${error.message}. Please check the file and selections.`;
+            // Optionally add an alert
+            alert(`Submission failed: ${error.message}`);
+            resetUI();
+        });
+    });
+</script>
+{% endblock %}

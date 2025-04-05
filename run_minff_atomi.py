@@ -24,14 +24,14 @@ def main():
     # Step 1: Load a structure file in both PDB and GRO formats
     # ------------------------------------------
     import os
-    gro_file = "Kaolinite_GII_0.0487.gro"
+    xyz_file = "Kaolinite_GII_0.0487.xyz"
     # Use absolute path to ensure file is found regardless of working directory
-    gro_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), gro_file)
+    xyz_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), xyz_file)
     
-    print(f"Loading GRO structure from: {gro_file}")
-    # Read the GRO file - this returns a list of atom dictionaries and cell parameters
-    atoms, box_dim = ap.import_gro(gro_file)
-    print(f"Successfully loaded {len(atoms)} atoms from GRO")
+    print(f"Loading XYZ structure from: {xyz_file}")
+    # Read the XYZ file - this returns a list of atom dictionaries and cell parameters
+    atoms, box_dim = ap.import_xyz(xyz_file)
+    print(f"Successfully loaded {len(atoms)} atoms from XYZ")
     print(f"Box dimensions: {box_dim}")
 
 
