@@ -114,7 +114,7 @@ def main():
     # CLAYFF classifies atoms based on their chemical environment
     # For example, oxygen atoms can be: Oh (hydroxyl), Op (bridging), Ow (water)
     # Generate a log file with structure statistics
-    ap.clayff(replicated_atoms, replicated_box_dim, log=True)  
+    ap.clayff(replicated_atoms, replicated_box_dim, log=True, log_file="clayff_structure_stats.log")  
     clayff_atoms = replicated_atoms
     box_dim = replicated_box_dim
     

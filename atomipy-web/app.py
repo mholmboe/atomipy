@@ -3,11 +3,28 @@ import sys
 import uuid
 import zipfile
 import io
+import time
+import logging
+import traceback
 from flask import Flask, render_template, request, redirect, url_for, send_from_directory, flash, session, Response, jsonify
 from werkzeug.utils import secure_filename
 from werkzeug.exceptions import RequestEntityTooLarge
 from flask_executor import Executor
 import shutil
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler()
+    ]
+)
+logger = logging.getLogger('atomipy-web')
+
+# Global settings for timeouts and limits
+PROCESSING_TIMEOUT = 30  # seconds
+MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
 
 # Add the parent directory to sys.path to import atomipy
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -16,8 +33,8 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import atomipy as ap
 
 # Direct imports for functions explicitly exposed in __init__.py
-from atomipy import import_gro, import_pdb
-from atomipy import write_conf, write_top
+from atomipy import import_gro, import_pdb, import_xyz
+from atomipy import write_pdb, write_gro, write_xyz, write_top
 from atomipy import Box_dim2Cell, Cell2Box_dim
 
 # Updated imports for forcefield and charge modules
@@ -25,7 +42,11 @@ from atomipy.forcefield import minff, clayff
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.urandom(24)
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16 MB upload limit
+app.config['MAX_CONTENT_LENGTH'] = MAX_FILE_SIZE  # Reduced to 10 MB for better stability
+
+# App Engine specific configuration
+app.config['EXECUTOR_TYPE'] = 'thread'
+app.config['EXECUTOR_MAX_WORKERS'] = 2  # Limit concurrent tasks to prevent resource exhaustion
 
 # Initialize Flask-Executor
 executor = Executor(app)
@@ -36,9 +57,12 @@ UPLOAD_FOLDER_NAME = 'uploads'
 RESULTS_FOLDER_NAME = 'results'
 
 # Use /tmp for writable storage on App Engine, otherwise use local folders
-if os.environ.get('GAE_ENV', '').startswith('standard'):
+# Check for any Google Cloud environment: GAE_ENV, GAE_INSTANCE, or CLOUD_RUN_JOB
+if os.environ.get('GAE_ENV', '').startswith('standard') or os.environ.get('GAE_INSTANCE') or os.environ.get('CLOUD_RUN_JOB'):
     app.config['UPLOAD_FOLDER'] = '/tmp/uploads'
     app.config['RESULTS_FOLDER'] = '/tmp/results'
+    app.config['TEMP_DIR'] = '/tmp'
+    print(f"Running in cloud environment, using /tmp for writable storage")
 else:
     app.config['UPLOAD_FOLDER'] = os.path.join(os.path.dirname(os.path.abspath(__file__)), UPLOAD_FOLDER_NAME)
     app.config['RESULTS_FOLDER'] = os.path.join(os.path.dirname(os.path.abspath(__file__)), RESULTS_FOLDER_NAME)
@@ -54,40 +78,46 @@ def allowed_file(filename):
 
 # --- Background Task ---
 def process_file_task(task_id, filepath, filename, ff_type, output_formats, results_id, results_dir, generate_topology=True):
+    start_time = time.time()
+    logger.info(f"Starting task {task_id} for file {filename}")
     base_filename = filename.rsplit('.', 1)[0]
     try:
         tasks_status[task_id] = {'status': 'Processing', 'step': 'Reading structure', 'progress': 10}
         # Use appropriate import function based on file extension
         file_extension = filename.rsplit('.', 1)[1].lower()
         if file_extension == 'gro':
-            atoms, box_dim = import_gro(filepath)
+            atoms, cell, box_dim = import_gro(filepath)
         elif file_extension == 'pdb':
-            atoms, cell = import_pdb(filepath)
-            # Convert cell to box_dim for consistency
-            box_dim = Cell2Box_dim(cell)
+            atoms, cell, box_dim = import_pdb(filepath)
+            # box_dim is now directly provided by the import function
         elif file_extension == 'xyz':
             # Import XYZ file with box dimensions from the comment line
-            from atomipy import import_conf
-            atoms, box_dim = import_conf.xyz(filepath)
+            atoms, cell, box_dim = import_xyz(filepath)
+            # Check if box dimensions were provided
+            if box_dim is None:
+                raise ValueError("XYZ file must contain box dimensions on the second line after a # character (e.g., # 40.0 40.0 40.0)")
             # If box_dim is a Cell format (1x6), convert to Box_dim for consistency
-            if box_dim is not None and len(box_dim) == 6:
+            elif len(box_dim) == 6:
                 # Convert [a, b, c, alpha, beta, gamma] to Box_dim
                 box_dim = Cell2Box_dim(box_dim)
         else:
             raise ValueError(f"Unsupported file extension: {file_extension}")
         tasks_status[task_id] = {'status': 'Processing', 'step': f'Assigning {ff_type} atom types', 'progress': 30}
         if ff_type == 'minff':
-            # Generate MINFF log file
-            atoms = minff(atoms, box_dim, log=True)
-            # Rename the log file to include the results ID for uniqueness
-            if os.path.exists('minff_structure_stats.log'):
-                shutil.copy('minff_structure_stats.log', os.path.join(results_dir, 'minff_structure_stats.log'))
+            # Import necessary functions from atomipy
+            from atomipy.forcefield import minff
+            
+            # Generate log file path in the writable results directory
+            log_file = os.path.join(results_dir, 'minff_structure_stats.log')
+            
+            # Assign atom types using MINFF forcefield and generate statistics in one call
+            atoms = minff(atoms, box_dim, log=True, log_file=log_file)
         elif ff_type == 'clayff':
-            # Generate CLAYFF log file
-            atoms = clayff(atoms, box_dim, log=True)
-            # Rename the log file to include the results ID for uniqueness
-            if os.path.exists('clayff_structure_stats.log'):
-                shutil.copy('clayff_structure_stats.log', os.path.join(results_dir, 'clayff_structure_stats.log'))
+            # Generate log file path in the writable results directory
+            log_file = os.path.join(results_dir, 'clayff_structure_stats.log')
+            
+            # Assign atom types using CLAYFF forcefield and generate statistics in one call
+            atoms = clayff(atoms, box_dim, log=True, log_file=log_file)
         tasks_status[task_id] = {'status': 'Processing', 'step': f'Calculating charges ({ff_type})', 'progress': 50}
         # Comprehensive debug of the structure
         print(f"Type of atoms after processing: {type(atoms)}")
@@ -189,28 +219,49 @@ def process_file_task(task_id, filepath, filename, ff_type, output_formats, resu
         pdb_filepath = os.path.join(results_dir, f"{base_filename}_{ff_type}.pdb")
         # Convert box_dim to cell parameters for PDB and XYZ formats
         cell = Box_dim2Cell(box_dim)
-        write_conf.pdb(atoms, cell, pdb_filepath)
+        write_pdb(atoms, cell, pdb_filepath)
         print(f"PDB file written successfully to {pdb_filepath}")
 
         # GRO file is also always generated for reference
         tasks_status[task_id] = {'status': 'Processing', 'step': 'Writing GRO', 'progress': 90} # Update progress
         gro_filepath = os.path.join(results_dir, f"{base_filename}_{ff_type}.gro")
-        write_conf.gro(atoms, box_dim, gro_filepath)
+        write_gro(atoms, box_dim, gro_filepath)
         print(f"GRO file written successfully to {gro_filepath}")
         
         # XYZ file is also generated for reference with cell info on line 2
         tasks_status[task_id] = {'status': 'Processing', 'step': 'Writing XYZ', 'progress': 95} # Final writing step
         xyz_filepath = os.path.join(results_dir, f"{base_filename}_{ff_type}.xyz")
-        write_conf.xyz(atoms, Cell=cell, file_path=xyz_filepath)
+        write_xyz(atoms, Cell=cell, file_path=xyz_filepath)
         print(f"XYZ file written successfully to {xyz_filepath}")
 
-        tasks_status[task_id] = {'status': 'Complete', 'results_id': results_id, 'progress': 100}
-        print(f"Task {task_id} completed successfully. Results ID: {results_id}")
+        elapsed_time = time.time() - start_time
+        logger.info(f"Task {task_id} completed successfully in {elapsed_time:.2f} seconds. Results ID: {results_id}")
+        tasks_status[task_id] = {
+            'status': 'Complete', 
+            'results_id': results_id, 
+            'progress': 100,
+            'elapsed_time': f"{elapsed_time:.2f} seconds"
+        }
     except Exception as e:
-        print(f"Error processing task {task_id}: {e}")
-        import traceback
-        traceback.print_exc()  # Log traceback for debugging
-        tasks_status[task_id] = {'status': 'Error', 'message': f'Error generating output files: {e}', 'progress': 100}
+        error_msg = f"Error processing task {task_id}: {str(e)}"
+        logger.error(error_msg)
+        logger.error(traceback.format_exc())  # Log detailed traceback for debugging
+        
+        # Try to extract more details about the error
+        error_type = type(e).__name__
+        error_details = str(e)
+        
+        # Create a more informative error message
+        detailed_error = f"{error_type}: {error_details}"
+        logger.error(f"Detailed error: {detailed_error}")
+        
+        tasks_status[task_id] = {
+            'status': 'Error', 
+            'message': f'Error generating output files: {detailed_error}', 
+            'progress': 100,
+            'error_type': error_type,
+            'timestamp': time.time()
+        }
     finally:
         # Clean up the original uploaded file from the results directory
         # as it's not needed after processing.
@@ -273,8 +324,17 @@ def start_processing_task():  # Renamed route function
             task_id = str(uuid.uuid4())
             tasks_status[task_id] = {'status': 'Pending', 'progress': 0}
 
-            # Submit the task to the executor
-            executor.submit(process_file_task, task_id, filepath, filename, ff_type, output_formats, results_id, results_dir, generate_topology)
+            # Submit the task to the executor with a timeout
+            try:
+                # Log the task submission
+                file_size = os.path.getsize(filepath)
+                logger.info(f"Submitting task {task_id} for file {filename} ({file_size} bytes)")
+                
+                # Submit the task to the executor
+                executor.submit(process_file_task, task_id, filepath, filename, ff_type, output_formats, results_id, results_dir, generate_topology)
+            except Exception as e:
+                logger.error(f"Error submitting task: {str(e)}")
+                raise
 
             # Return the task ID to the client
             return jsonify({'task_id': task_id})

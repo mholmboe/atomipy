@@ -193,8 +193,8 @@ def xyz(atoms, Cell=None, file_path=None):
             y = atom.get('y', 0.0)
             z = atom.get('z', 0.0)
             
-            # Write atom entry: Element X Y Z
-            f.write(f"{element:<2}           {x:.5f}   {y:.5f}   {z:.5f}\n")
+            # Write atom entry: Element X Y Z with right-aligned coordinates and extra spacing
+            f.write(f"{element:<2}         {x:>12.5f}    {y:>12.5f}    {z:>12.5f}\n")
 
 
 def auto(atoms, box, file_path):
