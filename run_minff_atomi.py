@@ -9,7 +9,7 @@ using the atomipy package. It demonstrates how to:
 3. Create a supercell
 4. Calculate bonds and angles
 5. Assign atomtypes according to MINFF
-6. Generate a molecular topology file
+6. Generate a minff topology file
 """
 
 # Import the atomipy package and other required libraries
@@ -17,7 +17,7 @@ import atomipy as ap
 import numpy as np
 
 def main():
-    """Main function to demonstrate atomipy molecular modeling workflow"""
+    """Main function to demonstrate atomipy minff modeling workflow"""
     print("atomipy demo")
     print("======================================\n")
 
@@ -128,9 +128,9 @@ def main():
     for atype, count in atom_types.items():
         print(f"  {atype}: {count}")
     
-    # Step 7: Generate a molecular topology file
+    # Step 7: Generate a minff topology file
     # ----------------------------------------
-    print("\nGenerating molecular topology files...")
+    print("\nGenerating minff topology files...")
     # The topology (.itp) file contains all information needed for simulation:
     # - Atom definitions (type, charge, mass)
     # - Bond connections (only hydrogen bonds with current settings)
@@ -138,23 +138,23 @@ def main():
     ap.write_itp(
         minff_atoms, 
         Box_dim=box_dim,
-        file_path="molecular_topology.itp"
+        file_path="minff_topology.itp"
     )
     
-    # Also generate a PSF topology file for use with other molecular dynamics packages
+    # Also generate a PSF topology file for use with other minff dynamics packages
     print("Writing PSF topology file...")
     ap.write_psf(
         minff_atoms,
         Box_dim=box_dim,
-        file_path="molecular_topology.psf"
+        file_path="minff_topology.psf"
     )
     
-    # Also generate a LAMMPS topology file for use with other molecular dynamics packages
+    # Also generate a LAMMPS topology file for use with other minff dynamics packages
     print("Writing LAMMPS topology file...")
     ap.write_lmp(
         minff_atoms,
         Box_dim=box_dim,
-        file_path="molecular_topology.data"
+        file_path="minff_topology.data"
     )
     
     # Step 8: Write final GRO file
@@ -168,9 +168,9 @@ def main():
     
     print("\nDone! Generated files:")
     print("1. replicated_structure.gro - Structure in GROMACS format")
-    print("2. molecular_topology.itp - GROMACS topology file with H-bonds")
-    print("3. molecular_topology.psf - PSF topology file")
-    print("4. molecular_topology.data - LAMMPS topology file")
+    print("2. minff_topology.itp - GROMACS topology file with H-bonds")
+    print("3. minff_topology.psf - PSF topology file")
+    print("4. minff_topology.data - LAMMPS topology file")
     print("5. preem.gro - Final structure with MINFF typing and charges")
     print("7. minff_structure_stats.log - Detailed system statistics including dimensions, density, bonds, and angles")
 

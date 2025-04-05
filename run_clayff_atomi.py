@@ -9,7 +9,7 @@ using the atomipy package. It demonstrates how to:
 3. Create a supercell
 4. Calculate bonds and angles
 5. Assign atomtypes according to CLAYFF
-6. Generate a molecular topology file
+6. Generate a clayff topology file
 """
 
 # Import the atomipy package and other required libraries
@@ -18,7 +18,7 @@ import numpy as np
 
 
 def main():
-    """Main function to demonstrate atomipy molecular modeling workflow"""
+    """Main function to demonstrate atomipy clayff modeling workflow"""
     print("atomipy demo")
     print("======================================\n")
 
@@ -129,9 +129,9 @@ def main():
     for atype, count in atom_types.items():
         print(f"  {atype}: {count}")
     
-    # Step 7: Generate a molecular topology file
+    # Step 7: Generate a clayff topology file
     # ----------------------------------------
-    print("\nGenerating molecular topology files...")
+    print("\nGenerating clayff topology files...")
     # The topology (.itp) file contains all information needed for simulation:
     # - Atom definitions (type, charge, mass)
     # - Bond connections (only hydrogen bonds with current settings)
@@ -139,23 +139,23 @@ def main():
     ap.write_itp(
         clayff_atoms, 
         Box_dim=box_dim,
-        file_path="molecular_topology.itp"
+        file_path="clayff_topology.itp"
     )
     
-    # Also generate a PSF topology file for use with other molecular dynamics packages
+    # Also generate a PSF topology file for use with other clayff dynamics packages
     print("Writing PSF topology file...")
     ap.write_psf(
         clayff_atoms,
         Box_dim=box_dim,
-        file_path="molecular_topology.psf"
+        file_path="clayff_topology.psf"
     )
     
-    # Also generate a LAMMPS topology file for use with other molecular dynamics packages
+    # Also generate a LAMMPS topology file for use with other clayff dynamics packages
     print("Writing LAMMPS topology file...")
     ap.write_lmp(
         clayff_atoms,
         Box_dim=box_dim,
-        file_path="molecular_topology.data"
+        file_path="clayff_topology.data"
     )
     
     # Step 8: Write final GRO file
@@ -170,9 +170,9 @@ def main():
     print("\nDone! Generated files:")
     print("1. replicated_structure.gro - Structure in GROMACS format")
     print("2. replicated_structure.pdb - Structure in PDB format")
-    print("3. molecular_topology.itp - GROMACS topology file with H-bonds")
-    print("4. molecular_topology.psf - PSF topology file")
-    print("5. molecular_topology.data - LAMMPS topology file")
+    print("3. clayff_topology.itp - GROMACS topology file with H-bonds")
+    print("4. clayff_topology.psf - PSF topology file")
+    print("5. clayff_topology.data - LAMMPS topology file")
     print("6. preem.gro - Final structure with CLAYFF typing and charges")
     print("7. clayff_structure_stats.log - Detailed system statistics including dimensions, density, bonds, and angles")
 
