@@ -193,7 +193,7 @@ def get_structure_stats(atoms, total_charge, ffname, Box_dim=None, Cell=None, lo
     
     output.append("\nUnique Atom Types and Their Coordination Environment")
     output.append("-" * 70)
-    output.append(f"{'Type':<10} {'Count':<6} {'Neighbors':<25} {'Charge':<15}")
+    output.append(f"{'Type':<10} {'Count':<6} {'Neighbors':<25} {'Charge':>15}")
     output.append("-" * 70)
     
     # Sort by atom type for a more organized display
@@ -211,12 +211,12 @@ def get_structure_stats(atoms, total_charge, ffname, Box_dim=None, Cell=None, lo
         
         # If there's only one unique charge, display it as before
         if len(unique_charges) == 1:
-            charge_str = f"{unique_charges[0]:.3f}"
+            charge_str = f"{unique_charges[0]:.5f}"
         else:
             # Otherwise, display all unique charges separated by commas
-            charge_str = ', '.join([f"{c:.3f}" for c in sorted(unique_charges)])
+            charge_str = ', '.join([f"{c:.5f}" for c in sorted(unique_charges)])
         
-        output.append(f"{atom_type:<10} {count:<6} {neighbor_pattern:<25} {charge_str}")
+        output.append(f"{atom_type:<10} {count:<6} {neighbor_pattern:<25} {charge_str:>15}")
     
     output.append("-" * 70)
     
@@ -865,7 +865,7 @@ def minff(atoms, Box_dim, ffname='minff', rmaxlong=2.45, rmaxH=1.2, log=False, l
     # Print a compact table of truly unique atom types and their neighbors
     print("\nUnique Atom Types and Their Coordination Environment")
     print("-" * 70)
-    print(f"{'Type':<10} {'Count':<6} {'Neighbors':<25} {'Charge':<15}")
+    print(f"{'Type':<10} {'Count':<6} {'Neighbors':<25} {'Charge':>15}")
     print("-" * 70)
     
     # Sort by atom type for a more organized display
@@ -873,8 +873,8 @@ def minff(atoms, Box_dim, ffname='minff', rmaxlong=2.45, rmaxH=1.2, log=False, l
         atom_type, neighbor_pattern = key
         count = unique_patterns[key]['count']
         charges = unique_patterns[key]['charges']
-        charge_str = ', '.join([f"{c:.3f}" if isinstance(c, float) else str(c) for c in charges])
-        print(f"{atom_type:<10} {count:<6} {neighbor_pattern:<25} {charge_str:<15}")
+        charge_str = ', '.join([f"{c:.5f}" if isinstance(c, float) else str(c) for c in charges])
+        print(f"{atom_type:<10} {count:<6} {neighbor_pattern:<25} {charge_str:>15}")
     print("-" * 70)
     
     # Calculate total charge for statistics
@@ -1406,7 +1406,7 @@ def clayff(atoms, Box_dim, ffname='clayff', rmaxlong=2.45, rmaxH=1.2, log=False,
     # Print a compact table of truly unique atom types and their neighbors
     print("\nUnique Atom Types and Their Coordination Environment")
     print("-" * 70)
-    print(f"{'Type':<10} {'Count':<6} {'Neighbors':<25} {'Charge':<15}")
+    print(f"{'Type':<10} {'Count':<6} {'Neighbors':<25} {'Charge':>15}")
     print("-" * 70)
     
     # Sort by atom type for a more organized display
@@ -1414,8 +1414,8 @@ def clayff(atoms, Box_dim, ffname='clayff', rmaxlong=2.45, rmaxH=1.2, log=False,
         atom_type, neighbor_pattern = key
         count = unique_patterns[key]['count']
         charges = unique_patterns[key]['charges']
-        charge_str = ', '.join([f"{c:.3f}" if isinstance(c, float) else str(c) for c in charges])
-        print(f"{atom_type:<10} {count:<6} {neighbor_pattern:<25} {charge_str:<15}")
+        charge_str = ', '.join([f"{c:.5f}" if isinstance(c, float) else str(c) for c in charges])
+        print(f"{atom_type:<10} {count:<6} {neighbor_pattern:<25} {charge_str:>15}")
     print("-" * 70)
     
     # Calculate total charge for statistics
