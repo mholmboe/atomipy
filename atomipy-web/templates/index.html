@@ -11,15 +11,15 @@
             </div>
             <div class="card-body">
                 <div class="text-center mb-4">
-                    <p class="lead">Upload a GRO or PDB file to process with atomipy</p>
+                    <p class="lead">Upload a GRO, PDB, or XYZ file to process with atomipy</p>
                     <p>Your file will be processed (slowly) to assign atom types and generate topology files</p>
                 </div>
 
                 <form id="upload-form" action="{{ url_for('start_processing_task') }}" method="post" enctype="multipart/form-data" class="mb-4">
                     <div class="mb-3">
                         <label for="file" class="form-label">Select a molecular structure file</label>
-                        <input class="form-control" type="file" id="file" name="file" accept=".gro,.pdb" required>
-                        <div class="form-text">Supported formats: .gro, .pdb</div>
+                        <input class="form-control" type="file" id="file" name="file" accept=".gro,.pdb,.xyz" required>
+                        <div class="form-text">Supported formats: .gro, .pdb, .xyz (must contain box dimensions)</div>
                     </div>
                     
                     <!-- Forcefield Selection -->
@@ -39,28 +39,39 @@
                         </div>
                     </div>
                     
-                    <!-- Output Topology Format Selection -->
+                    <!-- Topology Generation Option -->
                     <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="generate_topology" name="generate_topology" checked>
+                            <label class="form-check-label" for="generate_topology">
+                                Generate topology files
+                            </label>
+                        </div>
+                        <div class="form-text">Uncheck to only generate structure files and log files (faster processing).</div>
+                    </div>
+
+                    <!-- Output Topology Format Selection (Only visible when topology generation is enabled) -->
+                    <div class="mb-3" id="topology-formats-section">
                         <label class="form-label">Select Output Topology Formats:</label>
                         <div class="form-check">
-                            <input class="form-check-input" type="checkbox" name="output_formats" id="format_itp" value="itp" checked>
+                            <input class="form-check-input topology-format" type="checkbox" name="output_formats" id="format_itp" value="itp" checked>
                             <label class="form-check-label" for="format_itp">
                                 GROMACS (.itp)
                             </label>
                         </div>
                         <div class="form-check">
-                            <input class="form-check-input" type="checkbox" name="output_formats" id="format_psf" value="psf">
+                            <input class="form-check-input topology-format" type="checkbox" name="output_formats" id="format_psf" value="psf">
                             <label class="form-check-label" for="format_psf">
                                 CHARMM/NAMD (.psf)
                             </label>
                         </div>
                         <div class="form-check">
-                            <input class="form-check-input" type="checkbox" name="output_formats" id="format_lmp" value="lmp">
+                            <input class="form-check-input topology-format" type="checkbox" name="output_formats" id="format_lmp" value="lmp">
                             <label class="form-check-label" for="format_lmp">
                                 LAMMPS (.data)
                             </label>
                         </div>
-                        <div class="form-text">Select at least one format.</div>
+                        <div class="form-text">Select at least one format if topology generation is enabled.</div>
                     </div>
 
                     <!-- Removed charge assignment selection as it's now automatic -->
@@ -83,15 +94,33 @@
                 </div>
 
                 <div class="alert alert-info">
-                    <h5>What will be processed:</h5>
+                    <h5>What can be processed:</h5>
                     <ul>
+                        <li>System box size, volume and density from the input structure</li>
                         <li>Element assignment based on atoms and their neighbours</li>
                         <li>Bond and angle calculation with periodic boundary conditions</li>
                         <li>Forcefield atom type assignment (MINFF or CLAYFF)</li>
                         <li>Automatic charge assignment based on the selected forcefield</li>
-                        <li>Generation of processed structure files (.gro, .pdb)</li>
+                        <li>Generation of processed structure files (.gro, .pdb, .xyz)</li>
                         <li>Generation of topology files (.itp for GROMACS, .psf for CHARMM/NAMD, .data for LAMMPS)</li>
                     </ul>
+                </div>
+
+                <div class="alert alert-warning">
+                    <h5>Input file requirements:</h5>
+                    <ul>
+                        <li>Note that MINFF only supports the elements H, O, Mg, Ca, Si, Al, Fe, Ti, Li, F</li>
+                        <li>All structures must be chemically reasonable and contain the right number of elements, including H</li>
+                        <li>PDB files must contain box dimensions in a CRYST1 record for proper periodic boundary handling</li>
+                        <li>XYZ files must contain box dimensions on the second line after a # character (e.g., "# 10.0 10.0 10.0 90.0 90.0 90.0")</li>
+                        <li>GRO files should follow standard GROMACS format with box dimensions on the last line</li>
+                        <li>Bond detection relies on reasonable atomic positions and standard bond lengths</li>
+                    </ul>
+                </div>
+
+                <div class="alert alert-danger mt-3">
+                    <h5>Beta Version Disclaimer</h5>
+                    <p>This is a beta version of atomipy and there is no guarantee that the output is correct. Users are responsible for verifying that the generated files are reasonable and suitable for their purposes. Use the generated files at your own risk.</p>
                 </div>
             </div>
         </div>
@@ -106,6 +135,28 @@
     const progressBar = document.getElementById('progress-bar');
     const progressStatus = document.getElementById('progress-status');
     const submitButton = form.querySelector('button[type="submit"]');
+    const generateTopologyCheckbox = document.getElementById('generate_topology');
+    const topologyFormatsSection = document.getElementById('topology-formats-section');
+    const topologyFormatCheckboxes = document.querySelectorAll('.topology-format');
+
+    // Toggle visibility of topology format options based on the generate_topology checkbox
+    generateTopologyCheckbox.addEventListener('change', function() {
+        if (this.checked) {
+            topologyFormatsSection.style.display = 'block';
+            // Ensure at least one format is selected
+            let anyChecked = false;
+            topologyFormatCheckboxes.forEach(checkbox => {
+                if (checkbox.checked) anyChecked = true;
+            });
+            if (!anyChecked) document.getElementById('format_itp').checked = true;
+        } else {
+            topologyFormatsSection.style.display = 'none';
+            // Unselect all format checkboxes when topology generation is disabled
+            topologyFormatCheckboxes.forEach(checkbox => {
+                checkbox.checked = false;
+            });
+        }
+    });
 
     form.addEventListener('submit', function(event) {
         event.preventDefault(); // Prevent default form submission
@@ -120,6 +171,24 @@
         submitButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processing...';
 
         const formData = new FormData(form);
+        
+        // If topology generation is disabled, ensure we pass that information
+        if (!generateTopologyCheckbox.checked) {
+            formData.set('generate_topology', 'false');
+        } else {
+            formData.set('generate_topology', 'true');
+            // Ensure at least one format is selected for topology generation
+            let anyFormatSelected = false;
+            topologyFormatCheckboxes.forEach(checkbox => {
+                if (checkbox.checked) anyFormatSelected = true;
+            });
+            
+            if (!anyFormatSelected && generateTopologyCheckbox.checked) {
+                event.preventDefault();
+                alert('Please select at least one topology format or disable topology generation.');
+                return false;
+            }
+        }
         let taskId = null;
         let pollInterval = null;
 

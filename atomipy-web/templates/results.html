@@ -46,15 +46,16 @@
                         </div>
                     </div>
                     
-                    <!-- MINFF Topology Files -->
+                    <!-- MINFF Topology and Log Files -->
                     <div class="col-md-6">
                         <div class="card mb-3">
                             <div class="card-header bg-info text-white">
-                                <h4 class="mb-0">MINFF Topology Files</h4>
+                                <h4 class="mb-0">MINFF Topology & Log Files</h4>
                             </div>
                             <div class="card-body">
+                                <!-- Topology Files -->
                                 <p>These files contain molecular topology information for MINFF:</p>
-                                <ul class="list-group">
+                                <ul class="list-group mb-3">
                                     {% if files.minff_topologies %}
                                         {% for file in files.minff_topologies %}
                                         <li class="list-group-item d-flex justify-content-between align-items-center">
@@ -66,6 +67,23 @@
                                         {% endfor %}
                                     {% else %}
                                         <li class="list-group-item">No MINFF topology files available</li>
+                                    {% endif %}
+                                </ul>
+                                
+                                <!-- Log Files -->
+                                <p>Log files with detailed structure statistics (dimensions, density, bonds, angles):</p>
+                                <ul class="list-group">
+                                    {% if files.minff_logs %}
+                                        {% for file in files.minff_logs %}
+                                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                                            {{ file }}
+                                            <a href="{{ url_for('download_file', results_id=results_id, filename=file) }}" class="btn btn-sm btn-outline-dark">
+                                                <i class="bi bi-download"></i> Download
+                                            </a>
+                                        </li>
+                                        {% endfor %}
+                                    {% else %}
+                                        <li class="list-group-item">No MINFF log files available</li>
                                     {% endif %}
                                 </ul>
                             </div>
@@ -105,15 +123,16 @@
                         </div>
                     </div>
                     
-                    <!-- CLAYFF Topology Files -->
+                    <!-- CLAYFF Topology and Log Files -->
                     <div class="col-md-6">
                         <div class="card mb-3">
                             <div class="card-header bg-warning text-dark">
-                                <h4 class="mb-0">CLAYFF Topology Files</h4>
+                                <h4 class="mb-0">CLAYFF Topology & Log Files</h4>
                             </div>
                             <div class="card-body">
+                                <!-- Topology Files -->
                                 <p>These files contain molecular topology information for CLAYFF:</p>
-                                <ul class="list-group">
+                                <ul class="list-group mb-3">
                                     {% if files.clayff_topologies %}
                                         {% for file in files.clayff_topologies %}
                                         <li class="list-group-item d-flex justify-content-between align-items-center">
@@ -125,6 +144,23 @@
                                         {% endfor %}
                                     {% else %}
                                         <li class="list-group-item">No CLAYFF topology files available</li>
+                                    {% endif %}
+                                </ul>
+                                
+                                <!-- Log Files -->
+                                <p>Log files with detailed structure statistics (dimensions, density, bonds, angles):</p>
+                                <ul class="list-group">
+                                    {% if files.clayff_logs %}
+                                        {% for file in files.clayff_logs %}
+                                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                                            {{ file }}
+                                            <a href="{{ url_for('download_file', results_id=results_id, filename=file) }}" class="btn btn-sm btn-outline-secondary">
+                                                <i class="bi bi-download"></i> Download
+                                            </a>
+                                        </li>
+                                        {% endfor %}
+                                    {% else %}
+                                        <li class="list-group-item">No CLAYFF log files available</li>
                                     {% endif %}
                                 </ul>
                             </div>
@@ -166,8 +202,14 @@
                         <li><strong>.itp</strong> - GROMACS topology format (defines bonds, angles, atom types)</li>
                         <li><strong>.psf</strong> - NAMD/CHARMM topology format</li>
                         <li><strong>.data</strong> - LAMMPS data file (combined structure and topology)</li>
+                        <li><strong>*_structure_stats.log</strong> - Detailed statistics including density calculation, volume, bonds and angles</li>
                     </ul>
                     <p class="mt-2 mb-0"><strong>Note:</strong> Files are generated based on the forcefield and output formats you selected on the previous page.</p>
+                </div>
+
+                <div class="alert alert-danger mt-3">
+                    <h5>Beta Version Disclaimer</h5>
+                    <p>This is a beta version of atomipy and there is no guarantee that the output is correct. Users are responsible for verifying that the generated files are reasonable and suitable for their purposes. Use the generated files at your own risk.</p>
                 </div>
 
                 <div class="d-grid gap-2 col-md-8 mx-auto mt-4">
