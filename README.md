@@ -1,6 +1,6 @@
 # atomipy: The atom Toolbox in Python
 
-A modular Python toolbox for handling and analyzing molecular structures, particularly for mineral slabs with periodic boundary conditions. This toolbox is a lightweight version of the MATLAB [atom Toolbox](https://github.com/mholmboe/atom) and can mainly be used to generate molecular topology files for the [**MINFF**](https://github.com/mholmboe/minff) forcefield with a streamlined Python interface. For small bulk systems, a simple online server running [**atomipy**](https://www.atomipy.io) is now also available.
+A modular Python toolbox for handling and analyzing molecular structures, particularly for mineral slabs with periodic boundary conditions. This toolbox is a light version of the MATLAB [atom Toolbox](https://github.com/mholmboe/atom) and can mainly be used to generate molecular topology files for the [**MINFF**](https://github.com/mholmboe/minff) forcefield with a streamlined Python interface. For small bulk systems, a simple online server running [**atomipy**](https://www.atomipy.io) is now also available.
 
 ## Overview
 

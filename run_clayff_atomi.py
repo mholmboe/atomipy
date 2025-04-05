@@ -113,8 +113,8 @@ def main():
     print("\nAssigning specialized atom types using CLAYFF...")
     # CLAYFF classifies atoms based on their chemical environment
     # For example, oxygen atoms can be: Oh (hydroxyl), Op (bridging), Ow (water)
-    # This function modifies atoms in-place (doesn't return anything)
-    ap.clayff(replicated_atoms, replicated_box_dim)  
+    # Generate a log file with structure statistics
+    ap.clayff(replicated_atoms, replicated_box_dim, log=True)  
     clayff_atoms = replicated_atoms
     box_dim = replicated_box_dim
     
@@ -173,6 +173,7 @@ def main():
     print("4. molecular_topology.psf - PSF topology file")
     print("5. molecular_topology.data - LAMMPS topology file")
     print("6. preem.gro - Final structure with CLAYFF typing and charges")
+    print("7. clayff_structure_stats.log - Detailed system statistics including dimensions, density, bonds, and angles")
 
 if __name__ == "__main__":
     main()
