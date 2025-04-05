@@ -23,8 +23,8 @@ logging.basicConfig(
 logger = logging.getLogger('atomipy-web')
 
 # Global settings for timeouts and limits
-PROCESSING_TIMEOUT = 30  # seconds
-MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
+PROCESSING_TIMEOUT = 300  # seconds
+MAX_FILE_SIZE = 16 * 1024 * 1024  # 16 MB
 
 # Add the parent directory to sys.path to import atomipy
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -42,11 +42,11 @@ from atomipy.forcefield import minff, clayff
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.urandom(24)
-app.config['MAX_CONTENT_LENGTH'] = MAX_FILE_SIZE  # Reduced to 10 MB for better stability
+app.config['MAX_CONTENT_LENGTH'] = MAX_FILE_SIZE  # Reduced to 16 MB for better stability
 
 # App Engine specific configuration
 app.config['EXECUTOR_TYPE'] = 'thread'
-app.config['EXECUTOR_MAX_WORKERS'] = 2  # Limit concurrent tasks to prevent resource exhaustion
+app.config['EXECUTOR_MAX_WORKERS'] = 4  # Limit concurrent tasks to prevent resource exhaustion
 
 # Initialize Flask-Executor
 executor = Executor(app)
