@@ -11,7 +11,11 @@ The molecular structure information is stored in dictionaries where each atom ha
 ## Key Features
 
 - Support for multiple forcefields: MINFF and CLAYFF atom typing and parameter assignment
-- Import/export PDB and Gromacs GRO files
+- Import/export PDB, Gromacs GRO, and XYZ files
+  - All file formats need to contain system size information
+  - For .pdb files, system dimensions should be in the CRYST1 record
+  - For .gro files, box dimensions should be in the last line
+  - For .xyz files, system dimensions should be on the second line after a # character
 - Generating topology files for MINFF and CLAYFF forcefields, for Gromacs (.itp), NAMD (.psf) and LAMMPS (.data)
 - Handle both orthogonal and triclinic simulation cells with periodic boundary conditions
 - Calculate bond distances and angles
