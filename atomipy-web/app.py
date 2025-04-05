@@ -43,7 +43,7 @@ else:
     app.config['UPLOAD_FOLDER'] = os.path.join(os.path.dirname(os.path.abspath(__file__)), UPLOAD_FOLDER_NAME)
     app.config['RESULTS_FOLDER'] = os.path.join(os.path.dirname(os.path.abspath(__file__)), RESULTS_FOLDER_NAME)
 
-app.config['ALLOWED_EXTENSIONS'] = {'gro', 'pdb'}
+app.config['ALLOWED_EXTENSIONS'] = {'gro', 'pdb', 'xyz'}
 
 # Create upload and results folders if they don't exist
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
@@ -53,7 +53,7 @@ def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in app.config['ALLOWED_EXTENSIONS']
 
 # --- Background Task ---
-def process_file_task(task_id, filepath, filename, ff_type, output_formats, results_id, results_dir):
+def process_file_task(task_id, filepath, filename, ff_type, output_formats, results_id, results_dir, generate_topology=True):
     base_filename = filename.rsplit('.', 1)[0]
     try:
         tasks_status[task_id] = {'status': 'Processing', 'step': 'Reading structure', 'progress': 10}
@@ -65,13 +65,29 @@ def process_file_task(task_id, filepath, filename, ff_type, output_formats, resu
             atoms, cell = import_pdb(filepath)
             # Convert cell to box_dim for consistency
             box_dim = Cell2Box_dim(cell)
+        elif file_extension == 'xyz':
+            # Import XYZ file with box dimensions from the comment line
+            from atomipy import import_conf
+            atoms, box_dim = import_conf.xyz(filepath)
+            # If box_dim is a Cell format (1x6), convert to Box_dim for consistency
+            if box_dim is not None and len(box_dim) == 6:
+                # Convert [a, b, c, alpha, beta, gamma] to Box_dim
+                box_dim = Cell2Box_dim(box_dim)
         else:
             raise ValueError(f"Unsupported file extension: {file_extension}")
         tasks_status[task_id] = {'status': 'Processing', 'step': f'Assigning {ff_type} atom types', 'progress': 30}
         if ff_type == 'minff':
-            atoms = minff(atoms, box_dim)
+            # Generate MINFF log file
+            atoms = minff(atoms, box_dim, log=True)
+            # Rename the log file to include the results ID for uniqueness
+            if os.path.exists('minff_structure_stats.log'):
+                shutil.copy('minff_structure_stats.log', os.path.join(results_dir, 'minff_structure_stats.log'))
         elif ff_type == 'clayff':
-            atoms = clayff(atoms, box_dim)
+            # Generate CLAYFF log file
+            atoms = clayff(atoms, box_dim, log=True)
+            # Rename the log file to include the results ID for uniqueness
+            if os.path.exists('clayff_structure_stats.log'):
+                shutil.copy('clayff_structure_stats.log', os.path.join(results_dir, 'clayff_structure_stats.log'))
         tasks_status[task_id] = {'status': 'Processing', 'step': f'Calculating charges ({ff_type})', 'progress': 50}
         # Comprehensive debug of the structure
         print(f"Type of atoms after processing: {type(atoms)}")
@@ -136,39 +152,57 @@ def process_file_task(task_id, filepath, filename, ff_type, output_formats, resu
         # Generate selected output files
         generated_files = []
         progress_step = 70
-        progress_increment = (95 - progress_step) / len(output_formats) if output_formats else 0
-        if 'itp' in output_formats:
-            tasks_status[task_id] = {'status': 'Processing', 'step': 'Writing ITP', 'progress': int(progress_step)}
-            topology_itp = os.path.join(results_dir, f"{base_filename}_{ff_type}.itp")
-            write_top.itp(atoms, box_dim, file_path=topology_itp)
-            generated_files.append(topology_itp)
-            print(f"ITP file for {ff_type} written successfully to {topology_itp}")
-            progress_step += progress_increment
-        if 'psf' in output_formats:
-            tasks_status[task_id] = {'status': 'Processing', 'step': 'Writing PSF', 'progress': int(progress_step)}
-            topology_psf = os.path.join(results_dir, f"{base_filename}_{ff_type}.psf")
-            write_top.psf(atoms, box_dim, file_path=topology_psf)
-            generated_files.append(topology_psf)
-            print(f"PSF file for {ff_type} written successfully to {topology_psf}")
-            progress_step += progress_increment
-        if 'lmp' in output_formats:  # Check for 'lmp' from form value
-            tasks_status[task_id] = {'status': 'Processing', 'step': 'Writing LAMMPS Data', 'progress': int(progress_step)}
-            topology_lmp = os.path.join(results_dir, f"{base_filename}_{ff_type}.data")  # Use .data extension
-            write_top.lmp(atoms, box_dim, file_path=topology_lmp)
-            generated_files.append(topology_lmp)
-            print(f"LAMMPS data file for {ff_type} written successfully to {topology_lmp}")
-            progress_step += progress_increment
+        
+        # Only generate topology files if requested
+        if generate_topology and output_formats:
+            progress_increment = (85 - progress_step) / len(output_formats) if output_formats else 0
+            if 'itp' in output_formats:
+                tasks_status[task_id] = {'status': 'Processing', 'step': 'Writing ITP', 'progress': int(progress_step)}
+                topology_itp = os.path.join(results_dir, f"{base_filename}_{ff_type}.itp")
+                write_top.itp(atoms, box_dim, file_path=topology_itp)
+                generated_files.append(topology_itp)
+                print(f"ITP file for {ff_type} written successfully to {topology_itp}")
+                progress_step += progress_increment
+            if 'psf' in output_formats:
+                tasks_status[task_id] = {'status': 'Processing', 'step': 'Writing PSF', 'progress': int(progress_step)}
+                topology_psf = os.path.join(results_dir, f"{base_filename}_{ff_type}.psf")
+                write_top.psf(atoms, box_dim, file_path=topology_psf)
+                generated_files.append(topology_psf)
+                print(f"PSF file for {ff_type} written successfully to {topology_psf}")
+                progress_step += progress_increment
+            if 'lmp' in output_formats:  # Check for 'lmp' from form value
+                tasks_status[task_id] = {'status': 'Processing', 'step': 'Writing LAMMPS Data', 'progress': int(progress_step)}
+                topology_lmp = os.path.join(results_dir, f"{base_filename}_{ff_type}.data")  # Use .data extension
+                write_top.lmp(atoms, box_dim, file_path=topology_lmp)
+                generated_files.append(topology_lmp)
+                print(f"LAMMPS data file for {ff_type} written successfully to {topology_lmp}")
+                progress_step += progress_increment
+        else:
+            # If topology generation is disabled, skip to the next step and update progress
+            tasks_status[task_id] = {'status': 'Processing', 'step': 'Skipping topology files (disabled)', 'progress': 85}
+            print("Topology generation skipped as requested.")
         # PDB file is always generated for reference
-        tasks_status[task_id] = {'status': 'Processing', 'step': 'Writing PDB', 'progress': 90} # Adjust progress slightly
+        # If topology was disabled, progress is already at 85, so don't update it again
+        if generate_topology or progress_step < 85:
+            tasks_status[task_id] = {'status': 'Processing', 'step': 'Writing PDB', 'progress': 85}
+        
         pdb_filepath = os.path.join(results_dir, f"{base_filename}_{ff_type}.pdb")
-        write_conf.pdb(atoms, Box_dim2Cell(box_dim), pdb_filepath)
+        # Convert box_dim to cell parameters for PDB and XYZ formats
+        cell = Box_dim2Cell(box_dim)
+        write_conf.pdb(atoms, cell, pdb_filepath)
         print(f"PDB file written successfully to {pdb_filepath}")
 
         # GRO file is also always generated for reference
-        tasks_status[task_id] = {'status': 'Processing', 'step': 'Writing GRO', 'progress': 95} # Final writing step
+        tasks_status[task_id] = {'status': 'Processing', 'step': 'Writing GRO', 'progress': 90} # Update progress
         gro_filepath = os.path.join(results_dir, f"{base_filename}_{ff_type}.gro")
         write_conf.gro(atoms, box_dim, gro_filepath)
         print(f"GRO file written successfully to {gro_filepath}")
+        
+        # XYZ file is also generated for reference with cell info on line 2
+        tasks_status[task_id] = {'status': 'Processing', 'step': 'Writing XYZ', 'progress': 95} # Final writing step
+        xyz_filepath = os.path.join(results_dir, f"{base_filename}_{ff_type}.xyz")
+        write_conf.xyz(atoms, Cell=cell, file_path=xyz_filepath)
+        print(f"XYZ file written successfully to {xyz_filepath}")
 
         tasks_status[task_id] = {'status': 'Complete', 'results_id': results_id, 'progress': 100}
         print(f"Task {task_id} completed successfully. Results ID: {results_id}")
@@ -217,16 +251,22 @@ def start_processing_task():  # Renamed route function
         file.save(filepath)
 
         ff_type = request.form.get('forcefield', 'minff')
-        output_formats = request.form.getlist('output_formats')
-
-        if not output_formats:
-            # Clean up created results dir if no format selected
-            if os.path.exists(results_dir):
-                try:
-                    shutil.rmtree(results_dir)
-                except OSError as e:
-                    print(f"Error removing directory {results_dir}: {e}")
-            return jsonify({'error': 'Please select at least one output topology format.'}), 400
+        
+        # Check if topology generation is enabled
+        generate_topology = request.form.get('generate_topology', 'true').lower() == 'true'
+        
+        # Only validate output formats if topology generation is enabled
+        output_formats = []
+        if generate_topology:
+            output_formats = request.form.getlist('output_formats')
+            if not output_formats:
+                # Clean up created results dir if no format selected when topology is enabled
+                if os.path.exists(results_dir):
+                    try:
+                        shutil.rmtree(results_dir)
+                    except OSError as e:
+                        print(f"Error removing directory {results_dir}: {e}")
+                return jsonify({'error': 'Please select at least one output topology format or disable topology generation.'}), 400
 
         try:
             # Generate a unique task ID
@@ -234,7 +274,7 @@ def start_processing_task():  # Renamed route function
             tasks_status[task_id] = {'status': 'Pending', 'progress': 0}
 
             # Submit the task to the executor
-            executor.submit(process_file_task, task_id, filepath, filename, ff_type, output_formats, results_id, results_dir)
+            executor.submit(process_file_task, task_id, filepath, filename, ff_type, output_formats, results_id, results_dir, generate_topology)
 
             # Return the task ID to the client
             return jsonify({'task_id': task_id})
@@ -273,13 +313,23 @@ def results(results_id):
     # Organize files by type and forcefield
     minff_files = [f for f in result_files if '_minff.' in f]
     clayff_files = [f for f in result_files if '_clayff.' in f]
-    other_files = [f for f in result_files if '_minff.' not in f and '_clayff.' not in f]
+    
+    # Handle log files explicitly
+    minff_logs = [f for f in result_files if 'minff_structure_stats.log' in f]
+    clayff_logs = [f for f in result_files if 'clayff_structure_stats.log' in f]
+    
+    # Any file not caught by the above categories
+    other_files = [f for f in result_files if 
+                  ('_minff.' not in f and '_clayff.' not in f) and
+                  ('minff_structure_stats.log' not in f and 'clayff_structure_stats.log' not in f)]
 
     files = {
-        'minff_structures': [f for f in minff_files if f.endswith('.gro') or f.endswith('.pdb')],
+        'minff_structures': [f for f in minff_files if f.endswith('.gro') or f.endswith('.pdb') or f.endswith('.xyz')],
         'minff_topologies': [f for f in minff_files if f.endswith('.itp') or f.endswith('.psf') or f.endswith('.data')],
-        'clayff_structures': [f for f in clayff_files if f.endswith('.gro') or f.endswith('.pdb')],
+        'minff_logs': minff_logs,
+        'clayff_structures': [f for f in clayff_files if f.endswith('.gro') or f.endswith('.pdb') or f.endswith('.xyz')],
         'clayff_topologies': [f for f in clayff_files if f.endswith('.itp') or f.endswith('.psf') or f.endswith('.data')],
+        'clayff_logs': clayff_logs,
         'other_files': other_files
     }
 
