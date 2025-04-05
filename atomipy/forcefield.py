@@ -4,7 +4,307 @@ from .charge import charge_minff, charge_clayff, assign_formal_charges
 from .element import element  # Correct function name is 'element' not 'set_element'
 from .mass import set_atomic_masses
 
-def minff(atoms, Box_dim, ffname='minff', rmaxlong=2.45, rmaxH=1.2):
+def get_structure_stats(atoms, total_charge, ffname, Box_dim=None, Cell=None, log_file=None):
+    """Generate statistics about atom types, coordination, and charges in the structure.
+    
+    This function analyzes atom types, their coordination environment, charges,
+    coordination numbers, bond distances, and angles, and outputs a formatted report.
+    The report can be written to a log file and/or returned as a string.
+    
+    Args:
+        atoms: List of atom dictionaries containing 'type', 'neigh', 'charge', etc. keys.
+        total_charge: The total charge of the system.
+        ffname: The name of the forcefield used (e.g., 'minff', 'clayff').
+        Box_dim: Optional box dimensions array. Can be a 3-element array [Lx, Ly, Lz] for 
+                orthogonal boxes or a 6/9-element array for triclinic boxes.
+        Cell: Optional cell parameters array [a, b, c, alpha, beta, gamma].
+        log_file: Optional path to a log file. If provided, statistics will be
+                 written to this file.
+    
+    Returns:
+        A string containing the structure statistics.
+    """
+    import numpy as np
+    from collections import defaultdict
+    import math
+    # Conversion factor for density calculation: amu/Å³ to g/cm³
+    # 1 amu = 1.66053886e-24 g and 1 Å³ = 1e-24 cm³
+    AMU_TO_G_PER_CM3 = 1.66053886
+    
+    # Initialize statistics storage
+    all_neighbor_str_list = []
+    atom_type_counts = {}
+    coord_nums = defaultdict(list)  # Store coordination numbers by atom type
+    bond_dists = defaultdict(list)  # Store bond distances by atom type
+    angles = defaultdict(list)      # Store angles by atom type
+    h_involved_angles = defaultdict(list)  # Store angles where hydrogen is an outer atom
+    
+    # Additional statistics storage for atom type pairs and triplets
+    bond_type_pairs = defaultdict(list)  # Store bond distances by atom type pair (e.g., H-Oh)
+    angle_type_triplets = defaultdict(list)  # Store angles by atom type triplet (e.g., H-Oh-Alo)
+    
+    # Gather coordination information
+    for i, atom in enumerate(atoms):
+        atom_type = atom.get('type', 'X')
+        
+        # Count atom types
+        if atom_type in atom_type_counts:
+            atom_type_counts[atom_type] += 1
+        else:
+            atom_type_counts[atom_type] = 1
+        
+        # Get neighbor atom types for coordination environment
+        neighbor_indices = atom.get('neigh', [])
+        neighbor_types = [atoms[neigh_idx].get('type', 'X') for neigh_idx in neighbor_indices]
+        
+        # Collect coordination number
+        cn = len(neighbor_indices)
+        coord_nums[atom_type].append(cn)
+        
+        # Collect bond distances if available
+        if 'bonds' in atom:
+            for bond in atom['bonds']:
+                # Bond format is (neighbor_idx, distance)
+                neighbor_idx, distance = bond
+                bond_dists[atom_type].append(distance)
+                
+                # Collect bond type pairs
+                neighbor_type = atoms[neighbor_idx].get('type', 'X')
+                # Use alphabetical ordering of atom types for consistency
+                bond_pair = tuple(sorted([atom_type, neighbor_type]))
+                bond_type_pairs[bond_pair].append(distance)
+        
+        # Collect angles if available
+        if 'angles' in atom:
+            for angle_data in atom['angles']:
+                # angle_data format is ((neigh1_idx, neigh2_idx), angle_value)
+                (neigh1_idx, neigh2_idx), angle_value = angle_data
+                angles[atom_type].append(angle_value)
+                
+                # Special handling for hydrogen-involved angles
+                # If either of the outer atoms is hydrogen, record this angle for that hydrogen type
+                neigh1_type = atoms[neigh1_idx].get('type', '')
+                neigh2_type = atoms[neigh2_idx].get('type', '')
+                
+                if neigh1_type.startswith('H'):
+                    h_involved_angles[neigh1_type].append(angle_value)
+                if neigh2_type.startswith('H'):
+                    h_involved_angles[neigh2_type].append(angle_value)
+                    
+                # Collect angle type triplets
+                # Create a unique representation for the angle triplet
+                # For A-B-C, where B is the center atom, order as (min(A,C), B, max(A,C))
+                # This ensures we group equivalent angles like A-B-C and C-B-A together
+                if neigh1_type <= neigh2_type:
+                    angle_triplet = (neigh1_type, atom_type, neigh2_type)
+                else:
+                    angle_triplet = (neigh2_type, atom_type, neigh1_type)
+                    
+                angle_type_triplets[angle_triplet].append(angle_value)
+        
+        # Create a sorted neighbor string
+        all_neighbor_str = ''.join(sorted(neighbor_types))
+        all_neighbor_str_list.append((atom_type, all_neighbor_str, atom.get('charge', 0.0)))
+    
+    # Create a consolidated dictionary of unique atom types, their coordination, and charges
+    unique_patterns = {}
+    for atom_type, neighbor_str, charge in all_neighbor_str_list:
+        key = (atom_type, neighbor_str)
+        
+        if key in unique_patterns:
+            unique_patterns[key]['count'] += 1
+            unique_patterns[key]['charges'].append(charge)
+        else:
+            unique_patterns[key] = {
+                'count': 1,
+                'charges': [charge]
+            }
+    
+    # Format output
+    output = []
+    
+    # Calculate total mass for density calculation
+    total_mass = sum(atom.get('mass', 0.0) for atom in atoms)
+    
+    # Add box dimensions, volume, and density information
+    if Box_dim is not None or Cell is not None:
+        output.append("System Dimensions and Properties")
+        output.append("-" * 70)
+        
+        # Box_dim representation
+        if Box_dim is not None:
+            output.append("Box_dim (Å):")
+            if len(Box_dim) == 3:
+                output.append(f"  Orthogonal box: [{Box_dim[0]:.4f}, {Box_dim[1]:.4f}, {Box_dim[2]:.4f}]")
+                volume = Box_dim[0] * Box_dim[1] * Box_dim[2]
+                output.append(f"  Volume: {volume:.4f} Å³")
+            elif len(Box_dim) == 6:
+                output.append(f"  Triclinic box: [{Box_dim[0]:.4f}, {Box_dim[1]:.4f}, {Box_dim[2]:.4f}, {Box_dim[3]:.4f}, {Box_dim[4]:.4f}, {Box_dim[5]:.4f}]")
+            elif len(Box_dim) == 9:
+                output.append(f"  Full matrix: [{Box_dim[0]:.4f}, {Box_dim[1]:.4f}, {Box_dim[2]:.4f}, {Box_dim[3]:.4f}, {Box_dim[4]:.4f}, {Box_dim[5]:.4f}, {Box_dim[6]:.4f}, {Box_dim[7]:.4f}, {Box_dim[8]:.4f}]")
+        
+        # Cell representation
+        if Cell is not None:
+            a, b, c = Cell[0], Cell[1], Cell[2]
+            alpha, beta, gamma = Cell[3], Cell[4], Cell[5]
+            output.append("Cell parameters:")
+            output.append(f"  a, b, c (Å): {a:.4f}, {b:.4f}, {c:.4f}")
+            output.append(f"  α, β, γ (°): {alpha:.4f}, {beta:.4f}, {gamma:.4f}")
+            
+            # Calculate volume from cell parameters
+            if abs(alpha - 90) < 1e-6 and abs(beta - 90) < 1e-6 and abs(gamma - 90) < 1e-6:
+                # Orthogonal box
+                volume = a * b * c
+            else:
+                # Triclinic box, use the general formula
+                alpha_rad = math.radians(alpha)
+                beta_rad = math.radians(beta)
+                gamma_rad = math.radians(gamma)
+                volume = a * b * c * math.sqrt(1 - math.cos(alpha_rad)**2 - math.cos(beta_rad)**2 - 
+                                              math.cos(gamma_rad)**2 + 
+                                              2 * math.cos(alpha_rad) * math.cos(beta_rad) * math.cos(gamma_rad))
+            output.append(f"  Volume: {volume:.4f} Å³")
+            
+        # Calculate and display density
+        # Only calculate if we have a volume and total mass is non-zero
+        if 'volume' in locals() and total_mass > 0:
+            # Convert from amu/Å³ to g/cm³
+            density = total_mass / volume * AMU_TO_G_PER_CM3
+            output.append(f"System properties:")
+            output.append(f"  Total mass: {total_mass:.4f} amu")
+            output.append(f"  Density: {density:.4f} g/cm³")
+        
+        # Explanation of variables
+        output.append("\nBox_dim and Cell explanations:")
+        output.append("  Box_dim: A 1D array of box dimensions, typically in Angstroms.")
+        output.append("          For orthogonal boxes: [Lx, Ly, Lz]")
+        output.append("          For triclinic boxes: [Lx, Ly, Lz, xy, xz, yz] or [Lx, Ly, Lz, α, β, γ]")
+        output.append("  Cell: A 1×6 array with cell parameters [a, b, c, α, β, γ]")
+        output.append("        where a, b, c are lengths and α, β, γ are angles in degrees.")
+        output.append("-" * 70)
+        output.append("")
+    
+    output.append(f"Total charge ({ffname.upper()}): {total_charge:.7f}")
+    
+    if abs(round(total_charge) - total_charge) > 1e-10:
+        output.append("Warning: Non-integer total charge. Adjusting to nearest integer.")
+        target_charge = round(total_charge)
+        output.append(f"Final total charge: {sum(atom.get('charge', 0) for atom in atoms):.7f} (target was {target_charge})")
+    
+    output.append("\nUnique Atom Types and Their Coordination Environment")
+    output.append("-" * 70)
+    output.append(f"{'Type':<10} {'Count':<6} {'Neighbors':<25} {'Charge':<15}")
+    output.append("-" * 70)
+    
+    # Sort by atom type for a more organized display
+    for key in sorted(unique_patterns.keys()):
+        atom_type, neighbor_pattern = key
+        count = unique_patterns[key]['count']
+        charges = unique_patterns[key]['charges']
+        
+        # Find unique charge values (with some tolerance for floating point comparison)
+        unique_charges = []
+        for charge in charges:
+            # Only add if this is a new unique charge (accounting for floating point precision)
+            if not any(abs(charge - uc) < 1e-6 for uc in unique_charges):
+                unique_charges.append(charge)
+        
+        # If there's only one unique charge, display it as before
+        if len(unique_charges) == 1:
+            charge_str = f"{unique_charges[0]:.3f}"
+        else:
+            # Otherwise, display all unique charges separated by commas
+            charge_str = ', '.join([f"{c:.3f}" for c in sorted(unique_charges)])
+        
+        output.append(f"{atom_type:<10} {count:<6} {neighbor_pattern:<25} {charge_str}")
+    
+    output.append("-" * 70)
+    
+    # Add detailed statistics for average coordination, bond distances, and angles
+    output.append("\nDetailed Atom Type Statistics with Standard Deviations")
+    output.append("-" * 100)
+    header = f"{'Type':<10} {'Count':<6} {'Coord#':<15} {'Bond Dist (Å)':<20} {'Angle (°)':<20}"
+    output.append(header)
+    output.append("-" * 100)
+    
+    for atom_type, count in sorted(atom_type_counts.items()):
+        # Calculate average coordination number and std dev
+        cn_data = coord_nums[atom_type]
+        avg_cn = np.mean(cn_data) if cn_data else 0
+        std_cn = np.std(cn_data) if len(cn_data) > 1 else 0
+        cn_str = f"{avg_cn:.2f} ± {std_cn:.2f}" if cn_data else "N/A"
+        
+        # Calculate average bond distance and std dev
+        dist_data = bond_dists[atom_type]
+        avg_dist = np.mean(dist_data) if dist_data else 0
+        std_dist = np.std(dist_data) if len(dist_data) > 1 else 0
+        dist_str = f"{avg_dist:.4f} ± {std_dist:.4f}" if dist_data else "N/A"
+        
+        # Calculate average angle and std dev
+        angle_data = angles[atom_type]
+        # For hydrogen atom types with no angles (as center atom), use the angles where H is involved
+        if not angle_data and atom_type.startswith('H') and atom_type in h_involved_angles:
+            h_angle_data = h_involved_angles[atom_type]
+            avg_angle = np.mean(h_angle_data) if h_angle_data else 0
+            std_angle = np.std(h_angle_data) if len(h_angle_data) > 1 else 0
+            angle_str = f"{avg_angle:.3f} ± {std_angle:.3f} (H-involved)" if h_angle_data else "N/A"
+        else:
+            avg_angle = np.mean(angle_data) if angle_data else 0
+            std_angle = np.std(angle_data) if len(angle_data) > 1 else 0
+            angle_str = f"{avg_angle:.3f} ± {std_angle:.3f}" if angle_data else "N/A"
+        
+        # Format the output line
+        output.append(f"{atom_type:<10} {count:<6} {cn_str:<15} {dist_str:<20} {angle_str:<20}")
+    
+    output.append("-" * 100)
+    
+    # Add bond statistics for unique atom type pairs
+    output.append("\nBond Statistics for Unique Atom Type Pairs")
+    output.append("-" * 80)
+    output.append(f"{'Bond Pair':<30} {'Count':>10} {'Avg Distance (Å)':>20} {'Std Dev':>10}")
+    output.append("-" * 80)
+    
+    # Sort by bond pair for a more organized display
+    for bond_pair, distances in sorted(bond_type_pairs.items()):
+        type1, type2 = bond_pair
+        pair_str = f"{type1}-{type2}"
+        count = len(distances)
+        avg_dist = np.mean(distances)
+        std_dist = np.std(distances) if len(distances) > 1 else 0
+        
+        output.append(f"{pair_str:<30} {count:>10} {avg_dist:>20.4f} {std_dist:>10.4f}")
+    
+    output.append("-" * 80)
+    
+    # Add angle statistics for unique atom type triplets
+    output.append("\nAngle Statistics for Unique Atom Type Triplets")
+    output.append("-" * 80)
+    output.append(f"{'Angle Triplet':<35} {'Count':>10} {'Avg Angle (°)':>15} {'Std Dev':>10}")
+    output.append("-" * 80)
+    
+    # Sort by angle triplet for a more organized display
+    for angle_triplet, angles_data in sorted(angle_type_triplets.items()):
+        type1, type2, type3 = angle_triplet
+        triplet_str = f"{type1}-{type2}-{type3}"
+        count = len(angles_data)
+        avg_angle = np.mean(angles_data)
+        std_angle = np.std(angles_data) if len(angles_data) > 1 else 0
+        
+        output.append(f"{triplet_str:<40} {count:>10} {avg_angle:>15.3f} {std_angle:>10.3f}")
+    
+    output.append("-" * 80)
+    
+    # Join everything into a string
+    result = "\n".join(output)
+    
+    # Write to log file if specified
+    if log_file:
+        with open(log_file, 'w') as f:
+            f.write(result + "\n")
+    
+    return result
+
+def minff(atoms, Box_dim, ffname='minff', rmaxlong=2.45, rmaxH=1.2, log=False):
     """Assign MINFF forcefield specific atom types to atoms based on their coordination environment.
     
     This function updates the 'fftype' field based on the atom's element and its bonding environment,
@@ -574,11 +874,24 @@ def minff(atoms, Box_dim, ffname='minff', rmaxlong=2.45, rmaxH=1.2):
         print(f"{atom_type:<10} {count:<6} {neighbor_pattern:<25} {charge_str:<15}")
     print("-" * 70)
     
+    # Calculate total charge for statistics
+    total_charge = sum(atom.get('charge', 0) for atom in atoms)
+    
+    # Generate and output structure statistics if log is enabled
+    if log:
+        log_file = f"{ffname}_structure_stats.log"
+        # Convert Box_dim to Cell parameters for additional statistics
+        from .cell_utils import Box_dim2Cell
+        Cell = Box_dim2Cell(Box_dim)
+        
+        stats = get_structure_stats(atoms, total_charge, ffname, Box_dim=Box_dim, Cell=Cell, log_file=log_file)
+        print(f"Structure statistics written to {log_file}")
+    
     return atoms, all_neighbors
 
 
 
-def clayff(atoms, Box_dim, ffname='clayff', rmaxlong=2.45, rmaxH=1.2):
+def clayff(atoms, Box_dim, ffname='clayff', rmaxlong=2.45, rmaxH=1.2, log=False):
     """Assign CLAYFF forcefield specific atom types to atoms based on their coordination environment.
     
     This function updates the 'fftype' field based on the atom's element and its bonding environment,
@@ -1100,5 +1413,18 @@ def clayff(atoms, Box_dim, ffname='clayff', rmaxlong=2.45, rmaxH=1.2):
         charge_str = ', '.join([f"{c:.3f}" if isinstance(c, float) else str(c) for c in charges])
         print(f"{atom_type:<10} {count:<6} {neighbor_pattern:<25} {charge_str:<15}")
     print("-" * 70)
+    
+    # Calculate total charge for statistics
+    total_charge = sum(atom.get('charge', 0) for atom in atoms)
+    
+    # Generate and output structure statistics if log is enabled
+    if log:
+        log_file = f"{ffname}_structure_stats.log"
+        # Convert Box_dim to Cell parameters for additional statistics
+        from .cell_utils import Box_dim2Cell
+        Cell = Box_dim2Cell(Box_dim)
+        
+        stats = get_structure_stats(atoms, total_charge, ffname, Box_dim=Box_dim, Cell=Cell, log_file=log_file)
+        print(f"Structure statistics written to {log_file}")
     
     return atoms, all_neighbors

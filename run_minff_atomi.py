@@ -24,14 +24,14 @@ def main():
     # Step 1: Load a structure file in both PDB and GRO formats
     # ------------------------------------------
     import os
-    xyz_file = "Kaolinite_GII_0.0487.xyz"
+    pdb_file = "Kaolinite_GII_0.0487.pdb"
     # Use absolute path to ensure file is found regardless of working directory
-    xyz_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), xyz_file)
+    pdb_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), pdb_file)
     
-    print(f"Loading XYZ structure from: {xyz_file}")
-    # Read the XYZ file - this returns a list of atom dictionaries and cell parameters
-    atoms, box_dim = ap.import_xyz(xyz_file)
-    print(f"Successfully loaded {len(atoms)} atoms from XYZ")
+    print(f"Loading PDB structure from: {pdb_file}")
+    # Read the PDB file - this returns a list of atom dictionaries and cell parameters
+    atoms, box_dim = ap.import_pdb(pdb_file)
+    print(f"Successfully loaded {len(atoms)} atoms from PDB")
     print(f"Box dimensions: {box_dim}")
 
 
@@ -112,8 +112,8 @@ def main():
     print("\nAssigning specialized atom types using MINFF...")
     # MINFF classifies atoms based on their chemical environment
     # For example, oxygen atoms can be: Oh (hydroxyl), Op (bridging), Ow (water)
-    # This function modifies atoms in-place (doesn't return anything)
-    ap.minff(replicated_atoms, replicated_box_dim)  
+    # Generate detailed structure statistics and save to a log file
+    ap.minff(replicated_atoms, replicated_box_dim, log=True)  
     minff_atoms = replicated_atoms
     box_dim = replicated_box_dim
     
@@ -172,6 +172,7 @@ def main():
     print("4. molecular_topology.psf - PSF topology file")
     print("5. molecular_topology.data - LAMMPS topology file")
     print("6. preem.gro - Final structure with MINFF typing and charges")
+    print("7. minff_structure_stats.log - Detailed system statistics including dimensions, density, bonds, and angles")
 
 if __name__ == "__main__":
     main()
