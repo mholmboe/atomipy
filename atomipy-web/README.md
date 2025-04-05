@@ -1,18 +1,35 @@
 # atomipy Web Interface
 
-A web application for processing molecular structure files using the atomipy package. This application allows users to upload GRO or PDB files, process them with the MINFF forcefield atom typing, and generate various topology files for molecular dynamics simulations.
+A web application for processing molecular structure files using the atomipy package. This application allows users to upload GRO, PDB, or XYZ files, process them with either MINFF or CLAYFF forcefield atom typing, and generate various topology files for molecular dynamics simulations.
 
 ## Features
 
-- Upload GRO or PDB structure files
+- Upload GRO, PDB, or XYZ structure files
 - Automatically assign chemical elements
 - Calculate bonds and angles with periodic boundary conditions
-- Assign MINFF forcefield atom types
+- Support for multiple forcefields:
+  - MINFF forcefield for mineral systems
+  - CLAYFF forcefield for clay minerals, hydroxides, and oxyhydroxides
+- Multiple charge assignment methods:
+  - Formal charges
+  - MINFF partial charges
+  - CLAYFF partial charges
+  - Charge balancing
+- Parallel processing of both MINFF and CLAYFF forcefields
 - Generate processed structure files with the new atom types
 - Create topology files for multiple simulation packages:
   - GROMACS (.itp)
   - NAMD/CHARMM (.psf)
   - LAMMPS (.data)
+- Organized results with clear categorization by forcefield type
+
+## Force Field References
+
+### CLAYFF
+Cygan, R.T.; Liang, J.J.; Kalinichev, A.G. Molecular Models of Hydroxide, Oxyhydroxide, and Clay Phases and the Development of a General Force Field. *J. Phys. Chem. B* **2004**, *108*, 1255-1266.
+
+### MINFF
+[Include MINFF reference here if available]
 
 ## Installation
 
