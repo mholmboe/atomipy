@@ -30,9 +30,10 @@ def main():
     gro_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), gro_file)
     
     print(f"Loading GRO structure from: {gro_file}")
-    # Read the GRO file - this returns a list of atom dictionaries and cell parameters
-    atoms, box_dim = ap.import_gro(gro_file)
+    # Read the GRO file - this returns a list of atom dictionaries, cell parameters, and box dimensions
+    atoms, cell, box_dim = ap.import_gro(gro_file)
     print(f"Successfully loaded {len(atoms)} atoms from GRO")
+    print(f"Cell parameters: {cell}")
     print(f"Box dimensions: {box_dim}")
 
 
