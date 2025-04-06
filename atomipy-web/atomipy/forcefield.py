@@ -1,5 +1,6 @@
 import numpy as np
 from .bond_angle import bond_angle
+from .cell_utils import Box_dim2Cell, Cell2Box_dim
 from .charge import charge_minff, charge_clayff, assign_formal_charges
 from .element import element  # Correct function name is 'element' not 'set_element'
 from .mass import set_atomic_masses
@@ -304,7 +305,7 @@ def get_structure_stats(atoms, total_charge, ffname, Box_dim=None, Cell=None, lo
     
     return result
 
-def minff(atoms, Box_dim, ffname='minff', rmaxlong=2.45, rmaxH=1.2, log=False, log_file=None):
+def minff(atoms, box, ffname='minff', rmaxlong=2.45, rmaxH=1.2, log=False, log_file=None):
     """Assign MINFF forcefield specific atom types to atoms based on their coordination environment.
     
     This function updates the 'fftype' field based on the atom's element and its bonding environment,
@@ -316,7 +317,10 @@ def minff(atoms, Box_dim, ffname='minff', rmaxlong=2.45, rmaxH=1.2, log=False, l
     Args:
         atoms: A list of atom dictionaries, each atom is expected to have position coordinates
               and element/type information.
-        Box_dim: Box dimensions for periodic boundary conditions.
+        box: a 1x3, 1x6 or 1x9 list representing cell dimensions (in Angstroms):
+            - For orthogonal boxes, a 1x3 list [lx, ly, lz] where box = Box_dim, and Cell would be [lx, ly, lz, 90, 90, 90]
+            - For cell parameters, a 1x6 list [a, b, c, alpha, beta, gamma] (Cell format)
+            - For triclinic boxes, a 1x9 list [lx, ly, lz, 0, 0, xy, 0, xz, yz] (GROMACS Box_dim format)
         ffname: The forcefield name, default is 'minff'.
         rmaxlong: Maximum bond distance for non-hydrogen bonds, default is 2.45 Å.
         rmaxH: Maximum bond distance for hydrogen bonds, default is 1.2 Å.
@@ -336,6 +340,22 @@ def minff(atoms, Box_dim, ffname='minff', rmaxlong=2.45, rmaxH=1.2, log=False, l
 
     # Set atom masses using the mass.py module
     atoms = set_atomic_masses(atoms)
+
+    # Determine box format and convert as needed
+    if len(box) == 9:
+        # Triclinic box in GROMACS format [lx, ly, lz, 0, 0, xy, 0, xz, yz]
+        Box_dim = box
+        Cell = Box_dim2Cell(Box_dim)
+    elif len(box) == 6:
+        # Cell parameters [a, b, c, alpha, beta, gamma]
+        Cell = box
+        Box_dim = Cell2Box_dim(Cell)
+    elif len(box) == 3:
+        # Simple orthogonal box [lx, ly, lz]
+        Box_dim = box
+        Cell = list(box) + [90.0, 90.0, 90.0]
+    else:
+        raise ValueError("Box must be length 3, 6, or 9")
     
     # Run the entire process twice to ensure all atoms have proper typing
     # This is especially important for oxygen atoms which need to know
@@ -396,7 +416,7 @@ def minff(atoms, Box_dim, ffname='minff', rmaxlong=2.45, rmaxH=1.2, log=False, l
         # Only calculate bonds in the first pass
         if _ == 0:
             # Get bonds and angles using bond_angle function (this also calculates coordination numbers)
-            atoms, bond_index, angle_index = bond_angle(atoms, Box_dim, rmaxH=rmaxH, rmaxM=rmaxlong)
+            atoms, bond_index, angle_index = bond_angle(atoms, box, rmaxH=rmaxH, rmaxM=rmaxlong)
             
             # Store bond information and prepare for atom typing
             for i, atom in enumerate(atoms):
@@ -768,7 +788,7 @@ def minff(atoms, Box_dim, ffname='minff', rmaxlong=2.45, rmaxH=1.2, log=False, l
                1.884, 2.413, 0.86, 0.4]
     # By default, apply charges to all atoms (set resname=None)
     # To limit charge assignment to specific residues, provide a resname (e.g., 'MIN')
-    atoms = charge_minff(atoms, Box_dim, atom_labels, charges, resname=None)
+    atoms = charge_minff(atoms, box, atom_labels, charges, resname=None)
     
     # Find unique types of atomtypes and their neighbors
     # This is equivalent to the MATLAB code for finding unique types after atom type assignment
@@ -884,10 +904,7 @@ def minff(atoms, Box_dim, ffname='minff', rmaxlong=2.45, rmaxH=1.2, log=False, l
     if log:
         # Use provided log_file path or generate default name if not provided
         log_path = log_file if log_file is not None else f"{ffname}_structure_stats.log"
-        # Convert Box_dim to Cell parameters for additional statistics
-        from .cell_utils import Box_dim2Cell
-        Cell = Box_dim2Cell(Box_dim)
-        
+        # Cell is already available from earlier in the function
         stats = get_structure_stats(atoms, total_charge, ffname, Box_dim=Box_dim, Cell=Cell, log_file=log_path)
         print(f"Structure statistics written to {log_path}")
     
@@ -895,7 +912,7 @@ def minff(atoms, Box_dim, ffname='minff', rmaxlong=2.45, rmaxH=1.2, log=False, l
 
 
 
-def clayff(atoms, Box_dim, ffname='clayff', rmaxlong=2.45, rmaxH=1.2, log=False, log_file=None):
+def clayff(atoms, box, ffname='clayff', rmaxlong=2.45, rmaxH=1.2, log=False, log_file=None):
     """Assign CLAYFF forcefield specific atom types to atoms based on their coordination environment.
     
     This function updates the 'fftype' field based on the atom's element and its bonding environment,
@@ -907,7 +924,10 @@ def clayff(atoms, Box_dim, ffname='clayff', rmaxlong=2.45, rmaxH=1.2, log=False,
     Args:
         atoms: A list of atom dictionaries, each atom is expected to have position coordinates
               and element/type information.
-        Box_dim: Box dimensions for periodic boundary conditions.
+        box: a 1x3, 1x6 or 1x9 list representing cell dimensions (in Angstroms):
+            - For orthogonal boxes, a 1x3 list [lx, ly, lz] where box = Box_dim, and Cell would be [lx, ly, lz, 90, 90, 90]
+            - For cell parameters, a 1x6 list [a, b, c, alpha, beta, gamma] (Cell format)
+            - For triclinic boxes, a 1x9 list [lx, ly, lz, 0, 0, xy, 0, xz, yz] (GROMACS Box_dim format)
         ffname: The forcefield name, default is 'clayff'.
         rmaxlong: Maximum bond distance for non-hydrogen bonds, default is 2.45 Å.
         rmaxH: Maximum bond distance for hydrogen bonds, default is 1.2 Å.
@@ -924,6 +944,22 @@ def clayff(atoms, Box_dim, ffname='clayff', rmaxlong=2.45, rmaxH=1.2, log=False,
 
     # Set atom masses using the mass.py module
     atoms = set_atomic_masses(atoms)
+
+    # Determine box format and convert as needed
+    if len(box) == 9:
+        # Triclinic box in GROMACS format [lx, ly, lz, 0, 0, xy, 0, xz, yz]
+        Box_dim = box
+        Cell = Box_dim2Cell(Box_dim)
+    elif len(box) == 6:
+        # Cell parameters [a, b, c, alpha, beta, gamma]
+        Cell = box
+        Box_dim = Cell2Box_dim(Cell)
+    elif len(box) == 3:
+        # Simple orthogonal box [lx, ly, lz]
+        Box_dim = box
+        Cell = list(box) + [90.0, 90.0, 90.0]
+    else:
+        raise ValueError("Box must be length 3, 6, or 9")
     
     # Run the entire process twice to ensure all atoms have proper typing
     # This is especially important for oxygen atoms which need to know
@@ -980,7 +1016,7 @@ def clayff(atoms, Box_dim, ffname='clayff', rmaxlong=2.45, rmaxH=1.2, log=False,
         # Only calculate bonds in the first pass
         if _ == 0:
             # Get bonds and angles using bond_angle function (this also calculates coordination numbers)
-            atoms, bond_index, angle_index = bond_angle(atoms, Box_dim, rmaxH=rmaxH, rmaxM=rmaxlong)
+            atoms, bond_index, angle_index = bond_angle(atoms, box, rmaxH=rmaxH, rmaxM=rmaxlong)
             
             # Store bond information and prepare for atom typing
             for i, atom in enumerate(atoms):
@@ -1425,10 +1461,7 @@ def clayff(atoms, Box_dim, ffname='clayff', rmaxlong=2.45, rmaxH=1.2, log=False,
     if log:
         # Use provided log_file path or generate default name if not provided
         log_path = log_file if log_file is not None else f"{ffname}_structure_stats.log"
-        # Convert Box_dim to Cell parameters for additional statistics
-        from .cell_utils import Box_dim2Cell
-        Cell = Box_dim2Cell(Box_dim)
-        
+        # Cell is already available from earlier in the function
         stats = get_structure_stats(atoms, total_charge, ffname, Box_dim=Box_dim, Cell=Cell, log_file=log_path)
         print(f"Structure statistics written to {log_path}")
     

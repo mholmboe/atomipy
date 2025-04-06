@@ -138,7 +138,7 @@ def main():
     # - Angle definitions
     ap.write_itp(
         clayff_atoms, 
-        Box_dim=box_dim,
+        box=box_dim,
         file_path="clayff_topology.itp"
     )
     
@@ -146,7 +146,7 @@ def main():
     print("Writing PSF topology file...")
     ap.write_psf(
         clayff_atoms,
-        Box_dim=box_dim,
+        box=box_dim,
         file_path="clayff_topology.psf"
     )
     
@@ -154,7 +154,7 @@ def main():
     print("Writing LAMMPS topology file...")
     ap.write_lmp(
         clayff_atoms,
-        Box_dim=box_dim,
+        box=box_dim,
         file_path="clayff_topology.data"
     )
     
@@ -163,7 +163,7 @@ def main():
     print("Writing final structure to preem.gro...")
     ap.write_gro(
         clayff_atoms,    
-        Box_dim=box_dim,
+        box=box_dim,
         file_path="preem.gro"
     )
     

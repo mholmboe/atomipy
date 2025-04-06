@@ -1,5 +1,7 @@
 import numpy as np
 
+from atomipy.cell_utils import Cell2Box_dim, Box_dim2Cell
+
 # Try to import tqdm for progress bar
 try:
     from tqdm import tqdm
@@ -8,7 +10,7 @@ except ImportError:
     print("Note: Install tqdm package for progress bars (pip install tqdm)")
     has_tqdm = False
 
-def dist_matrix(atoms, Box_dim=None):
+def dist_matrix(atoms, box):
     """Calculate the distance matrix between atoms following the MATLAB implementation approach.
     
     This function closely mimics the behavior of the MATLAB dist_matrix_MATLAB.m function,
@@ -16,8 +18,10 @@ def dist_matrix(atoms, Box_dim=None):
     
     Args:
         atoms: list of atom dictionaries, each having 'x', 'y', 'z' coordinates.
-        Box_dim: Box dimensions in the format [lx, ly, lz] for orthogonal boxes, 
-                 or [lx, ly, lz, 0, 0, xy, 0, xz, yz] for triclinic cells.
+        box: a 1x3, 1x6 or 1x9 list representing cell dimensions (in Angstroms):
+            - For orthogonal boxes, a 1x3 list [lx, ly, lz] where box = Box_dim, and Cell would be [lx, ly, lz, 90, 90, 90]
+            - For cell parameters, a 1x6 list [a, b, c, alpha, beta, gamma] (Cell format)
+            - For triclinic boxes, a 1x9 list [lx, ly, lz, 0, 0, xy, 0, xz, yz] (GROMACS Box_dim format)
        
     Returns:
         A tuple of four numpy arrays: 
@@ -29,12 +33,28 @@ def dist_matrix(atoms, Box_dim=None):
         using per-atom iteration.
     """
     
-    if Box_dim is None:
-        raise ValueError("Box_dim must be provided")
+    # Initialize variables
+    Cell = None
+    Box_dim = None
     
-    # Extract atomic positions
-    n_atoms = len(atoms)
-    xyz = np.array([[atom['x'], atom['y'], atom['z']] for atom in atoms], dtype=np.float32)
+    if box is None:
+        raise ValueError("Box parameter must be provided")
+    
+    # Determine box format and convert as needed
+    if len(box) == 9:
+        # Triclinic box in GROMACS format [lx, ly, lz, 0, 0, xy, 0, xz, yz]
+        Box_dim = box
+        Cell = Box_dim2Cell(Box_dim)
+    elif len(box) == 6:
+        # Cell parameters [a, b, c, alpha, beta, gamma]
+        Cell = box
+        Box_dim = Cell2Box_dim(Cell)
+    elif len(box) == 3:
+        # Simple orthogonal box [lx, ly, lz]
+        Box_dim = box
+        Cell = list(box) + [90.0, 90.0, 90.0]
+    else:
+        raise ValueError("Box must be length 3, 6, or 9")
     
     # Extract box dimensions
     if len(Box_dim) == 3:
@@ -45,8 +65,11 @@ def dist_matrix(atoms, Box_dim=None):
         # Triclinic box in GROMACS format [lx, ly, lz, 0, 0, xy, 0, xz, yz]
         lx, ly, lz = Box_dim[0], Box_dim[1], Box_dim[2]
         xy, xz, yz = Box_dim[5], Box_dim[7], Box_dim[8]
-    else:
-        raise ValueError("Box_dim must be either length 3 (orthogonal) or 9 (triclinic)")
+    
+    # Extract atomic positions
+    n_atoms = len(atoms)
+    xyz = np.array([[atom['x'], atom['y'], atom['z']] for atom in atoms], dtype=np.float32)
+
     
     # Initialize output arrays
     distances = np.zeros((n_atoms, n_atoms), dtype=np.float32)
@@ -203,22 +226,30 @@ def dist_matrix_direct(atoms):
     
     return distances, dx, dy, dz
 
-def dist_matrix_hybrid(atoms, Box_dim=None, use_pbc=True):
+def dist_matrix_hybrid(atoms, box=None, use_pbc=True, Box_dim=None):
     """Calculate the distance matrix using either direct or PBC approach based on use_pbc flag.
     
     Args:
         atoms: list of atom dictionaries, each having 'x', 'y', 'z' coordinates.
-        Box_dim: Box dimensions (required if use_pbc=True).
+        box: a 1x3, 1x6 or 1x9 list representing cell dimensions (in Angstroms):
+            - For orthogonal boxes, a 1x3 list [lx, ly, lz]
+            - For cell parameters, a 1x6 list [a, b, c, alpha, beta, gamma] (Cell format)
+            - For triclinic boxes, a 1x9 list [lx, ly, lz, 0, 0, xy, 0, xz, yz] (Box_dim format)
         use_pbc: Whether to use periodic boundary conditions (default: True).
+        Box_dim: Deprecated. Use 'box' instead. Maintained for backward compatibility.
        
     Returns:
         A tuple of four numpy arrays: 
         - A numpy array of shape (N, N) with pairwise distances.
         - Three numpy arrays of shape (N, N) with pairwise x, y, z differences.
     """
+    # Backward compatibility for Box_dim parameter
+    if box is None and Box_dim is not None:
+        box = Box_dim
+        
     if use_pbc:
-        if Box_dim is None:
-            raise ValueError("Box_dim must be provided when use_pbc=True")
-        return dist_matrix(atoms, Box_dim)
+        if box is None:
+            raise ValueError("box parameter must be provided when use_pbc=True")
+        return dist_matrix(atoms, box)
     else:
         return dist_matrix_direct(atoms)

@@ -24,18 +24,18 @@ def optional_jit(func):
         return numba.jit(nopython=True)(func)
     return func
 
-def cell_list_dist_matrix(atoms, cutoff=2.45, Box_dim=None, Cell=None, rmaxH=1.2, H_type='H'):
+def cell_list_dist_matrix(atoms, box,cutoff=2.45, rmaxH=1.2, H_type='H'):
     """Calculate a sparse distance matrix using the cell list algorithm for efficiently 
     finding all atom pairs within a cutoff distance. This function closely follows the MATLAB 
     implementation of cell_list_dist_matrix_MATLAB.m.
     
     Args:
         atoms: list of atom dictionaries, each having 'x', 'y', 'z' coordinates and 'type' field.
+        box: a 1x3, 1x6 or 1x9 list representing cell dimensions (in Angstroms):
+            - For orthogonal boxes, a 1x3 list [lx, ly, lz] where box = Box_dim, and Cell would be [lx, ly, lz, 90, 90, 90]
+            - For cell parameters, a 1x6 list [a, b, c, alpha, beta, gamma] (Cell format)
+            - For triclinic boxes, a 1x9 list [lx, ly, lz, 0, 0, xy, 0, xz, yz] (GROMACS Box_dim format)
         cutoff: maximum distance to consider for non-hydrogen bonds (default: 2.45 Å).
-        Box_dim: (Optional) Box dimensions in the format [lx, ly, lz, 0, 0, xy, 0, xz, yz] for triclinic cells,
-                or [lx, ly, lz] for orthogonal cells. Either Box_dim or Cell must be provided.
-        Cell: (Optional) Cell parameters in the format [a, b, c, alpha, beta, gamma]. 
-              Either Box_dim or Cell must be provided.
         rmaxH: cutoff distance for bonds involving hydrogen atoms (default: 1.2 Å).
         H_type: atom type string identifying hydrogen atoms (default: 'H').
        
@@ -54,18 +54,28 @@ def cell_list_dist_matrix(atoms, cutoff=2.45, Box_dim=None, Cell=None, rmaxH=1.2
     N = len(atoms)
     positions = np.array([[atom['x'], atom['y'], atom['z']] for atom in atoms])
     
-    # Possibly convert Box_dim into [a,b,c,alpha,beta,gamma] form
-    if Box_dim is not None:
-        if len(Box_dim) == 9:
-            # Convert from Box_dim format to Cell format
-            if Cell is None:
-                Cell = box_dim_to_cell(Box_dim)
-        elif len(Box_dim) == 3:
-            # Orthogonal box
-            Cell = list(Box_dim) + [90.0, 90.0, 90.0]
+    # Initialize variables
+    Cell = None
+    Box_dim = None
     
-    if Cell is None:
-        raise ValueError("Either Box_dim or Cell must be provided")
+    if box is None:
+        raise ValueError("Box parameter must be provided")
+        
+    # Determine box format and convert as needed
+    if len(box) == 9:
+        # Triclinic box in GROMACS format [lx, ly, lz, 0, 0, xy, 0, xz, yz]
+        Box_dim = box
+        Cell = Box_dim2Cell(Box_dim)
+    elif len(box) == 6:
+        # Cell parameters [a, b, c, alpha, beta, gamma]
+        Cell = box
+        Box_dim = Cell2Box_dim(Cell)
+    elif len(box) == 3:
+        # Simple orthogonal box [lx, ly, lz]
+        Box_dim = box
+        Cell = list(box) + [90.0, 90.0, 90.0]
+    else:
+        raise ValueError("Box must be length 3, 6, or 9")
     
     # Extract cell parameters
     a, b, c = Cell[0], Cell[1], Cell[2]
@@ -281,19 +291,6 @@ def cell_list_dist_matrix(atoms, cutoff=2.45, Box_dim=None, Cell=None, rmaxH=1.2
         dist_list = np.zeros(0, dtype=float)
     
     return dist_matrix, X_dist, Y_dist, Z_dist, bond_list, dist_list
-
-
-def box_dim_to_cell(Box_dim):
-    """Convert Box_dim [lx, ly, lz, 0, 0, xy, 0, xz, yz] to Cell [a, b, c, alpha, beta, gamma].
-    
-    Args:
-        Box_dim: Box dimensions in the format [lx, ly, lz, 0, 0, xy, 0, xz, yz]
-        
-    Returns:
-        Cell parameters [a, b, c, alpha, beta, gamma] where angles are in degrees
-    """
-    # Use the more comprehensive implementation from cell_utils
-    return Box_dim2Cell(Box_dim)
 
 
 @optional_jit

@@ -7,7 +7,7 @@ coordinate systems using either box dimensions or angle parameters.
 
 import numpy as np
 
-def triclinic_to_orthogonal(atoms, box_dim, angleparam=None, angletype=None, preserve_fractional=True):
+def triclinic_to_orthogonal(atoms, box, angleparam=None, angletype=None, preserve_fractional=True):
     """
     Convert atoms in a triclinic box to an orthogonal box.
 
@@ -15,11 +15,10 @@ def triclinic_to_orthogonal(atoms, box_dim, angleparam=None, angletype=None, pre
     ----------
     atoms : list of dict
         Each dict should have at least the keys 'x', 'y', 'z'.
-    box_dim : list or array
-        Box dimensions that can be:
-          - length 3: [lx, ly, lz] (orthogonal)
-          - length 6: [a, b, c, alpha, beta, gamma] (cell parameters)
-          - length 9: [lx, ly, lz, 0, 0, xy, 0, xz, yz] (triclinic)
+    box : a 1x6 or 1x9 list representing cell dimensions (in Angstroms), either as 
+            a Cell variable having cell parameters array [a, b, c, alpha, beta, gamma], or as 
+            a Box_dim variable having box dimensions [lx, ly, lz, 0, 0, xy, 0, xz, yz] for triclinic cells.
+            Note that for orthogonal boxes Cell = Box_dim.
     angleparam : list or array, optional
         If provided along with `angletype='angle'`, it should be [alpha, beta, gamma] in degrees.
         If provided along with `angletype='tilt'`, it should be [xy, xz, yz].
@@ -46,8 +45,31 @@ def triclinic_to_orthogonal(atoms, box_dim, angleparam=None, angletype=None, pre
         atoms, [10, 10, 10], angleparam=[90, 110, 120], angletype='angle'
     )
     """
+
+    # Possibly convert Box_dim into [a,b,c,alpha,beta,gamma] form
+    if box is not None:
+        if len(box) == 9:
+            Box_dim = box
+        elif len(box) == 6:
+            Cell = box
+            Box_dim = Cell2Box_dim(Cell)
+        else:
+            raise ValueError("Box_dim must be either length 3 (orthogonal) or 9 (triclinic)")
+    
+    # Extract box dimensions
+    if len(Box_dim) == 3:
+        # Orthogonal box
+        lx, ly, lz = Box_dim
+        xy, xz, yz = 0, 0, 0
+    elif len(Box_dim) == 9:
+        # Triclinic box in GROMACS format [lx, ly, lz, 0, 0, xy, 0, xz, yz]
+        lx, ly, lz = Box_dim[0], Box_dim[1], Box_dim[2]
+        xy, xz, yz = Box_dim[5], Box_dim[7], Box_dim[8]
+    else:
+        raise ValueError("Box_dim must be either length 3 (orthogonal) or 9 (triclinic)")
+
     # Convert input to numpy array for calculations
-    box_dim = np.array(box_dim, dtype=float)
+    box_dim = np.array(Box_dim, dtype=float)
     
     # Set default values
     # a, b, c are lengths, alpha, beta, gamma are angles in degrees

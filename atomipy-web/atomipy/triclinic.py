@@ -7,8 +7,9 @@ coordinate systems using either angle parameters or tilt factors.
 
 import math
 import numpy as np
+from atomipy.fract import Cell2Box_dim, Box_dim2Cell
 
-def orthogonal_to_triclinic(atoms, box_dim, angleparam, angletype='angle', return_box=False):
+def orthogonal_to_triclinic(atoms, box, angleparam, angletype='angle', return_box=False):
     """
     Transforms an orthogonal atom list to a triclinic one using either angles
     (alpha, beta, gamma) or tilt factors (xy, xz, yz).
@@ -17,8 +18,10 @@ def orthogonal_to_triclinic(atoms, box_dim, angleparam, angletype='angle', retur
     ----------
     atoms : list of dict
         Each dict should have 'x', 'y', 'z' coordinates (orthogonal).
-    box_dim : list or tuple
-        Orthogonal box dimensions: [lx, ly, lz].
+    box : a 1x3, 1x6 or 1x9 list representing cell dimensions (in Angstroms):
+        - For orthogonal boxes, a 1x3 list [lx, ly, lz] where box = Box_dim, and Cell would be [lx, ly, lz, 90, 90, 90]
+        - For cell parameters, a 1x6 list [a, b, c, alpha, beta, gamma] (Cell format)
+        - For triclinic boxes, a 1x9 list [lx, ly, lz, 0, 0, xy, 0, xz, yz] (GROMACS Box_dim format)
     angleparam : list or tuple
         If angletype='angle', provide [alpha, beta, gamma] in degrees.
         If angletype='tilt',  provide [xy, xz, yz].
@@ -49,7 +52,25 @@ def orthogonal_to_triclinic(atoms, box_dim, angleparam, angletype='angle', retur
     def deg2rad(d):
         return math.radians(d)
 
-    # Extract box dimensions
+    # Make sure box parameter is provided and handle different formats
+    if box is None:
+        raise ValueError("Box parameter must be provided")
+    
+    if len(box) == 9:
+        # Triclinic box in GROMACS format [lx, ly, lz, 0, 0, xy, 0, xz, yz]
+        Box_dim = box
+    elif len(box) == 6:
+        # Cell parameters [a, b, c, alpha, beta, gamma]
+        Cell = box
+        Box_dim = Cell2Box_dim(Cell)
+    elif len(box) == 3:
+        # Simple orthogonal box [lx, ly, lz]
+        Box_dim = list(box) + [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]  # Add zeros for the triclinic terms
+    else:
+        raise ValueError("Box must be length 3, 6, or 9")
+
+# Extract box dimensions
+    box_dim = Box_dim
     lx, ly, lz = box_dim[0], box_dim[1], box_dim[2]
     xy = xz = yz = 0.0
 
@@ -150,7 +171,7 @@ def orthogonal_to_triclinic(atoms, box_dim, angleparam, angletype='angle', retur
     return atoms
 
 
-def triclinic_to_orthogonal(atoms, triclinic_box_dim, return_box=False):
+def triclinic_to_orthogonal(atoms, box, return_box=False):
     """
     Transforms a triclinic atom list to an orthogonal one.
     
@@ -158,8 +179,10 @@ def triclinic_to_orthogonal(atoms, triclinic_box_dim, return_box=False):
     ----------
     atoms : list of dict
         Each dict should have 'x', 'y', 'z' coordinates (triclinic).
-    triclinic_box_dim : list or tuple
-        Triclinic box dimensions in format [lx, ly, lz, 0, 0, xy, 0, xz, yz].
+    box : a 1x3, 1x6 or 1x9 list representing cell dimensions (in Angstroms):
+        - For orthogonal boxes, a 1x3 list [lx, ly, lz] where box = Box_dim, and Cell would be [lx, ly, lz, 90, 90, 90]
+        - For cell parameters, a 1x6 list [a, b, c, alpha, beta, gamma] (Cell format)
+        - For triclinic boxes, a 1x9 list [lx, ly, lz, 0, 0, xy, 0, xz, yz] (GROMACS Box_dim format)
     return_box : bool, optional
         Whether to return the orthogonal box dimensions. Default is False.
         
@@ -176,7 +199,27 @@ def triclinic_to_orthogonal(atoms, triclinic_box_dim, return_box=False):
     # Convert to orthogonal:
     atoms = ap.triclinic.triclinic_to_orthogonal(atoms, [10, 10, 10, 0, 0, 0.5, 0, 0.2, 0.1])
     """
+
+        # Make sure box parameter is provided and handle different formats
+    if box is None:
+        raise ValueError("Box parameter must be provided")
+    
+    if len(box) == 9:
+        # Triclinic box in GROMACS format [lx, ly, lz, 0, 0, xy, 0, xz, yz]
+        Box_dim = box
+    elif len(box) == 6:
+        # Cell parameters [a, b, c, alpha, beta, gamma]
+        Cell = box
+        Box_dim = Cell2Box_dim(Cell)
+    elif len(box) == 3:
+        # Simple orthogonal box [lx, ly, lz]
+        Box_dim = list(box) + [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]  # Add zeros for the triclinic terms
+    else:
+        raise ValueError("Box must be length 3, 6, or 9")
+
+
     # Extract box dimensions
+    triclinic_box_dim = Box_dim
     if len(triclinic_box_dim) >= 9:
         lx, ly, lz, _, _, xy, _, xz, yz = triclinic_box_dim[:9]
     else:

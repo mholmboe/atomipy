@@ -1,11 +1,12 @@
 import os
 import numpy as np
 from datetime import datetime
+from atomipy.cell_utils import Cell2Box_dim
 from .bond_angle import bond_angle
 
 
-def itp(atoms, Box_dim, file_path=None, molecule_name=None, nrexcl=1, comment=None, 
-          rmaxH=1.2, rmaxM=2.45, explicit_bonds=0, explicit_angles=1, KANGLE=500):
+def itp(atoms, box=None, file_path=None, molecule_name=None, nrexcl=1, comment=None, 
+          rmaxH=1.2, rmaxM=2.45, explicit_bonds=0, explicit_angles=1, KANGLE=500, Box_dim=None):
     """
     Write atoms to a Gromacs molecular topology (.itp) file.
     
@@ -15,7 +16,10 @@ def itp(atoms, Box_dim, file_path=None, molecule_name=None, nrexcl=1, comment=No
     
     Args:
         atoms: List of atom dictionaries.
-        Box_dim: Box dimensions (required for bond/angle calculations if not already in atoms).
+        box: a 1x6 or 1x9 list representing cell dimensions (in Angstroms), either as 
+            a Cell variable having cell parameters array [a, b, c, alpha, beta, gamma], or as 
+            a Box_dim variable having box dimensions [lx, ly, lz, 0, 0, xy, 0, xz, yz] for triclinic cells.
+            Note that for orthogonal boxes Cell = Box_dim.
         file_path: Output file path for the .itp file.
         molecule_name: Name of the molecule (default: derived from atoms[0].resname).
         nrexcl: Number of exclusions (default: 3).
@@ -30,8 +34,14 @@ def itp(atoms, Box_dim, file_path=None, molecule_name=None, nrexcl=1, comment=No
         None
     
     Example:
-        itp(atoms, Box_dim=[50, 50, 50], file_path="molecule.itp", molecule_name="MMT")
+        itp(atoms, box=[50, 50, 50], file_path="molecule.itp", molecule_name="MMT")
     """
+    # Backward compatibility for Box_dim parameter
+    if box is None and Box_dim is not None:
+        box = Box_dim
+    elif box is None and Box_dim is None:
+        raise ValueError("Either 'box' or 'Box_dim' parameter must be provided")
+    
     # If file doesn't have .itp extension, add it
     if not file_path.endswith('.itp'):
         file_path = file_path + '.itp'
@@ -60,22 +70,18 @@ def itp(atoms, Box_dim, file_path=None, molecule_name=None, nrexcl=1, comment=No
         molecule_name = "MOL"
     
     # Use bond_angle function to calculate bonds and angles
-    if Box_dim is None:
-        raise ValueError("Box_dim is required to calculate bonds and angles using bond_angle function")
+    if box is None:
+        raise ValueError("A box variable is required to calculate bonds and angles using bond_angle function")
     
     # Add debug output for atom coordinates and box dimensions
-    print(f"write_itp: Using box dimensions: {Box_dim}")
- 
-    # Make sure Box_dim is correctly formatted
-    if isinstance(Box_dim, list):
-        Box_dim = np.array(Box_dim, dtype=float)
+    print(f"write_itp: Using box dimensions: {box}")
     
     # Call the bond_angle function with the provided rmaxH and rmaxM parameters
     # Note: bond_angle function expects coordinates in Angstroms
     # Important: Use same_molecule_only=False to allow bonds between different molecules
     # Keep same_element_bonds=False (default) which is correct for mineral structures
     print(f"write_itp: Calling bond_angle with rmaxH={rmaxH}, rmaxM={rmaxM}, same_molecule_only=False")
-    updated_atoms, Bond_index, Angle_index = bond_angle(atoms, Box_dim, rmaxH=rmaxH, rmaxM=rmaxM, same_element_bonds=False, same_molecule_only=True)
+    updated_atoms, Bond_index, Angle_index = bond_angle(atoms, box, rmaxH=rmaxH, rmaxM=rmaxM, same_element_bonds=False, same_molecule_only=True)
     print(f"write_itp: bond_angle found {len(Bond_index)} bonds and {len(Angle_index)} angles")
     
     # Convert bond and angle indices to 1-based if they're not already
@@ -313,7 +319,7 @@ def itp(atoms, Box_dim, file_path=None, molecule_name=None, nrexcl=1, comment=No
         # Getting angles from the Angle_index is more reliable and consistent
 
 
-def psf(atoms, Box_dim, file_path,segid=None, rmaxH=1.2, rmaxM=2.45, comment=None):
+def psf(atoms, box=None, file_path=None, segid=None, rmaxH=1.2, rmaxM=2.45, comment=None, Box_dim=None):
     """
     Write atoms to a NAMD/CHARMM PSF topology file.
     
@@ -323,7 +329,10 @@ def psf(atoms, Box_dim, file_path,segid=None, rmaxH=1.2, rmaxM=2.45, comment=Non
     
     Args:
         atoms: List of atom dictionaries.
-        Box_dim: Box dimensions (required for bond/angle calculations if not already in atoms).
+        box: a 1x6 or 1x9 list representing cell dimensions (in Angstroms), either as 
+            a Cell variable having cell parameters array [a, b, c, alpha, beta, gamma], or as 
+            a Box_dim variable having box dimensions [lx, ly, lz, 0, 0, xy, 0, xz, yz] for triclinic cells.
+            Note that for orthogonal boxes Cell = Box_dim.
         file_path: Output file path for the .psf file.
         segid: Segment ID to use in the PSF file (default: derived from atoms[0].resname).
         rmaxH: Maximum bond distance for hydrogen bonds (default: 1.2 Å).
@@ -334,8 +343,14 @@ def psf(atoms, Box_dim, file_path,segid=None, rmaxH=1.2, rmaxM=2.45, comment=Non
         None
     
     Example:
-        psf(atoms, Box_dim=[50, 50, 50], file_path="molecule.psf", segid="CLAY")
+        psf(atoms, box=[50, 50, 50], file_path="molecule.psf", segid="CLAY")
     """
+    # Backward compatibility for Box_dim parameter
+    if box is None and Box_dim is not None:
+        box = Box_dim
+    elif box is None and Box_dim is None:
+        raise ValueError("Either 'box' or 'Box_dim' parameter must be provided")
+    
     # If file doesn't have .psf extension, add it
     if not file_path.endswith('.psf'):
         file_path = file_path + '.psf'
@@ -346,19 +361,11 @@ def psf(atoms, Box_dim, file_path,segid=None, rmaxH=1.2, rmaxM=2.45, comment=Non
     if segid is None and atoms and 'resname' in atoms[0]:
         segid = atoms[0]['resname'][:4].upper()  # PSF typically uses 4-char segids
     elif segid is None:
-        segid = "CLAY"
-    
-    # Use bond_angle function to calculate bonds and angles
-    if Box_dim is None:
-        raise ValueError("Box_dim is required to calculate bonds and angles using bond_angle function")
-    
-    # Make sure Box_dim is correctly formatted
-    if isinstance(Box_dim, list):
-        Box_dim = np.array(Box_dim, dtype=float)
+        segid = "MIN"
     
     # Call the bond_angle function with the provided rmaxH and rmaxM parameters
     print(f"write_psf: Calling bond_angle with rmaxH={rmaxH}, rmaxM={rmaxM}")
-    updated_atoms, Bond_index, Angle_index = bond_angle(atoms, Box_dim, rmaxH=rmaxH, rmaxM=rmaxM, same_element_bonds=False, same_molecule_only=True)
+    updated_atoms, Bond_index, Angle_index = bond_angle(atoms, box, rmaxH=rmaxH, rmaxM=rmaxM, same_element_bonds=False, same_molecule_only=True)
     print(f"write_psf: bond_angle found {len(Bond_index)} bonds and {len(Angle_index)} angles")
     
     # PSF uses 0-based indexing for its pointers internally but displays as 1-based
@@ -531,52 +538,7 @@ def psf(atoms, Box_dim, file_path,segid=None, rmaxH=1.2, rmaxM=2.45, comment=Non
     return file_path
 
 
-def from_atom_types(atom_types, charges, masses, file_path, molecule_name='MOL', nrexcl=1, comment=None):
-    """
-    Write a Gromacs topology file directly from atom types, charges, and masses.
-    
-    This is a convenience function that doesn't require full atom dictionaries.
-    
-    Args:
-        atom_types: List of atom type strings.
-        charges: List of charges corresponding to atom types.
-        masses: List of masses corresponding to atom types.
-        file_path: Output file path for the .itp file.
-        molecule_name: Name of the molecule (default: 'MOL').
-        nrexcl: Number of exclusions (default: 1).
-        comment: Optional comment to include in the header.
-        
-    Returns:
-        None
-        
-    Example:
-        ap.write_itp.from_atom_types(
-            ['Al', 'Si', 'O', 'H'],
-            [1.782, 1.884, -1.065, 0.4],
-            [26.98, 28.09, 16.0, 1.01],
-            "simple.itp",
-            molecule_name="MIN"
-        )
-    """
-    # Create simple atom dictionaries
-    atoms = []
-    for i, (atom_type, charge, mass) in enumerate(zip(atom_types, charges, masses), start=1):
-        atoms.append({
-            'index': i,
-            'fftype': atom_type,
-            'atname': atom_type,
-            'resname': molecule_name,
-            'resnr': 1,
-            'charge': charge,
-            'mass': mass,
-            'cgnr': i
-        })
-    
-    # Call the main write function
-    write_itp(atoms, file_path, molecule_name, nrexcl, comment)
-
-
-def lmp(atoms, Box_dim, file_path, forcefield=None, rmaxH=1.2, rmaxM=2.45, comment=None):
+def lmp(atoms, box=None, file_path=None, forcefield=None, rmaxH=1.2, rmaxM=2.45, comment=None, Box_dim=None):
     """
     Write a LAMMPS data file (.data) from the atom data.
     
@@ -586,7 +548,10 @@ def lmp(atoms, Box_dim, file_path, forcefield=None, rmaxH=1.2, rmaxM=2.45, comme
     
     Args:
         atoms: List of atom dictionaries.
-        Box_dim: Box dimensions (required for bond/angle calculations if not already in atoms).
+        box: a 1x6 or 1x9 list representing cell dimensions (in Angstroms), either as 
+            a Cell variable having cell parameters array [a, b, c, alpha, beta, gamma], or as 
+            a Box_dim variable having box dimensions [lx, ly, lz, 0, 0, xy, 0, xz, yz] for triclinic cells.
+            Note that for orthogonal boxes Cell = Box_dim.
         file_path: Output file path for the .data file.
         forcefield: Dictionary of forcefield parameters or None (default: None).
         rmaxH: Maximum bond distance for hydrogen bonds (default: 1.2 Å).
@@ -597,7 +562,7 @@ def lmp(atoms, Box_dim, file_path, forcefield=None, rmaxH=1.2, rmaxM=2.45, comme
         The file path to which the data was written.
     
     Example:
-        lmp(atoms, Box_dim=[50, 50, 50], file_path="molecule.data")
+        lmp(atoms, box=[50, 50, 50], file_path="molecule.data")
     """
     import numpy as np
     from datetime import datetime
@@ -615,6 +580,22 @@ def lmp(atoms, Box_dim, file_path, forcefield=None, rmaxH=1.2, rmaxM=2.45, comme
     KANGLE_M = 500.00 / (2 * 4.184)       # For other angles
     ANGLE_H = 110                        # Angle value for H-containing angles
 
+    # Use bond_angle function to calculate bonds and angles
+    if box is None:
+        raise ValueError("A box variable is required to calculate bonds and angles using bond_angle function")
+    
+    # Possibly convert Box_dim into [a,b,c,alpha,beta,gamma] form
+    if box is not None:
+        if len(box) == 9:
+            Box_dim = box 
+        elif len(box) == 6:
+            Cell = box
+            Box_dim = Cell2Box_dim(Cell)
+        elif len(box) == 3:
+            # Orthogonal box
+            Box_dim = box
+        else:
+            raise ValueError("Box_dim must be either length 3 (orthogonal) or 9 (triclinic)")
     
     # Check if we need to convert file_path to include .data extension
     if not file_path.endswith('.data') and not file_path.endswith('.data'):
@@ -626,7 +607,7 @@ def lmp(atoms, Box_dim, file_path, forcefield=None, rmaxH=1.2, rmaxM=2.45, comme
     
     # Call the bond_angle function with the provided rmaxH and rmaxM parameters
     print(f"write_lmp: Calling bond_angle with rmaxH={rmaxH}, rmaxM={rmaxM}")
-    updated_atoms, Bond_index, Angle_index = bond_angle(atoms, Box_dim, rmaxH=rmaxH, rmaxM=rmaxM, same_element_bonds=False, same_molecule_only=True)
+    updated_atoms, Bond_index, Angle_index = bond_angle(atoms, box, rmaxH=rmaxH, rmaxM=rmaxM, same_element_bonds=False, same_molecule_only=True)
     print(f"write_lmp: bond_angle found {len(Bond_index)} bonds and {len(Angle_index)} angles")
     
     # Ensure Bond_index is using 1-based indexing for consistent processing
@@ -979,3 +960,47 @@ def lmp(atoms, Box_dim, file_path, forcefield=None, rmaxH=1.2, rmaxM=2.45, comme
     # Print success message
     print(f"write_lmp: Successfully wrote LAMMPS data file to {file_path}")
     return file_path
+
+def from_atom_types(atom_types, charges, masses, file_path, molecule_name='MOL', nrexcl=1, comment=None):
+    """
+    Write a Gromacs topology file directly from atom types, charges, and masses.
+    
+    This is a convenience function that doesn't require full atom dictionaries.
+    
+    Args:
+        atom_types: List of atom type strings.
+        charges: List of charges corresponding to atom types.
+        masses: List of masses corresponding to atom types.
+        file_path: Output file path for the .itp file.
+        molecule_name: Name of the molecule (default: 'MOL').
+        nrexcl: Number of exclusions (default: 1).
+        comment: Optional comment to include in the header.
+        
+    Returns:
+        None
+        
+    Example:
+        ap.write_itp.from_atom_types(
+            ['Al', 'Si', 'O', 'H'],
+            [1.782, 1.884, -1.065, 0.4],
+            [26.98, 28.09, 16.0, 1.01],
+            "simple.itp",
+            molecule_name="MIN"
+        )
+    """
+    # Create simple atom dictionaries
+    atoms = []
+    for i, (atom_type, charge, mass) in enumerate(zip(atom_types, charges, masses), start=1):
+        atoms.append({
+            'index': i,
+            'fftype': atom_type,
+            'atname': atom_type,
+            'resname': molecule_name,
+            'resnr': 1,
+            'charge': charge,
+            'mass': mass,
+            'cgnr': i
+        })
+    
+    # Call the main write function
+    write_itp(atoms, file_path, molecule_name, nrexcl, comment)
