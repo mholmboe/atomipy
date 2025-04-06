@@ -132,7 +132,7 @@ def main():
     ap.write_itp(
         minff_atoms, 
         file_path="molecular_topology.itp", 
-        Box_dim=box_dim
+        box=box_dim
     )
     
     # Step 8: Write final GRO file

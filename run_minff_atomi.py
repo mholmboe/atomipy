@@ -9,7 +9,8 @@ using the atomipy package. It demonstrates how to:
 3. Create a supercell
 4. Calculate bonds and angles
 5. Assign atomtypes according to MINFF
-6. Generate a minff topology file
+6. Generate a minff topology filey
+7. Generate a minff structure file
 """
 
 # Import the atomipy package and other required libraries
@@ -137,7 +138,7 @@ def main():
     # - Angle definitions
     ap.write_itp(
         minff_atoms, 
-        Box_dim=box_dim,
+        box=box_dim,
         file_path="minff_topology.itp"
     )
     
@@ -145,7 +146,7 @@ def main():
     print("Writing PSF topology file...")
     ap.write_psf(
         minff_atoms,
-        Box_dim=box_dim,
+        box=box_dim,
         file_path="minff_topology.psf"
     )
     
@@ -153,7 +154,7 @@ def main():
     print("Writing LAMMPS topology file...")
     ap.write_lmp(
         minff_atoms,
-        Box_dim=box_dim,
+        box=box_dim,
         file_path="minff_topology.data"
     )
     

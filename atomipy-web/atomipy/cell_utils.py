@@ -142,6 +142,9 @@ def Cell2Box_dim(cell, original_box_dim=None):
     """
     cell = np.array(cell, dtype=float)
     
+    if len(cell) == 3:
+        cell = list(cell) + [90.0, 90.0, 90.0]
+    
     if len(cell) != 6:
         raise ValueError(f"Expected 6 cell parameters, got {len(cell)}")
     

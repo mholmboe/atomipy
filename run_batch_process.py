@@ -44,7 +44,7 @@ def main():
             # ------------------------------
             print(f"Loading structure from: {input_file}")
             try:
-                atoms, box_dim = ap.import_conf.gro(input_file)
+                atoms, cell, box_dim = ap.import_conf.gro(input_file)
                 print(f"Successfully loaded {len(atoms)} atoms")
                 
                 # Store original atom types before processing
@@ -134,12 +134,12 @@ def main():
             # Output GRO file
             output_gro = f"output/pypreem{i}.gro"
             print(f"\nWriting processed structure to {output_gro}...")
-            ap.write_gro(atoms, box_dim, output_gro)
+            ap.write_gro(atoms, box=box_dim, file_path=output_gro)
             
             # Output ITP file
             output_itp = f"output/pymin{i}.itp"
             print(f"Generating molecular topology file {output_itp}...")
-            ap.write_itp(atoms, Box_dim=box_dim, file_path=output_itp)
+            ap.write_itp(atoms, box=box_dim, file_path=output_itp)
             
             print(f"Completed processing {input_file}")
     

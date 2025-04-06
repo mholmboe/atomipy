@@ -111,13 +111,13 @@ def process_file_task(task_id, filepath, filename, ff_type, output_formats, resu
             log_file = os.path.join(results_dir, 'minff_structure_stats.log')
             
             # Assign atom types using MINFF forcefield and generate statistics in one call
-            atoms = minff(atoms, box_dim, log=True, log_file=log_file)
+            atoms = minff(atoms, box=box_dim, log=True, log_file=log_file)
         elif ff_type == 'clayff':
             # Generate log file path in the writable results directory
             log_file = os.path.join(results_dir, 'clayff_structure_stats.log')
             
             # Assign atom types using CLAYFF forcefield and generate statistics in one call
-            atoms = clayff(atoms, box_dim, log=True, log_file=log_file)
+            atoms = clayff(atoms, box=box_dim, log=True, log_file=log_file)
         tasks_status[task_id] = {'status': 'Processing', 'step': f'Calculating charges ({ff_type})', 'progress': 50}
         # Comprehensive debug of the structure
         print(f"Type of atoms after processing: {type(atoms)}")
@@ -189,21 +189,21 @@ def process_file_task(task_id, filepath, filename, ff_type, output_formats, resu
             if 'itp' in output_formats:
                 tasks_status[task_id] = {'status': 'Processing', 'step': 'Writing ITP', 'progress': int(progress_step)}
                 topology_itp = os.path.join(results_dir, f"{base_filename}_{ff_type}.itp")
-                write_top.itp(atoms, box_dim, file_path=topology_itp)
+                write_top.itp(atoms, box=box_dim, file_path=topology_itp)
                 generated_files.append(topology_itp)
                 print(f"ITP file for {ff_type} written successfully to {topology_itp}")
                 progress_step += progress_increment
             if 'psf' in output_formats:
                 tasks_status[task_id] = {'status': 'Processing', 'step': 'Writing PSF', 'progress': int(progress_step)}
                 topology_psf = os.path.join(results_dir, f"{base_filename}_{ff_type}.psf")
-                write_top.psf(atoms, box_dim, file_path=topology_psf)
+                write_top.psf(atoms, box=box_dim, file_path=topology_psf)
                 generated_files.append(topology_psf)
                 print(f"PSF file for {ff_type} written successfully to {topology_psf}")
                 progress_step += progress_increment
             if 'lmp' in output_formats:  # Check for 'lmp' from form value
                 tasks_status[task_id] = {'status': 'Processing', 'step': 'Writing LAMMPS Data', 'progress': int(progress_step)}
                 topology_lmp = os.path.join(results_dir, f"{base_filename}_{ff_type}.data")  # Use .data extension
-                write_top.lmp(atoms, box_dim, file_path=topology_lmp)
+                write_top.lmp(atoms, box=box_dim, file_path=topology_lmp)
                 generated_files.append(topology_lmp)
                 print(f"LAMMPS data file for {ff_type} written successfully to {topology_lmp}")
                 progress_step += progress_increment
@@ -225,13 +225,13 @@ def process_file_task(task_id, filepath, filename, ff_type, output_formats, resu
         # GRO file is also always generated for reference
         tasks_status[task_id] = {'status': 'Processing', 'step': 'Writing GRO', 'progress': 90} # Update progress
         gro_filepath = os.path.join(results_dir, f"{base_filename}_{ff_type}.gro")
-        write_gro(atoms, box_dim, gro_filepath)
+        write_gro(atoms, box=box_dim, file_path=gro_filepath)
         print(f"GRO file written successfully to {gro_filepath}")
         
         # XYZ file is also generated for reference with cell info on line 2
         tasks_status[task_id] = {'status': 'Processing', 'step': 'Writing XYZ', 'progress': 95} # Final writing step
         xyz_filepath = os.path.join(results_dir, f"{base_filename}_{ff_type}.xyz")
-        write_xyz(atoms, Cell=cell, file_path=xyz_filepath)
+        write_xyz(atoms, box=cell, file_path=xyz_filepath)
         print(f"XYZ file written successfully to {xyz_filepath}")
 
         elapsed_time = time.time() - start_time

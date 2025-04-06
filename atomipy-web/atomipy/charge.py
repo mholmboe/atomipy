@@ -121,7 +121,7 @@ def get_half_formal_charge(element_or_type):
 # =====================================================
 # MINFF forcefield charge functions (from charge_minff.py)
 # =====================================================
-def charge_minff(atoms, box_dim, atom_labels=None, charges=None, resname=None):
+def charge_minff(atoms, box, atom_labels=None, charges=None, resname=None):
     """
     Assign charges to atoms based on MINFF forcefield principles.
     
@@ -129,7 +129,7 @@ def charge_minff(atoms, box_dim, atom_labels=None, charges=None, resname=None):
     
     Args:
         atoms: List of atom dictionaries.
-        box_dim: Box dimensions for periodic boundary conditions.
+        box: Box dimensions for periodic boundary conditions.
         atom_labels: Optional list of atom types to assign specific charges.
         charges: Optional list of charge values corresponding to atom_labels.
         resname: Optional residue name filter (e.g., 'MIN').
@@ -170,7 +170,7 @@ def charge_minff(atoms, box_dim, atom_labels=None, charges=None, resname=None):
     fs_indices = [i for i in target_atoms if 'type' in atoms[i] and atoms[i]['type'].lower().startswith('fs')]
 
     if 'bonds' not in atoms[0] and 'neigh' not in atoms[0]:
-        atoms, _, _ = bond_angle(atoms, box_dim, rmaxH=1.2, rmaxM=2.45)
+        atoms, _, _ = bond_angle(atoms, box, rmaxH=1.2, rmaxM=2.45)
 
     for i in ox_indices:
         neighbors = atoms[i].get('neigh', [])

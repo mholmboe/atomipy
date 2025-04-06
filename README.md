@@ -105,11 +105,11 @@ for i in range(len(atoms)):
 
 # Step 3: Calculate bonds and angles
 print("Calculating bonds and angles...")
-atoms = ap.bond_angle(atoms, box_dim)
+atoms = ap.bond_angle(atoms, box=box_dim)
 
 # Step 4: Save as a new file
 print("Saving processed structure...")
-ap.write_gro(atoms, box_dim, "processed.gro")
+ap.write_gro(atoms, box=box_dim, "processed.gro")
 print("Done!")
 ```
 
@@ -128,20 +128,21 @@ python my_first_atomipy.py
 
 ### File I/O
 
-- `import_pdb(file_path)`: Import a PDB file, returning a list of atom dictionaries and cell parameters
+- `import_pdb(file_path)`: Import a PDB file, returning a list of atom dictionaries and box parameters
 - `import_gro(file_path)`: Import a Gromacs GRO file, including velocities if present
-- `write_pdb(atoms, cell, file_path)`: Write atoms to a PDB file
-- `write_gro(atoms, Box_dim, file_path)`: Write atoms to a Gromacs GRO file, including velocities if present
+- `write_pdb(atoms, box, file_path)`: Write atoms to a PDB file
+- `write_gro(atoms, box, file_path)`: Write atoms to a Gromacs GRO file, including velocities if present
 
 ### Force Field
 
-- `minff(atom)`: Assign MINFF forcefield specific atom types to each atom
+- `minff(atoms, box, ffname='minff', rmaxlong=2.45, rmaxH=1.2)`: Assign MINFF forcefield specific atom types to each atom
+- `clayff(atoms, box, ffname='clayff', rmaxlong=2.45, rmaxH=1.2)`: Assign CLAYFF forcefield specific atom types to each atom
 
 ### Molecular Topology
 
-- `write_itp(atoms, Box_dim, file_path)`: Write a Gromacs topology file
-- `write_psf(atoms, Box_dim, file_path)`: Write a NAMD topology file
-- `write_data(atoms, Box_dim, file_path)`: Write a LAMMPS topology file
+- `write_itp(atoms, box, file_path)`: Write a Gromacs topology file
+- `write_psf(atoms, box, file_path)`: Write a NAMD topology file
+- `write_data(atoms, box, file_path)`: Write a LAMMPS topology file
 
 ### Atom Properties
 
@@ -151,18 +152,18 @@ python my_first_atomipy.py
 
 ### Structure Analysis
 
-- `bond_angle(atoms, Box_dim, rmaxH=1.2, rmaxM=2.45)`: Compute bonds and angles for a given atomic structure
-- `dist_matrix(atoms, Box_dim)`: Calculate a full distance matrix between all atoms with PBC
-- `cell_list_dist_matrix(atoms, Box_dim)`: Calculate a sparse distance matrix between all atoms with PBC
+- `bond_angle(atoms, box, rmaxH=1.2, rmaxM=2.45)`: Compute bonds and angles for a given atomic structure
+- `dist_matrix(atoms, box)`: Calculate a full distance matrix between all atoms with PBC
+- `cell_list_dist_matrix(atoms, box)`: Calculate a sparse distance matrix between all atoms with PBC
 
 
 ### Coordinate Transformations
 
-- `triclinic.orthogonal_to_triclinic(atoms, box_dim, angleparam)`: Convert atom coordinates from orthogonal to triclinic space
-- `ortho.triclinic_to_orthogonal(atoms, box_dim)`: Convert atom coordinates from triclinic to orthogonal space
-- `fract.cartesian_to_fractional(atoms, box_dim)`: Convert atom coordinates to fractional coordinates
-- `fract.fractional_to_cartesian(atoms, box_dim)`: Convert fractional coordinates to cartesian
-- `replicate.replicate_cell(atoms, box_dim, replicate)`: Create supercells by replicating in a, b, c directions
+- `triclinic.orthogonal_to_triclinic(atoms, box, angleparam)`: Convert atom coordinates from orthogonal to triclinic space
+- `ortho.triclinic_to_orthogonal(atoms, box)`: Convert atom coordinates from triclinic to orthogonal space
+- `fract.cartesian_to_fractional(atoms, box)`: Convert atom coordinates to fractional coordinates
+- `fract.fractional_to_cartesian(atoms, box)`: Convert fractional coordinates to cartesian
+- `replicate.replicate_system(atoms, box, replicate)`: Create supercells by replicating in a, b, c directions
 
 ### Cell Utilities
 
@@ -191,13 +192,45 @@ All atomic information is stored in a list of dictionaries called `atoms`. Each 
 - `fftype`: Force field specific atom type
 - `cn`: Coordination number
 
-The simulation cell is represented in two ways:
-- `Box_dim`: A 1x9 array used in Gromacs GRO files for triclinic cells
-- `cell`: A 1x6 array [a, b, c, alpha, beta, gamma] used in PDB files
+The simulation cell can be represented in three ways with the unified `box` parameter:
+- **Orthogonal box**: A 1x3 array `[lx, ly, lz]` for simple rectangular boxes
+- **Cell parameters**: A 1x6 array `[a, b, c, alpha, beta, gamma]` (used in PDB files)
+- **Triclinic box**: A 1x9 array `[lx, ly, lz, 0, 0, xy, 0, xz, yz]` (used in Gromacs GRO files for triclinic cells)
+
+Conversion utilities `Box_dim2Cell()` and `Cell2Box_dim()` can be used to convert between these formats.
 
 ## Common Workflow Examples
 
 Here are some common workflows that demonstrate how to use Atomipy for specific tasks:
+
+## Box Parameter Handling
+
+Atomipy now uses a standardized approach for handling simulation box parameters across all functions:
+
+- All functions accept a generalized `box` parameter (replacing the previous `Box_dim` parameter in most functions)
+- The `box` parameter supports three formats:
+  1. **Orthogonal box**: A 1x3 array `[lx, ly, lz]` for simple rectangular boxes
+  2. **Cell parameters**: A 1x6 array `[a, b, c, alpha, beta, gamma]` for crystallographic notation
+  3. **Triclinic box**: A 1x9 array `[lx, ly, lz, 0, 0, xy, 0, xz, yz]` using GROMACS triclinic box format
+
+- Conversion utilities are automatically applied internally based on the format provided
+- Backward compatibility is maintained for functions still using `Box_dim` and `Cell` parameters
+
+Example usage with the different formats:
+
+```python
+# Using orthogonal box format
+box_ortho = [30.0, 30.0, 30.0]  # lx, ly, lz in Angstroms
+atoms = ap.bond_angle(atoms, box=box_ortho)
+
+# Using cell parameters format
+box_cell = [30.0, 30.0, 30.0, 90.0, 90.0, 90.0]  # a, b, c, alpha, beta, gamma
+atoms = ap.bond_angle(atoms, box=box_cell)
+
+# Using triclinic box format
+box_triclinic = [30.0, 30.0, 30.0, 0.0, 0.0, 5.0, 0.0, 5.0, 2.0]  # GROMACS format
+atoms = ap.bond_angle(atoms, box=box_triclinic)
+```
 
 ### Basic Structure Processing
 
