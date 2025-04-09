@@ -130,7 +130,7 @@ def get_structure_stats(atoms, total_charge, ffname, Box_dim=None, Cell=None, lo
     # Add box dimensions, volume, and density information
     if Box_dim is not None or Cell is not None:
         output.append("System Dimensions and Properties")
-        output.append("-" * 70)
+        output.append("-" * 80)
         
         # Box_dim representation
         if Box_dim is not None:
@@ -182,7 +182,7 @@ def get_structure_stats(atoms, total_charge, ffname, Box_dim=None, Cell=None, lo
         output.append("          For triclinic boxes: [Lx, Ly, Lz, xy, xz, yz] or [Lx, Ly, Lz, α, β, γ]")
         output.append("  Cell: A 1×6 array with cell parameters [a, b, c, α, β, γ]")
         output.append("        where a, b, c are lengths and α, β, γ are angles in degrees.")
-        output.append("-" * 70)
+        output.append("-" * 80)
         output.append("")
     
     output.append(f"Total charge ({ffname.upper()}): {total_charge:.7f}")
@@ -193,9 +193,9 @@ def get_structure_stats(atoms, total_charge, ffname, Box_dim=None, Cell=None, lo
         output.append(f"Final total charge: {sum(atom.get('charge', 0) for atom in atoms):.7f} (target was {target_charge})")
     
     output.append("\nUnique Atom Types and Their Coordination Environment")
-    output.append("-" * 70)
-    output.append(f"{'Type':<10} {'Count':<6} {'Neighbors':<25} {'Charge':>15}")
-    output.append("-" * 70)
+    output.append("-" * 80)
+    output.append(f"{'Type':<10} {'Count':<6} {'Neighbors':<20} {'Charge':>15}")
+    output.append("-" * 80)
     
     # Sort by atom type for a more organized display
     for key in sorted(unique_patterns.keys()):
@@ -217,16 +217,16 @@ def get_structure_stats(atoms, total_charge, ffname, Box_dim=None, Cell=None, lo
             # Otherwise, display all unique charges separated by commas
             charge_str = ', '.join([f"{c:.5f}" for c in sorted(unique_charges)])
         
-        output.append(f"{atom_type:<10} {count:<6} {neighbor_pattern:<25} {charge_str:>15}")
+        output.append(f"{atom_type:<10} {count:<6} {neighbor_pattern:<20} {charge_str:>15}")
     
-    output.append("-" * 70)
+    output.append("-" * 80)
     
     # Add detailed statistics for average coordination, bond distances, and angles
     output.append("\nDetailed Atom Type Statistics with Standard Deviations")
-    output.append("-" * 100)
-    header = f"{'Type':<10} {'Count':<6} {'Coord#':<15} {'Bond Dist (Å)':<20} {'Angle (°)':<20}"
+    output.append("-" * 80)
+    header = f"{'Type':<10} {'Count':<6} {'Coord#':<16} {'Bond Dist (Å)':<20} {'Angle (°)':<20}"
     output.append(header)
-    output.append("-" * 100)
+    output.append("-" * 80)
     
     for atom_type, count in sorted(atom_type_counts.items()):
         # Calculate average coordination number and std dev
@@ -248,21 +248,21 @@ def get_structure_stats(atoms, total_charge, ffname, Box_dim=None, Cell=None, lo
             h_angle_data = h_involved_angles[atom_type]
             avg_angle = np.mean(h_angle_data) if h_angle_data else 0
             std_angle = np.std(h_angle_data) if len(h_angle_data) > 1 else 0
-            angle_str = f"{avg_angle:.3f} ± {std_angle:.3f} (H-involved)" if h_angle_data else "N/A"
+            angle_str = f"{avg_angle:.3f} ± {std_angle:.3f} (H-O-M)" if h_angle_data else "N/A"
         else:
             avg_angle = np.mean(angle_data) if angle_data else 0
             std_angle = np.std(angle_data) if len(angle_data) > 1 else 0
             angle_str = f"{avg_angle:.3f} ± {std_angle:.3f}" if angle_data else "N/A"
         
         # Format the output line
-        output.append(f"{atom_type:<10} {count:<6} {cn_str:<15} {dist_str:<20} {angle_str:<20}")
+        output.append(f"{atom_type:<10} {count:<6} {cn_str:<16} {dist_str:<20} {angle_str:<20}")
     
-    output.append("-" * 100)
+    output.append("-" * 80)
     
     # Add bond statistics for unique atom type pairs
     output.append("\nBond Statistics for Unique Atom Type Pairs")
     output.append("-" * 80)
-    output.append(f"{'Bond Pair':<30} {'Count':>10} {'Avg Distance (Å)':>20} {'Std Dev':>10}")
+    output.append(f"{'Bond Pair':<25} {'Count':<8} {'Distance (Å)':<20}")
     output.append("-" * 80)
     
     # Sort by bond pair for a more organized display
@@ -273,14 +273,14 @@ def get_structure_stats(atoms, total_charge, ffname, Box_dim=None, Cell=None, lo
         avg_dist = np.mean(distances)
         std_dist = np.std(distances) if len(distances) > 1 else 0
         
-        output.append(f"{pair_str:<30} {count:>10} {avg_dist:>20.4f} {std_dist:>10.4f}")
+        output.append(f"{pair_str:<25} {count:<8} {avg_dist:.4f} ± {std_dist:.4f}")
     
     output.append("-" * 80)
     
     # Add angle statistics for unique atom type triplets
     output.append("\nAngle Statistics for Unique Atom Type Triplets")
     output.append("-" * 80)
-    output.append(f"{'Angle Triplet':<35} {'Count':>10} {'Avg Angle (°)':>15} {'Std Dev':>10}")
+    output.append(f"{'Angle Triplet':<25} {'Count':<8} {'Angle (°)':<20}")
     output.append("-" * 80)
     
     # Sort by angle triplet for a more organized display
@@ -291,7 +291,7 @@ def get_structure_stats(atoms, total_charge, ffname, Box_dim=None, Cell=None, lo
         avg_angle = np.mean(angles_data)
         std_angle = np.std(angles_data) if len(angles_data) > 1 else 0
         
-        output.append(f"{triplet_str:<40} {count:>10} {avg_angle:>15.3f} {std_angle:>10.3f}")
+        output.append(f"{triplet_str:<25} {count:<8} {avg_angle:.3f} ± {std_angle:.3f}")
     
     output.append("-" * 80)
     
