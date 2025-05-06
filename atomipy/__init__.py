@@ -5,6 +5,16 @@ This package provides tools for working with molecular structures, particularly
 focused on mineral systems with periodic boundary conditions. It supports both
 orthogonal and triclinic simulation cells, and provides efficient distance
 calculations, bond/angle detection, and structure manipulation functions.
+
+Key features:
+- Import/export of common molecular file formats (PDB, GRO, XYZ)
+- Topology file generation for molecular dynamics simulations
+- Distance calculations with efficient algorithms for periodic systems
+- Bond and angle detection
+- Coordinate transformations between Cartesian and fractional representations
+- Support for both orthogonal and triclinic simulation cells
+- Structure manipulation (replication, translation)
+- Force field implementations for mineral systems (CLAYFF, MINFF)
 """
 
 # ===== File I/O functions =====

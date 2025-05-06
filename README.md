@@ -24,7 +24,11 @@ The molecular structure information is stored in dictionaries where each atom ha
 - Distance matrices with PBC corrections (using both full matrix and efficient cell-list algorithms)
 - Progress tracking for computationally intensive calculations
 - Consolidated charge module with support for formal, MINFF, and CLAYFF charge assignments
-- Coordinate transformations (orthogonal/triclinic, fractional/cartesian)
+- Unified coordinate transformation system:
+  - Cartesian-to-fractional and fractional-to-cartesian conversions
+  - Orthogonal-to-triclinic and triclinic-to-orthogonal transformations
+  - Direct transformation methods for crystallographic calculations
+  - Coordinate wrapping for periodic boundary conditions
 - Supercell replication with proper handling of triclinic cells
 - Support for case-insensitive element matching in charge assignments
 
