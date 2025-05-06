@@ -163,11 +163,16 @@ python my_first_atomipy.py
 
 ### Coordinate Transformations
 
-- `triclinic.orthogonal_to_triclinic(atoms, box, angleparam)`: Convert atom coordinates from orthogonal to triclinic space
-- `ortho.triclinic_to_orthogonal(atoms, box)`: Convert atom coordinates from triclinic to orthogonal space
-- `fract.cartesian_to_fractional(atoms, box)`: Convert atom coordinates to fractional coordinates
-- `fract.fractional_to_cartesian(atoms, box)`: Convert fractional coordinates to cartesian
-- `replicate.replicate_system(atoms, box, replicate)`: Create supercells by replicating in a, b, c directions
+- `transform.orthogonal_to_triclinic(ortho_coords, box, atoms=None)`: Convert coordinates from orthogonal to triclinic space
+- `transform.triclinic_to_orthogonal(atoms=None, coords=None, box_dim=None, box=None)`: Convert coordinates from triclinic to orthogonal space
+- `transform.cartesian_to_fractional(atoms=None, cart_coords=None, box_dim=None, box=None)`: Convert coordinates to fractional coordinates
+- `transform.fractional_to_cartesian(atoms=None, frac_coords=None, box_dim=None, box=None)`: Convert fractional coordinates to cartesian
+- `transform.direct_cartesian_to_fractional(atoms=None, cart_coords=None, box_dim=None, cell=None)`: Direct conversion using crystallographic matrices
+- `transform.direct_fractional_to_cartesian(atoms=None, frac_coords=None, box_dim=None, cell=None)`: Direct conversion using crystallographic matrices
+- `transform.wrap_coordinates(atoms=None, coords=None, frac_coords=None, box_dim=None, box=None)`: Wrap coordinates to ensure they're within the primary unit cell
+- `transform.get_cell_vectors(box)`: Calculate cell vectors from box parameters
+- `transform.get_orthogonal_box(box_dim=None, box=None)`: Get orthogonal box dimensions from triclinic parameters
+- `replicate.replicate_system(atoms, box, replicate=[1, 1, 1])`: Create supercells by replicating in a, b, c directions
 
 ### Cell Utilities
 
