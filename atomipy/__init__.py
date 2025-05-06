@@ -47,12 +47,26 @@ from . import cell_utils
 Box_dim2Cell = cell_utils.Box_dim2Cell
 Cell2Box_dim = cell_utils.Cell2Box_dim
 
-from . import triclinic
-from . import ortho
-from . import fract
+# Coordinate transformation module
+from . import transform
+cartesian_to_fractional = transform.cartesian_to_fractional
+fractional_to_cartesian = transform.fractional_to_cartesian
+wrap_coordinates = transform.wrap_coordinates
+triclinic_to_orthogonal = transform.triclinic_to_orthogonal
+orthogonal_to_triclinic = transform.orthogonal_to_triclinic
+get_orthogonal_box = transform.get_orthogonal_box
+get_cell_vectors = transform.get_cell_vectors
+direct_cartesian_to_fractional = transform.direct_cartesian_to_fractional
+direct_fractional_to_cartesian = transform.direct_fractional_to_cartesian
 
 from . import replicate
 replicate_system = replicate.replicate_system
+
+from . import move
+translate = move.translate
+
+from . import add
+update = add.update
 
 # ===== Force field functions =====
 try:
@@ -77,7 +91,10 @@ __all__ = [
     'element', 'radius', 'mass',
     'dist_matrix', 'cell_list_dist_matrix', 'bond_angle',
     'Box_dim2Cell', 'Cell2Box_dim',
-    'replicate_system',
+    'cartesian_to_fractional', 'fractional_to_cartesian', 'wrap_coordinates',
+    'triclinic_to_orthogonal', 'orthogonal_to_triclinic', 'get_orthogonal_box', 'get_cell_vectors',
+    'direct_cartesian_to_fractional', 'direct_fractional_to_cartesian',
+    'replicate_system', 'translate', 'update',
     'minff', 'clayff',
     'charge_minff', 'charge_clayff', 'balance_charges',
     'assign_formal_charges'
