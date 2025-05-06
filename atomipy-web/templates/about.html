@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+
+{% block title %}About atomipy Web Interface{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-10">
+        <div class="card shadow">
+            <div class="card-header bg-dark text-white">
+                <h2 class="text-center mb-0">About atomipy</h2>
+            </div>
+            <div class="card-body">
+                <h3>What is atomipy?</h3>
+                <p class="lead">
+                    atomipy is a modular Python toolbox for handling and analyzing molecular structures, particularly for 
+                    mineral slabs with periodic boundary conditions. It's a lightweight version of the MATLAB 
+                    <a href="https://github.com/mholmboe/atom" target="_blank">atom Toolbox</a> and specializes in 
+                    generating molecular topology files for the <a href="https://github.com/mholmboe/minff" target="_blank">MINFF</a> 
+                    forcefield.
+                </p>
+
+                <hr>
+
+                <h3>About this Web Interface</h3>
+                <p>
+                    This web interface simplifies the use of atomipy by providing an easy way to:
+                </p>
+                <ul>
+                    <li>Upload molecular structure files (.gro or .pdb)</li>
+                    <li>Process them to assign MINFF atom types</li>
+                    <li>Generate structure files with the assigned atom types</li>
+                    <li>Create topology files for three popular simulation packages:
+                        <ul>
+                            <li>GROMACS (.itp)</li>
+                            <li>NAMD/CHARMM (.psf)</li>
+                            <li>LAMMPS (.data)</li>
+                        </ul>
+                    </li>
+                </ul>
+
+                <div class="alert alert-info">
+                    <h5>Key Features of atomipy:</h5>
+                    <ul>
+                        <li>MINFF forcefield atom typing</li>
+                        <li>Import/export PDB, XYZ and Gromacs GRO files</li>
+                        <li>Topology file generation for multiple simulation packages</li>
+                        <li>Handle both orthogonal and triclinic simulation cells with periodic boundary conditions</li>
+                        <li>Calculate bond distances and angles</li>
+                        <li>Element type assignment based on structural information</li>
+                        <li>Coordinate transformations (orthogonal/triclinic, fractional/cartesian)</li>
+                    </ul>
+                </div>
+
+                <hr>
+
+                <h3>How It Works</h3>
+                <ol>
+                    <li><strong>Upload</strong> - Select and upload a structure file (.gro or .pdb)</li>
+                    <li><strong>Process</strong> - The file is processed through several atomipy functions to:
+                        <ul>
+                            <li>Assign elements based on atom and residue names</li>
+                            <li>Calculate bonds and angles with periodic boundary conditions</li>
+                            <li>Assign specialized MINFF atom types based on their chemical environment</li>
+                        </ul>
+                    </li>
+                    <li><strong>Download</strong> - Get the processed structure and topology files for your simulations</li>
+                </ol>
+
+                <hr>
+
+                <h3>Technical Details</h3>
+                <p>This web application uses:</p>
+                <ul>
+                    <li>Flask web framework</li>
+                    <li>atomipy Python package for molecular processing</li>
+                    <li>The MINFF forcefield for atom typing</li>
+                </ul>
+                
+                <p>
+                    For more detailed information about atomipy and its capabilities, please visit the 
+                    <a href="https://github.com/mholmboe/atomipy" target="_blank">GitHub repository</a>.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
