@@ -2,7 +2,29 @@
 # -*- coding: utf-8 -*-
 """
 Transform module for coordinate transformations in atomipy.
-This module consolidates functionality from fract.py, triclinic.py, and ortho.py.
+
+This module consolidates functionality from the previous fract.py, triclinic.py, and ortho.py
+modules into a unified interface for handling all coordinate transformations in molecular systems.
+
+Key functionality includes:
+
+1. Cartesian-fractional coordinate conversions:
+   - cartesian_to_fractional(): Convert Cartesian coordinates to fractional coordinates
+   - fractional_to_cartesian(): Convert fractional coordinates to Cartesian coordinates
+   - direct_cartesian_to_fractional(): Direct conversion using crystallographic matrices
+   - direct_fractional_to_cartesian(): Direct conversion using crystallographic matrices
+
+2. Triclinic-orthogonal transformations:
+   - triclinic_to_orthogonal(): Convert triclinic coordinates to orthogonal system
+   - orthogonal_to_triclinic(): Convert orthogonal coordinates to triclinic system
+
+3. Utility functions:
+   - wrap_coordinates(): Ensure coordinates are within the primary unit cell
+   - get_orthogonal_box(): Get orthogonal box dimensions from triclinic parameters
+   - get_cell_vectors(): Calculate cell vectors from box parameters
+
+All functions support both direct atom dictionary input and numpy array input,
+making them flexible for various use cases.
 """
 
 import numpy as np
