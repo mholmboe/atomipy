@@ -1,0 +1,265 @@
+{% extends "base.html" %}
+
+{% block title %}atomipy - Molecular Structure Processor{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h2 class="text-center mb-0">Forcefield Atom Type Assignment & Topology Generator</h2>
+            </div>
+            <div class="card-body">
+                <div class="text-center mb-4">
+                    <p class="lead">Upload a GRO, PDB, or XYZ file to process with atomipy</p>
+                    <p>Your file will be processed to assign atom types and generate topology files</p>
+                </div>
+
+                <form id="upload-form" action="{{ url_for('start_processing_task') }}" method="post" enctype="multipart/form-data" class="mb-4">
+                    <div class="mb-3">
+                        <label for="file" class="form-label">Select a molecular structure file</label>
+                        <input class="form-control" type="file" id="file" name="file" accept=".gro,.pdb,.xyz" required>
+                        <div class="form-text">Supported formats: .gro, .pdb, .xyz (must contain box dimensions)</div>
+                    </div>
+                    
+                    <!-- Forcefield Selection -->
+                    <div class="mb-3">
+                        <label class="form-label">Select Forcefield Type</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="forcefield" id="minff" value="minff" checked>
+                            <label class="form-check-label" for="minff">
+                                MINFF (Mineral Force Field, note the angle terms)
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="forcefield" id="clayff" value="clayff">
+                            <label class="form-check-label" for="clayff">
+                                CLAYFF (From Cygan et al., 2004, check for errors)
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <!-- Topology Generation Option -->
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="generate_topology" name="generate_topology" checked>
+                            <label class="form-check-label" for="generate_topology">
+                                Generate topology files
+                            </label>
+                        </div>
+                        <div class="form-text">Uncheck to only generate structure files and log files (faster processing).</div>
+                    </div>
+
+                    <!-- Output Topology Format Selection (Only visible when topology generation is enabled) -->
+                    <div class="mb-3" id="topology-formats-section">
+                        <label class="form-label">Select Output Topology Formats:</label>
+                        <div class="form-check">
+                            <input class="form-check-input topology-format" type="checkbox" name="output_formats" id="format_itp" value="itp" checked>
+                            <label class="form-check-label" for="format_itp">
+                                GROMACS (.itp)
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input topology-format" type="checkbox" name="output_formats" id="format_psf" value="psf">
+                            <label class="form-check-label" for="format_psf">
+                                CHARMM/NAMD (.psf)
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input topology-format" type="checkbox" name="output_formats" id="format_lmp" value="lmp">
+                            <label class="form-check-label" for="format_lmp">
+                                LAMMPS (.data)
+                            </label>
+                        </div>
+                        <div class="form-text">Select at least one format if topology generation is enabled.</div>
+                    </div>
+
+                    <!-- Removed charge assignment selection as it's now automatic -->
+
+                    
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="bi bi-cloud-upload"></i> Process File
+                        </button>
+                    </div>
+                </form>
+
+                <!-- Progress Bar Section (Initially Hidden) -->
+                <div id="progress-section" style="display: none;" class="mt-4">
+                    <h5>Processing...</h5>
+                    <div class="progress">
+                        <div id="progress-bar" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                    </div>
+                    <p id="progress-status" class="mt-2 text-muted">Starting...</p>
+                </div>
+
+                <div class="alert alert-info">
+                    <h5>What can be processed:</h5>
+                    <ul>
+                        <li>System box size, volume and density from the input structure</li>
+                        <li>Element assignment based on atoms and their neighbours</li>
+                        <li>Bond and angle calculation with periodic boundary conditions</li>
+                        <li>Forcefield atom type assignment (MINFF or CLAYFF)</li>
+                        <li>Automatic charge assignment based on the selected forcefield</li>
+                        <li>Generation of processed structure files (.gro, .pdb, .xyz)</li>
+                        <li>Generation of topology files (.itp for GROMACS, .psf for CHARMM/NAMD, .data for LAMMPS)</li>
+                    </ul>
+                </div>
+
+                <div class="alert alert-warning">
+                    <h5>Input file requirements:</h5>
+                    <ul>
+                        <li>Note that MINFF only supports the elements H, O, Mg, Ca, Si, Al, Fe, Ti, Li, F</li>
+                        <li>All structures must be chemically reasonable and contain the right number of elements, including H</li>
+                        <li>PDB files must contain box dimensions in a CRYST1 record for proper periodic boundary handling</li>
+                        <li>XYZ files must contain box dimensions on the second line after a # character (e.g., "# 10.0 10.0 10.0 90.0 90.0 90.0")</li>
+                        <li>GRO files should follow standard GROMACS format with box dimensions on the last line</li>
+                        <li>Bond detection relies on reasonable atomic positions and standard bond lengths</li>
+                    </ul>
+                </div>
+
+                <div class="alert alert-danger mt-3">
+                    <h5>Beta Version Disclaimer</h5>
+                    <p>This is a beta version of atomipy and there is no guarantee that the output is correct. Users are responsible for verifying that the generated files are reasonable and suitable for their purposes. Use the generated files at your own risk.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const form = document.querySelector('form');
+    const progressSection = document.getElementById('progress-section');
+    const progressBar = document.getElementById('progress-bar');
+    const progressStatus = document.getElementById('progress-status');
+    const submitButton = form.querySelector('button[type="submit"]');
+    const generateTopologyCheckbox = document.getElementById('generate_topology');
+    const topologyFormatsSection = document.getElementById('topology-formats-section');
+    const topologyFormatCheckboxes = document.querySelectorAll('.topology-format');
+
+    // Toggle visibility of topology format options based on the generate_topology checkbox
+    generateTopologyCheckbox.addEventListener('change', function() {
+        if (this.checked) {
+            topologyFormatsSection.style.display = 'block';
+            // Ensure at least one format is selected
+            let anyChecked = false;
+            topologyFormatCheckboxes.forEach(checkbox => {
+                if (checkbox.checked) anyChecked = true;
+            });
+            if (!anyChecked) document.getElementById('format_itp').checked = true;
+        } else {
+            topologyFormatsSection.style.display = 'none';
+            // Unselect all format checkboxes when topology generation is disabled
+            topologyFormatCheckboxes.forEach(checkbox => {
+                checkbox.checked = false;
+            });
+        }
+    });
+
+    form.addEventListener('submit', function(event) {
+        event.preventDefault(); // Prevent default form submission
+
+        // Show progress bar and disable button
+        progressSection.style.display = 'block';
+        progressBar.style.width = '0%';
+        progressBar.setAttribute('aria-valuenow', 0);
+        progressBar.textContent = '0%';
+        progressStatus.textContent = 'Uploading file...';
+        submitButton.disabled = true;
+        submitButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processing...';
+
+        const formData = new FormData(form);
+        
+        // If topology generation is disabled, ensure we pass that information
+        if (!generateTopologyCheckbox.checked) {
+            formData.set('generate_topology', 'false');
+        } else {
+            formData.set('generate_topology', 'true');
+            // Ensure at least one format is selected for topology generation
+            let anyFormatSelected = false;
+            topologyFormatCheckboxes.forEach(checkbox => {
+                if (checkbox.checked) anyFormatSelected = true;
+            });
+            
+            if (!anyFormatSelected && generateTopologyCheckbox.checked) {
+                event.preventDefault();
+                alert('Please select at least one topology format or disable topology generation.');
+                return false;
+            }
+        }
+        let taskId = null;
+        let pollInterval = null;
+
+        // Function to reset UI
+        function resetUI() {
+            progressSection.style.display = 'none';
+            submitButton.disabled = false;
+            submitButton.innerHTML = '<i class="bi bi-cloud-upload"></i> Process File';
+            if (pollInterval) {
+                clearInterval(pollInterval);
+            }
+        }
+
+        // --- Start the background task ---
+        fetch('{{ url_for("start_processing_task") }}', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => {
+            if (!response.ok) {
+                // Try to get error message from JSON response
+                return response.json().then(err => { throw new Error(err.error || `HTTP error! status: ${response.status}`) });
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.error) {
+                 throw new Error(data.error);
+            }
+            taskId = data.task_id;
+            progressStatus.textContent = 'Processing started. Waiting for updates...';
+            
+            // --- Start polling for status ---
+            pollInterval = setInterval(() => {
+                fetch(`/status/${taskId}`)
+                .then(response => response.json())
+                .then(statusData => {
+                    progressBar.style.width = statusData.progress + '%';
+                    progressBar.setAttribute('aria-valuenow', statusData.progress);
+                    progressBar.textContent = statusData.progress + '%';
+                    progressStatus.textContent = statusData.step || statusData.status; // Show step if available
+
+                    if (statusData.status === 'Complete') {
+                        clearInterval(pollInterval);
+                        progressStatus.textContent = 'Processing complete! Redirecting...';
+                        // Redirect to a route that handles the final redirect based on task completion
+                        window.location.href = `/task_result/${taskId}`;
+                        // UI reset will happen on page reload
+                    } else if (statusData.status === 'Error') {
+                        clearInterval(pollInterval);
+                        progressStatus.textContent = `Error: ${statusData.message || 'Unknown error occurred.'}`;
+                        // Optionally add an alert
+                        alert(`Processing failed: ${statusData.message || 'Unknown error occurred.'}`);
+                        resetUI(); 
+                    }
+                })
+                .catch(pollError => {
+                    console.error('Polling error:', pollError);
+                    progressStatus.textContent = 'Error checking status. Please try again.';
+                    clearInterval(pollInterval);
+                    resetUI();
+                });
+            }, 2000); // Poll every 2 seconds
+        })
+        .catch(error => {
+            console.error('Submission error:', error);
+            progressStatus.textContent = `Error: ${error.message}. Please check the file and selections.`;
+            // Optionally add an alert
+            alert(`Submission failed: ${error.message}`);
+            resetUI();
+        });
+    });
+</script>
+{% endblock %}
