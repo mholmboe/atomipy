@@ -26,82 +26,43 @@ def pdb(file_path):
                 gamma = float(line[47:54].strip())
                 cell = [a, b, c, alpha, beta, gamma]
             elif line.startswith("ATOM") or line.startswith("HETATM"):
-                # PDB format column specifications (1-indexed based on documentation)
-                # Serial:       7-11
-                # Atom name:   13-16 (Atom type in user's description)
-                # AltLoc:      17
-                # ResName:     18-20
-                # ChainID:     22
-                # ResSeq:      23-26
-                # X:           31-38
-                # Y:           39-46
-                # Z:           47-54
-                # Occupancy:   55-60
-                # TempFactor:  61-66
-                # Element:     77-78 (right-justified)
-                # Charge:      79-80
-
+                index = int(line[6:11].strip())
+                # Extract atom name and type information from columns 12-16
+                atom_name = line[12:16].strip()
+                atom_type = atom_name.strip() # Store the full atom name as type
+                
+                # Extract residue name from columns 17-20
+                resname = line[17:20].strip()
+                
+                # Extract element from columns 76-78 if available (standard PDB format)
+                element_from_pdb = None
+                if len(line) >= 78:
+                    element_from_pdb = line[76:78].strip()
+                # Extract residue sequence number (columns 23-26) to use as molecule ID
                 try:
-                    index = int(line[6:11].strip())          # Cols 7-11
-                    atom_name = line[12:16].strip()        # Cols 13-16
-                    resname = line[17:20].strip()          # Cols 18-20
-                    
-                    try:
-                        molid = int(line[22:26].strip())     # Cols 23-26 (Residue sequence number as molid)
-                    except (ValueError, IndexError):
-                        molid = 1 # Default if not present or invalid
-
-                    x = float(line[30:38].strip())           # Cols 31-38
-                    y = float(line[38:46].strip())           # Cols 39-46
-                    z = float(line[46:54].strip())           # Cols 47-54
-
-                    occupancy = 1.0 # Default occupancy
-                    if len(line) >= 60:                      # Check if line is long enough for occupancy
-                        try:
-                            occupancy_str = line[54:60].strip() # Cols 55-60
-                            if occupancy_str: # Ensure not empty before float conversion
-                                occupancy = float(occupancy_str)
-                        except ValueError:
-                            pass # Keep default if parsing fails
-
-                    temp_factor = 0.0 # Default temperature factor
-                    if len(line) >= 66:                      # Check if line is long enough for temp_factor
-                        try:
-                            temp_factor_str = line[60:66].strip() # Cols 61-66
-                            if temp_factor_str:
-                                temp_factor = float(temp_factor_str)
-                        except ValueError:
-                            pass # Keep default
-
-                    element_symbol = "" # Default element symbol
-                    if len(line) >= 78:                      # Check for element symbol
-                        element_symbol = line[76:78].strip().upper() # Cols 77-78, ensure upper for consistency
-                    
-                    charge_str = "" # Default charge
-                    if len(line) >= 80:                      # Check for charge
-                        charge_str = line[78:80].strip()     # Cols 79-80
-
-                    atom = {
-                        "molid": molid,
-                        "index": index,
-                        "resname": resname,
-                        "x": x,
-                        "y": y,
-                        "z": z,
-                        "occupancy": occupancy,
-                        "temp_factor": temp_factor,
-                        "element": element_symbol, # Explicitly from PDB cols 77-78
-                        "charge": charge_str,
-                        "type": atom_name,   # Original atom name from PDB, often used as type
-                        "neigh": [],
-                        "bonds": [],
-                        "angles": [],
-                        "fftype": None 
-                    }
-                    atoms.append(atom)
-                except Exception as e:
-                    # print(f"Warning: Could not parse ATOM/HETATM line: {line.strip()} - Error: {e}")
-                    continue # Skip malformed ATOM/HETATM lines
+                    # PDB format has residue sequence number in columns 23-26
+                    molid = int(line[22:26].strip())
+                except (ValueError, IndexError):
+                    # Default to 1 if conversion fails
+                    molid = 1
+                x = float(line[30:38].strip())
+                y = float(line[38:46].strip())
+                z = float(line[46:54].strip())
+                atom = {
+                    "molid": molid,
+                    "index": index,
+                    "resname": resname,
+                    "x": x,
+                    "y": y,
+                    "z": z,
+                    "neigh": [],
+                    "bonds": [],
+                    "angles": [],
+                    "element": element_from_pdb,  # Will be properly set by element function later
+                    "type": atom_type,   # Set the atom type based on name
+                    "fftype": None
+                }
+                atoms.append(atom)
     
     # Now use the element.py function to properly determine elements
     element_module.element(atoms)

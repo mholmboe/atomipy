@@ -21,14 +21,6 @@ def element(atoms):
     
     # Process each atom in the list
     for atom in atoms:
-        # If 'element' is already provided and non-empty (e.g., from PDB cols 77-78),
-        # trust it, standardize capitalization, and skip guessing.
-        current_element = atom.get('element')
-        if isinstance(current_element, str) and current_element.strip():
-            # Standardize to capitalized form (e.g., 'al' -> 'Al', 'AL' -> 'Al')
-            atom['element'] = current_element.strip().capitalize()
-            continue
-
         # First try to get the atom type, falling back to atname or resname
         atomtype = atom.get('type', '')
         if atomtype is None:

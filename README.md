@@ -2,6 +2,8 @@
 
 A modular Python toolbox for handling and analyzing molecular structures, particularly for mineral slabs with periodic boundary conditions. This toolbox is a light version of the MATLAB [**atom Toolbox**](https://github.com/mholmboe/atom) and can mainly be used to generate molecular topology files for the [**MINFF**](https://github.com/mholmboe/minff) forcefield with a streamlined Python interface. For small bulk systems, a simple online server running [**www.atomipy.io**](https://www.atomipy.io) is now available. Test cases for hydrated montmorillonite using the general and tailored MINFF parameters (angle force constant 500 kJ/mol/rad²) can be found in the [**example cases of the atom Toolbox**](https://github.com/mholmboe/atom/tree/master/ATOM_scripts_lecture/MINFF).
 
+The package now supports generating GROMACS n2t (atom name to type) files for both MINFF and CLAYFF forcefields, enabling seamless integration with GROMACS utilities like gmx x2top for enhanced topology handling.
+
 ## Overview
 
 This toolbox is designed to import, export, and analyze molecular structures with a focus on mineral slabs containing the elements Si, Al, Fe, Mg, Ca, Ti, Li, F, O, H. It handles periodic and triclinic simulation cells, and provides functions for calculating bonds, angles, and distances while taking periodic boundary conditions into account, and hence is ideal for generating molecular topology files for mineral bulk/slab systems that can be modelled using the [**MINFF**](https://github.com/mholmboe/minff) forcefield. However it also has the capability to handle clay minerals, hydroxides, and oxyhydroxides using CLAYFF (Cygan, R.T.; Liang, J.J.; Kalinichev, A.G. Molecular Models of Hydroxide, Oxyhydroxide, and Clay Phases and the Development of a General Force Field. *J. Phys. Chem. B* **2004**, *108*, 1255-1266).
@@ -12,6 +14,9 @@ The molecular structure information is stored in dictionaries where each atom ha
 
 - Support for multiple forcefields: MINFF and CLAYFF atom typing and parameter assignment
 - Import/export PDB, Gromacs GRO, and XYZ files
+- Generation of GROMACS n2t (atom name to type) files for use with gmx x2top
+  - Neighbour distances honour periodic boundary conditions when the box is provided
+  - Nearly identical environments are merged to avoid duplicate entries caused by floating-point noise
   - All file formats need to contain system size information
   - For .pdb files, system dimensions should be in the CRYST1 record
   - For .gro files, box dimensions should be in the last line
@@ -122,6 +127,38 @@ Run this script with:
 python my_first_atomipy.py
 ```
 
+### N2T File Generation Example
+
+Here's an example of generating a GROMACS n2t file for use with gmx x2top:
+
+```python
+import atomipy as ap
+
+# Load structure
+atoms, cell, box = ap.import_auto("structure.gro")
+
+# Process with forcefield (optional)
+atoms, _ = ap.minff(atoms, box)
+
+# Generate n2t file
+n2t_path = ap.write_n2t(atoms, n2t_file="minff_atomtypes.n2t", box=box)
+print(f"N2T file saved to: {n2t_path}")
+```
+
+Alternatively, you can use the included utility script:
+
+```bash
+python generate_n2t_example.py structure.gro --forcefield minff --output minff_atomtypes.n2t
+```
+
+For the simplest possible conversion you can call the minimal helper:
+
+```bash
+python write_n2t_minimal.py structure.gro
+```
+
+This script auto-detects the input format, forwards the box dimensions, and writes `<structure>.n2t`.
+
 ### Common Issues for Beginners
 
 - **ModuleNotFoundError**: Make sure you've installed all required packages.
@@ -141,6 +178,7 @@ python my_first_atomipy.py
 
 - `minff(atoms, box, ffname='minff', rmaxlong=2.45, rmaxH=1.2)`: Assign MINFF forcefield specific atom types to each atom
 - `clayff(atoms, box, ffname='clayff', rmaxlong=2.45, rmaxH=1.2)`: Assign CLAYFF forcefield specific atom types to each atom
+- `write_n2t(atoms, n2t_file=None, box=None)`: Generate a GROMACS n2t (atom name to type) file based on structural analysis, honouring periodic boundary conditions when a box is supplied and merging nearly identical environments
 
 ### Molecular Topology
 

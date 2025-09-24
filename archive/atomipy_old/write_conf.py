@@ -1,5 +1,4 @@
 import os
-from .cell_utils import Box_dim2Cell
 
 def pdb(atoms, box, file_path):
     """Write atoms and cell dimensions to a PDB file.
@@ -61,58 +60,25 @@ def pdb(atoms, box, file_path):
             raw_resname = atom.get('resname', 'UNK')
             pdb_resname = f"{raw_resname[:3]:>3}" 
             
-            chain_id = atom.get('chain_id', 'A') # Column 22: Chain identifier
-            res_seq = atom.get('molid', 1) # Column 23-26: Residue sequence number (using 'molid' for consistency with import)
-            icode = atom.get('icode', ' ') # Column 27: Code for insertion of residues
+            chain_id = 'A' # Column 22: Chain identifier (default to 'A')
+            res_seq = atom.get('resid', 1) # Column 23-26: Residue sequence number
+            icode = ' ' # Column 27: Code for insertion of residues
             
             x = atom.get('x', 0.0)
             y = atom.get('y', 0.0)
             z = atom.get('z', 0.0)
-
-            # Occupancy (cols 55-60), default 1.00
-            occupancy_val = atom.get('occupancy', 1.00)
-            try:
-                occupancy_val = float(occupancy_val)
-            except (ValueError, TypeError):
-                occupancy_val = 1.00
-
-            # Temperature Factor (cols 61-66), default 0.00
-            temp_factor_val = atom.get('temp_factor', 0.00)
-            try:
-                temp_factor_val = float(temp_factor_val)
-            except (ValueError, TypeError):
-                temp_factor_val = 0.00
-
-            # Element symbol (cols 77-78), right-justified, uppercase. Default to empty if not found.
-            raw_element = atom.get('element', '') 
-            element_symbol_pdb = f"{str(raw_element).strip()[:2].upper():>2}"
-
-            # Charge (cols 79-80), right-justified. Default to empty if not found.
-            raw_charge = atom.get('charge', '') 
-            charge_str = f"{str(raw_charge).strip()[:2]:>2}"
+            
+            occupancy = 1.00 # Columns 55-60
+            temp_factor = 0.00 # Columns 61-66
+            
+            # Get element symbol (cols 77-78), right-justified
+            element_symbol = atom.get('element', 'X')[:2] # Max 2 chars
+            element_symbol_pdb = f"{element_symbol:>2}"
+            
+            charge_str = '  ' # Columns 79-80 (Not handled yet)
             
             # Construct the ATOM line using f-string formatting for precise columns
-            # ATOM record fields and their typical column formatting:
-            # Record name (ATOM/HETATM)  1-6
-            # Atom serial number         7-11  (index:5d)
-            # Space                      12
-            # Atom name                  13-16 (pdb_atomname: <4 or similar)
-            # Alt loc indicator          17    (alt_loc:1s)
-            # Residue name               18-20 (pdb_resname:>3s)
-            # Space                      21
-            # Chain ID                   22    (chain_id:1s)
-            # Residue sequence number    23-26 (res_seq:4d)
-            # Insertion code             27    (icode:1s)
-            # 3 spaces                   28-30
-            # X coordinate               31-38 (x:8.3f)
-            # Y coordinate               39-46 (y:8.3f)
-            # Z coordinate               47-54 (z:8.3f)
-            # Occupancy                  55-60 (occupancy_val:6.2f)
-            # Temperature factor         61-66 (temp_factor_val:6.2f)
-            # Spaces (Seg ID etc.)       67-76 ("          ")
-            # Element symbol             77-78 (element_symbol_pdb:>2s)
-            # Charge                     79-80 (charge_str:>2s)
-            f.write(f"ATOM  {index:5d} {pdb_atomname}{alt_loc}{pdb_resname} {chain_id}{res_seq:4d}{icode}   {x:8.3f}{y:8.3f}{z:8.3f}{occupancy_val:6.2f}{temp_factor_val:6.2f}          {element_symbol_pdb}{charge_str}\n")
+            f.write(f"ATOM  {index:5d} {pdb_atomname}{alt_loc}{pdb_resname} {chain_id}{res_seq:4d}{icode}   {x:8.3f}{y:8.3f}{z:8.3f}{occupancy:6.2f}{temp_factor:6.2f}          {element_symbol_pdb}{charge_str}\n")
         
         # Add ENDMDL record
         f.write("ENDMDL\n")

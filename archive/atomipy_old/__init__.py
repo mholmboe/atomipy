@@ -4,23 +4,17 @@ atomipy: The atom Toolbox in Python
 This package provides tools for working with molecular structures, particularly
 focused on mineral systems with periodic boundary conditions. It supports both
 orthogonal and triclinic simulation cells, and provides efficient distance
-calculations, bond/angle detection, structure manipulation, and X-ray diffraction
-simulation functions.
+calculations, bond/angle detection, and structure manipulation functions.
 
 Key features:
 - Import/export of common molecular file formats (PDB, GRO, XYZ)
-- Topology file generation for molecular dynamics simulations (GROMACS, NAMD, LAMMPS)
-- GROMACS n2t file generation for atom name to type conversions (gmx x2top)
-  with periodic minimum-image distances and environment deduplication
+- Topology file generation for molecular dynamics simulations
 - Distance calculations with efficient algorithms for periodic systems
 - Bond and angle detection
 - Coordinate transformations between Cartesian and fractional representations
 - Support for both orthogonal and triclinic simulation cells
 - Structure manipulation (replication, translation)
 - Force field implementations for mineral systems (CLAYFF, MINFF)
-- High-performance X-ray diffraction pattern simulation with vectorized calculations
-- Professional XRD plotting with Miller indices and multiplicities
-- Automatic ionic scattering factor selection and MATLAB compatibility
 """
 
 # ===== File I/O functions =====
@@ -86,7 +80,7 @@ update = add.update
 
 # ===== Force field functions =====
 try:
-    from .forcefield import minff, clayff, write_n2t
+    from .forcefield import minff, clayff
 except ImportError:
     pass
 
@@ -98,7 +92,7 @@ except ImportError:
 
 # ===== Diffraction functions =====
 try:
-    from .diffraction import xrd, occupancy_atom, atomic_scattering_factors, calculate_multiplicity, bragg_law
+    from .diffraction import xrd, occupancy_atom, atomic_scattering_factors
 except ImportError:
     pass
 
@@ -118,7 +112,7 @@ __all__ = [
     'triclinic_to_orthogonal', 'orthogonal_to_triclinic', 'get_orthogonal_box', 'get_cell_vectors',
     'direct_cartesian_to_fractional', 'direct_fractional_to_cartesian',
     'replicate_system', 'translate', 'update',
-    'minff', 'clayff', 'write_n2t',
+    'minff', 'clayff',
     'charge_minff', 'charge_clayff', 'balance_charges',
     'assign_formal_charges',
     'xrd', 'occupancy_atom', 'atomic_scattering_factors'
