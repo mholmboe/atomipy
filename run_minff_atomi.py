@@ -158,6 +158,14 @@ def main():
         file_path="minff_topology.data"
     )
     
+    # Generate a GROMACS n2t atom name to type file for use with gmx x2top
+    print("\nGenerating GROMACS n2t file...")
+    ap.write_n2t(
+        minff_atoms,
+        n2t_file="minff_atomtypes.n2t",
+        box=box_dim
+    )
+    
     # Step 8: Write final GRO file
     # ---------------------------
     print("Writing final structure to preem.gro...")
@@ -173,7 +181,8 @@ def main():
     print("3. minff_topology.psf - PSF topology file")
     print("4. minff_topology.data - LAMMPS topology file")
     print("5. preem.gro - Final structure with MINFF typing and charges")
-    print("7. minff_structure_stats.log - Detailed system statistics including dimensions, density, bonds, and angles")
+    print("6. minff_structure_stats.log - Detailed system statistics including dimensions, density, bonds, and angles")
+    print("7. minff_atomtypes.n2t - GROMACS atom name to type conversion file for gmx x2top")
 
 if __name__ == "__main__":
     main()
