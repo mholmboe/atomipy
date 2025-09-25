@@ -127,7 +127,7 @@ Run this script with:
 python my_first_atomipy.py
 ```
 
-### N2T File Generation Example
+### Gromacs .n2t File Generation Example
 
 Here's an example of generating a GROMACS n2t file for use with gmx x2top:
 
