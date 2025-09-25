@@ -22,11 +22,13 @@ build/
 
 # Local scripts
 update_github_repo.sh
+.gitignore
 
 # Web application
 
 # Misc
 old/
+archive/
 conf/
 output/
 launch_app.sh
