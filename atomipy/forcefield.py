@@ -1466,7 +1466,7 @@ def clayff(atoms, box, ffname='clayff', rmaxlong=2.45, rmaxH=1.2, log=False, log
         print(f"Structure statistics written to {log_path}")
     
     return atoms, all_neighbors
-def write_n2t(atoms, n2t_file=None, box=None, verbose=True):
+def write_n2t(atoms, box=None, n2t_file=None, verbose=True):
     """Generate a GROMACS-compatible atomname2type (.n2t) file.
 
     The layout mirrors the MATLAB implementation in ``n2t_atom.m`` and
@@ -1478,15 +1478,50 @@ def write_n2t(atoms, n2t_file=None, box=None, verbose=True):
 
     Args:
         atoms: List of atom dictionaries.
+        box: Optional simulation cell in any standard atomipy format. Accepts
+             orthogonal ``[lx, ly, lz]`` vectors, 1×6 cell parameters, or the
+             1×9 ``Box_dim`` layout used by GROMACS. When provided, distances
+             fall back to periodic minimum-image values.
         n2t_file: Optional output path (defaults to ``atomname2type.n2t``).
-        box: Optional simulation box (GROMACS-style list). When provided,
-             distances fall back to periodic minimum-image values.
         verbose: Emit warnings about inferred data.
     """
     import math
+    import os
     from statistics import median
 
     ANGSTROM_TO_NM = 0.1
+
+    path_like = (str, bytes)
+    if hasattr(os, "PathLike"):
+        path_like = path_like + (os.PathLike,)
+
+    def _looks_like_box(value):
+        if isinstance(value, np.ndarray):
+            value = value.tolist()
+        return isinstance(value, (list, tuple, np.ndarray)) and len(value) in {3, 6, 9}
+
+    # Backwards compatibility with legacy signature: write_n2t(atoms, n2t_file, box)
+    if isinstance(box, path_like):
+        if n2t_file is None:
+            n2t_file, box = box, None
+        elif _looks_like_box(n2t_file):
+            box, n2t_file = n2t_file, box
+
+    normalized_box = None
+    if box is not None:
+        if isinstance(box, np.ndarray):
+            box = box.tolist()
+        if not _looks_like_box(box):
+            raise ValueError("box must be a sequence of length 3, 6, or 9")
+        if len(box) == 6:
+            normalized_box = Cell2Box_dim(box)
+            if isinstance(normalized_box, np.ndarray):
+                normalized_box = normalized_box.tolist()
+        elif len(box) == 9:
+            normalized_box = list(box)
+        else:  # len == 3
+            normalized_box = list(box)
+    box = normalized_box
 
     if not atoms:
         raise ValueError("No atoms supplied to write_n2t")

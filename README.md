@@ -148,7 +148,7 @@ print(f"N2T file saved to: {n2t_path}")
 Alternatively, you can use the included utility script:
 
 ```bash
-python generate_n2t_example.py structure.gro --forcefield minff --output minff_atomtypes.n2t
+python generate_n2t_example.py structure.gro --output minff_atomtypes.n2t
 ```
 
 For the simplest possible conversion you can call the minimal helper:
@@ -178,7 +178,7 @@ This script auto-detects the input format, forwards the box dimensions, and writ
 
 - `minff(atoms, box, ffname='minff', rmaxlong=2.45, rmaxH=1.2)`: Assign MINFF forcefield specific atom types to each atom
 - `clayff(atoms, box, ffname='clayff', rmaxlong=2.45, rmaxH=1.2)`: Assign CLAYFF forcefield specific atom types to each atom
-- `write_n2t(atoms, n2t_file=None, box=None)`: Generate a GROMACS n2t (atom name to type) file based on structural analysis, honouring periodic boundary conditions when a box is supplied and merging nearly identical environments
+- `write_n2t(atoms, box=None, n2t_file=None, verbose=True)`: Generate a GROMACS n2t (atom name to type) file based on structural analysis, honouring periodic boundary conditions when a 1×3 box, 1×6 cell, or 1×9 ``Box_dim`` array is supplied and merging nearly identical environments
 
 ### Molecular Topology
 
