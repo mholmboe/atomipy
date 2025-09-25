@@ -140,21 +140,23 @@ atoms, cell, box = ap.import_auto("structure.gro")
 # Process with forcefield (optional)
 atoms, _ = ap.minff(atoms, box)
 
-# Generate n2t file
-n2t_path = ap.write_n2t(atoms, n2t_file="minff_atomtypes.n2t", box=box)
+# Generate n2t file (box argument now precedes the optional output path)
+n2t_path = ap.write_n2t(atoms, box=box, n2t_file="minff_atomtypes.n2t")
 print(f"N2T file saved to: {n2t_path}")
 ```
 
-Alternatively, you can use the included utility script:
+The `box` argument accepts orthogonal `[lx, ly, lz]` vectors, 1×6 cell parameter lists, or the 1×9 `Box_dim` layout and will be normalised internally.
+
+Alternatively, you can use the included MINFF helper script:
 
 ```bash
-python generate_n2t_example.py structure.gro --output minff_atomtypes.n2t
+python minff2n2t.py structure.gro --output minff_atomtypes.n2t
 ```
 
-For the simplest possible conversion you can call the minimal helper:
+For the simplest possible conversion you can call the structure-only helper:
 
 ```bash
-python write_n2t_minimal.py structure.gro
+python struct2n2t.py structure.gro
 ```
 
 This script auto-detects the input format, forwards the box dimensions, and writes `<structure>.n2t`.
