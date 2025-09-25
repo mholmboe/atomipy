@@ -1,6 +1,6 @@
-# atomipy: The atom Toolbox in Python
+# atomipy: The atom library in Python
 
-A modular Python toolbox for handling and analyzing molecular structures, particularly for mineral slabs with periodic boundary conditions. This toolbox is a light version of the MATLAB [**atom Toolbox**](https://github.com/mholmboe/atom) and can mainly be used to generate molecular topology files for the [**MINFF**](https://github.com/mholmboe/minff) forcefield with a streamlined Python interface. For small bulk systems, a simple online server running [**www.atomipy.io**](https://www.atomipy.io) is now available. Test cases for hydrated montmorillonite using the general and tailored MINFF parameters (angle force constant 500 kJ/mol/rad²) can be found in the [**example cases of the atom Toolbox**](https://github.com/mholmboe/atom/tree/master/ATOM_scripts_lecture/MINFF).
+A modular Python toolbox for handling and analyzing molecular structures, particularly for mineral slabs with periodic boundary conditions. This toolbox is a light version of the MATLAB [**atom**](https://github.com/mholmboe/atom) library and can mainly be used to generate molecular topology files for the [**MINFF**](https://github.com/mholmboe/minff) forcefield with a streamlined Python interface. For small bulk systems, a simple online server running [**www.atomipy.io**](https://www.atomipy.io) is now available. Test cases for hydrated montmorillonite using the general and tailored MINFF parameters (angle force constant 500 kJ/mol/rad²) can be found in the [**example cases of the atom Toolbox**](https://github.com/mholmboe/atom/tree/master/ATOM_scripts_lecture/MINFF).
 
 The package now supports generating GROMACS n2t (atom name to type) files for both MINFF and CLAYFF forcefields, enabling seamless integration with GROMACS utilities like gmx x2top for enhanced topology handling.
 
@@ -423,7 +423,7 @@ ap.write_gro(replicated_atoms, new_Box_dim, "structure.gro")
 ```
 
 
-## Differences from MATLAB atom Toolbox
+## Differences from atom MATLAB library
 
 This Python implementation is designed to provide similar functionality to the MATLAB atom Toolbox while following Python's conventions and making use of NumPy for efficient numerical operations. The data structure is dictionary-based rather than struct-based, and the function interfaces are designed for Python's style.
 
