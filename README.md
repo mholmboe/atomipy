@@ -425,7 +425,7 @@ ap.write_gro(replicated_atoms, new_Box_dim, "structure.gro")
 
 ## Differences from atom MATLAB library
 
-This Python implementation is designed to provide similar functionality to the MATLAB atom Toolbox while following Python's conventions and making use of NumPy for efficient numerical operations. The data structure is dictionary-based rather than struct-based, and the function interfaces are designed for Python's style.
+This Python implementation is designed to provide similar functionality to the MATLAB atom library while following Python's conventions and making use of NumPy for efficient numerical operations. The data structure is dictionary-based rather than struct-based, and the function interfaces are designed for Python's style.
 
 ## License
 
