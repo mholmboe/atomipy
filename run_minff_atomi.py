@@ -30,19 +30,19 @@ def main():
     pdb_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), pdb_file)
     
     print(f"Loading PDB structure from: {pdb_file}")
-    # Read the PDB file - this returns a list of atom dictionaries and cell parameters
-    atoms, cell, box_dim = ap.import_pdb(pdb_file)
+    # Read the PDB file - this returns a list of atom dictionaries and Cell parameters
+    atoms, Cell, Box_dim = ap.import_pdb(pdb_file)
     print(f"Successfully loaded {len(atoms)} atoms from PDB")
-    print(f"Cell parameters: {cell}")
-    print(f"Box dimensions: {box_dim}")
+    print(f"Cell parameters: {Cell}")
+    print(f"Box dimensions: {Box_dim}")
 
 
-    # Convert cell parameters to box dimensions
-    # gro_box_dim = ap.Cell2Box_dim(cell)
+    # Convert Cell parameters to Box dimensions
+    # gro_Box_dim = ap.Cell2Box_dim(Cell)
     
     # Use the GRO structure for the rest of the script
     # atoms = atoms
-    # box_dim = cell
+    # Box_dim = Cell
     
     # Step 2: Assign chemical elements
     # -------------------------------
@@ -63,20 +63,20 @@ def main():
     # Step 3: Create a supercell (replicate the structure)
     # ---------------------------------------------------
     # Replicate 5x3x4 times in x, y, z directions
-    # The replicate function converts coordinates to fractional, replicates the unit cell,
+    # The replicate function converts coordinates to fractional space, replicates the unit lattice,
     # then converts back to cartesian coordinates
     # Calculate replication based on desired size (approximately 30 Å in each dimension)
     target_size = 30  # Target size in Angstroms
-    # Use the first 3 values from box_dim which represent x, y, z dimensions
-    replicate_dims = np.ceil(np.array([target_size / box_dim[0], 
-                                       target_size / box_dim[1], 
-                                       target_size / box_dim[2]])).astype(int)
+    # Use the first 3 values from Box_dim which represent x, y, z dimensions
+    replicate_dims = np.ceil(np.array([target_size / Box_dim[0], 
+                                       target_size / Box_dim[1], 
+                                       target_size / Box_dim[2]])).astype(int)
     print(f"Replicate dimensions: {replicate_dims} (target size: {target_size} Å)")
     print(f"\nCreating a {replicate_dims[0]}x{replicate_dims[1]}x{replicate_dims[2]} supercell...")
     
-    replicated_atoms, replicated_box_dim, replicated_cell = ap.replicate_system(
+    replicated_atoms, replicated_Box_dim, replicated_Cell = ap.replicate_system(
         atoms, 
-        box_dim, 
+        Box=Box_dim, 
         replicate=replicate_dims,
         keep_molid=True, 
         renumber_index=True
@@ -87,8 +87,8 @@ def main():
     # Step 4: Write the replicated structure to files
     # ----------------------------------------------
     print("\nSaving replicated structure...")
-    ap.write_gro(replicated_atoms, replicated_box_dim, "replicated_structure.gro")
-    ap.write_pdb(replicated_atoms, replicated_cell, "replicated_structure.pdb")
+    ap.write_gro(replicated_atoms, Box=replicated_Box_dim, file_path="replicated_structure.gro")
+    ap.write_pdb(replicated_atoms, Box=replicated_Cell, file_path="replicated_structure.pdb")
     
     # Step 5: Calculate bonds and angles in the structure
     # -------------------------------------------------
@@ -98,7 +98,7 @@ def main():
     # rmaxM = maximum bond length for metal-oxygen bonds (2.45 Å)
     replicated_atoms, Bond_index, Angle_index = ap.bond_angle(
         replicated_atoms, 
-        replicated_box_dim, 
+        Box=replicated_Box_dim, 
         rmaxH=1.2, 
         rmaxM=2.45
     )
@@ -107,7 +107,7 @@ def main():
     
     # Write the system with bonds to a GRO file
     print("\nSaving structure with bond information...")
-    ap.write_gro(replicated_atoms, replicated_box_dim, "bonded_structure.gro")
+    ap.write_gro(replicated_atoms, Box=replicated_Box_dim, file_path="bonded_structure.gro")
     
     # Step 6: Assign MINFF atom types for force field
     # ---------------------------------------------
@@ -115,9 +115,9 @@ def main():
     # MINFF classifies atoms based on their chemical environment
     # For example, oxygen atoms can be: Oh (hydroxyl), Op (bridging), Ow (water)
     # Generate detailed structure statistics and save to a log file
-    ap.minff(replicated_atoms, replicated_box_dim, log=True, log_file="minff_structure_stats.log")  
+    ap.minff(replicated_atoms, Box=replicated_Box_dim, log=True, log_file="minff_structure_stats.log")  
     minff_atoms = replicated_atoms
-    box_dim = replicated_box_dim
+    Box_dim = replicated_Box_dim
     
     # Count the different atom types
     atom_types = {}
@@ -138,7 +138,7 @@ def main():
     # - Angle definitions
     ap.write_itp(
         minff_atoms, 
-        box=box_dim,
+        Box=Box_dim,
         file_path="minff_topology.itp"
     )
     
@@ -146,7 +146,7 @@ def main():
     print("Writing PSF topology file...")
     ap.write_psf(
         minff_atoms,
-        box=box_dim,
+        Box=Box_dim,
         file_path="minff_topology.psf"
     )
     
@@ -154,7 +154,7 @@ def main():
     print("Writing LAMMPS topology file...")
     ap.write_lmp(
         minff_atoms,
-        box=box_dim,
+        Box=Box_dim,
         file_path="minff_topology.data"
     )
     
@@ -163,7 +163,7 @@ def main():
     ap.write_n2t(
         minff_atoms,
         n2t_file="minff_atomtypes.n2t",
-        box=box_dim
+        Box=Box_dim
     )
     
     # Step 8: Write final GRO file
@@ -171,8 +171,8 @@ def main():
     print("Writing final structure to preem.gro...")
     ap.write_gro(
         minff_atoms,    
-        box_dim,
-        "preem.gro"
+        Box=Box_dim,
+        file_path="preem.gro"
     )
     
     print("\nDone! Generated files:")

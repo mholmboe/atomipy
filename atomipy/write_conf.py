@@ -1,28 +1,28 @@
 import os
 from .cell_utils import Box_dim2Cell
 
-def pdb(atoms, box, file_path):
-    """Write atoms and cell dimensions to a PDB file.
+def pdb(atoms, Box, file_path):
+    """Write atoms and Cell dimensions to a PDB file.
 
     Args:
        atoms: list of atom dictionaries.
-       box: a 1x6 or 1x9 list representing cell dimensions (in Angstroms), either as 
-            a Cell variable having cell parameters array [a, b, c, alpha, beta, gamma], or as 
-            a Box_dim variable having box dimensions [lx, ly, lz, 0, 0, xy, 0, xz, yz] for triclinic cells.
+       Box: a 1x6 or 1x9 list representing Cell dimensions (in Angstroms), either as 
+            a Cell variable having Cell parameters array [a, b, c, alpha, beta, gamma], or as 
+            a Box_dim variable having Box dimensions [lx, ly, lz, 0, 0, xy, 0, xz, yz] for triclinic cells.
             Note that for orthogonal boxes Cell = Box_dim.
        file_path: output filepath.
     """
     # Possibly convert Box_dim into [a,b,c,alpha,beta,gamma] form
-    if box is not None:
-        if len(box) == 9:
-            Box_dim = box 
+    if Box is not None:
+        if len(Box) == 9:
+            Box_dim = Box 
             # Convert from Box_dim format to Cell format
             Cell = Box_dim2Cell(Box_dim)
-        elif len(box) == 6:
-            Cell = box
-        elif len(box) == 3:
-            # Orthogonal box
-            Cell = list(box) + [90.0, 90.0, 90.0]
+        elif len(Box) == 6:
+            Cell = Box
+        elif len(Box) == 3:
+            # Orthogonal Box
+            Cell = list(Box) + [90.0, 90.0, 90.0]
     
     with open(file_path, 'w') as f:
         # Add REMARK lines
@@ -83,9 +83,18 @@ def pdb(atoms, box, file_path):
             except (ValueError, TypeError):
                 temp_factor_val = 0.00
 
-            # Element symbol (cols 77-78), right-justified, uppercase. Default to empty if not found.
-            raw_element = atom.get('element', '') 
-            element_symbol_pdb = f"{str(raw_element).strip()[:2].upper():>2}"
+            # Element symbol (cols 77-78), right-justified, proper capitalization. Default to empty if not found.
+            raw_element = atom.get('element', '')
+            # Capitalize properly: first letter uppercase, rest lowercase
+            if raw_element:
+                element_str = str(raw_element).strip()[:2]
+                if len(element_str) == 1:
+                    element_symbol_pdb = f"{element_str.upper():>2}"
+                else:
+                    element_symbol_pdb = f"{element_str[0].upper()}{element_str[1:].lower()}"
+                    element_symbol_pdb = f"{element_symbol_pdb:>2}"
+            else:
+                element_symbol_pdb = "  "  # Empty if no element found
 
             # Charge (cols 79-80), right-justified. Default to empty if not found.
             raw_charge = atom.get('charge', '') 
@@ -120,17 +129,17 @@ def pdb(atoms, box, file_path):
         f.write("END\n")
 
 
-def gro(atoms, box, file_path):
-    """Write atoms and box dimensions to a Gromacs .gro file.
+def gro(atoms, Box, file_path):
+    """Write atoms and Box dimensions to a Gromacs .gro file.
 
     Gromacs .gro files store coordinates in nanometers (nm), but atomipy uses Angstroms (Å).
-    This function automatically converts the coordinates and box dimensions from Å to nm.
+    This function automatically converts the coordinates and Box dimensions from Å to nm.
 
     Args:
        atoms: list of atom dictionaries with coordinates in Angstroms.
-       box: a 1x6 or 1x9 list representing cell dimensions in Angstroms, either as 
-            a Cell variable having cell parameters array [a, b, c, alpha, beta, gamma], or as 
-            a Box_dim variable having box dimensions [lx, ly, lz, 0, 0, xy, 0, xz, yz] for triclinic cells.
+       Box: a 1x6 or 1x9 list representing Cell dimensions in Angstroms, either as 
+            a Cell variable having Cell parameters array [a, b, c, alpha, beta, gamma], or as 
+            a Box_dim variable having Box dimensions [lx, ly, lz, 0, 0, xy, 0, xz, yz] for triclinic cells.
             Note that for orthogonal boxes Cell = Box_dim.
        file_path: output filepath.
     """
@@ -138,16 +147,16 @@ def gro(atoms, box, file_path):
     angstrom_to_nm = 0.1
 
     # Possibly convert Box_dim into [a,b,c,alpha,beta,gamma] form
-    if box is not None:
-        if len(box) == 9:
-            Box_dim = box 
-        elif len(box) == 6:
-            Cell = box
+    if Box is not None:
+        if len(Box) == 9:
+            Box_dim = Box 
+        elif len(Box) == 6:
+            Cell = Box
             # Convert from Box_dim format to Cell format
             Box_dim = Cell2Box_dim(Cell)
-        elif len(box) == 3:
-            # Orthogonal box
-            Box_dim = box
+        elif len(Box) == 3:
+            # Orthogonal Box
+            Box_dim = Box
     
     with open(file_path, 'w') as f:
         # Write title
@@ -189,79 +198,79 @@ def gro(atoms, box, file_path):
             f.write(line)
             
         if Box_dim is not None:
-            # Convert box dimensions from Angstroms to nm
-            box_dim_nm = [val * angstrom_to_nm for val in Box_dim]
+            # Convert Box dimensions from Angstroms to nm
+            Box_dim_nm = [val * angstrom_to_nm for val in Box_dim]
             
             # Handle different Box_dim formats
-            if len(Box_dim) == 3:  # Orthogonal box with just 3 dimensions
+            if len(Box_dim) == 3:  # Orthogonal Box with just 3 dimensions
                 # For orthogonal boxes, GROMACS expects just 3 values
-                box_str = '   '.join(f"{val:.5f}" for val in box_dim_nm[:3])
-            elif len(Box_dim) == 9:  # Triclinic box with 9 dimensions
+                Box_str = '   '.join(f"{val:.5f}" for val in Box_dim_nm[:3])
+            elif len(Box_dim) == 9:  # Triclinic Box with 9 dimensions
                 # For triclinic boxes, GROMACS expects all 9 values
-                box_str = '   '.join(f"{val:.5f}" for val in box_dim_nm)
+                Box_str = '   '.join(f"{val:.5f}" for val in Box_dim_nm)
             else:
                 # Handle unexpected Box_dim length
                 print(f"Warning: Box_dim has unexpected length {len(Box_dim)}. Expected 3 or 9.")
                 # Default to using whatever was provided
-                box_str = '   '.join(f"{val:.5f}" for val in box_dim_nm)
+                Box_str = '   '.join(f"{val:.5f}" for val in Box_dim_nm)
                 
-            f.write(box_str + "\n")
+            f.write(Box_str + "\n")
         else:
             f.write("\n")
 
 
-def xyz(atoms, box=None, file_path=None):
-    """Write atoms and cell dimensions to an XYZ file.
+def xyz(atoms, Box=None, file_path=None):
+    """Write atoms and Cell dimensions to an XYZ file.
 
     XYZ format has the following structure:
     - First line: number of atoms
-    - Second line: comment line with box dimensions (if provided). Box dimensions are a 1x6 or 1x9 list representing cell dimensions (in Angstroms), either as 
-            a Cell variable having cell parameters array [a, b, c, alpha, beta, gamma], or as 
-            a Box_dim variable having box dimensions [lx, ly, lz, 0, 0, xy, 0, xz, yz] for triclinic cells.
+    - Second line: comment line with Box dimensions (if provided). Box dimensions are a 1x6 or 1x9 list representing Cell dimensions (in Angstroms), either as 
+            a Cell variable having Cell parameters array [a, b, c, alpha, beta, gamma], or as 
+            a Box_dim variable having Box dimensions [lx, ly, lz, 0, 0, xy, 0, xz, yz] for triclinic cells.
             Note that for orthogonal boxes Cell = Box_dim.
     - Remaining lines: atom entries in format: Element X Y Z
 
     Args:
        atoms: list of atom dictionaries.
-       box: Optional 1x6 list [a, b, c, alpha, beta, gamma] or Box_dim (1x3 or 1x9 list).
+       Box: Optional 1x6 list [a, b, c, alpha, beta, gamma] or Box_dim (1x3 or 1x9 list).
            Default is to write Cell parameters if provided.
        file_path: output filepath.
     """
-    # Initialize Cell to None in case box is None
+    # Initialize Cell to None in case Box is None
     Cell = None
     
     # Possibly convert Box_dim into [a,b,c,alpha,beta,gamma] form
-    if box is not None:
-        if len(box) == 9:
-            Box_dim = box 
+    if Box is not None:
+        if len(Box) == 9:
+            Box_dim = Box 
             # Convert from Box_dim format to Cell format
             Cell = Box_dim2Cell(Box_dim)
-        elif len(box) == 6:
-            Cell = box
-        elif len(box) == 3:
-            # Orthogonal box
-            Cell = list(box) + [90.0, 90.0, 90.0]
+        elif len(Box) == 6:
+            Cell = Box
+        elif len(Box) == 3:
+            # Orthogonal Box
+            Cell = list(Box) + [90.0, 90.0, 90.0]
 
 
     with open(file_path, 'w') as f:
         # Write number of atoms on first line
         f.write(f"{len(atoms)}\n")
         
-        # Write comment line with box dimensions if available
+        # Write comment line with Box dimensions if available
         if Cell is not None:
             if len(Cell) == 6:  # Cell parameters format
                 f.write(f"#    {Cell[0]:.5f}   {Cell[1]:.5f}   {Cell[2]:.5f}   {Cell[3]:.5f}   {Cell[4]:.5f}   {Cell[5]:.5f}\n")
-            elif len(Cell) == 3:  # Orthogonal box
+            elif len(Cell) == 3:  # Orthogonal Box
                 f.write(f"#    {Cell[0]:.5f}   {Cell[1]:.5f}   {Cell[2]:.5f}\n")
-            elif len(Cell) == 9:  # Triclinic box
+            elif len(Cell) == 9:  # Triclinic Box
                 # Write all 9 values
-                box_str = '   '.join(f"{val:.5f}" for val in Cell)
-                f.write(f"#    {box_str}\n")
+                Box_str = '   '.join(f"{val:.5f}" for val in Cell)
+                f.write(f"#    {Box_str}\n")
             else:
                 # No recognized format, just write a placeholder comment
                 f.write("# Generated by atomipy\n")
         else:
-            # No cell information, just write a placeholder comment
+            # No Cell information, just write a placeholder comment
             f.write("# Generated by atomipy\n")
             
         # Write atom entries
@@ -278,7 +287,7 @@ def xyz(atoms, box=None, file_path=None):
             f.write(f"{atom_type:<10} {x:>12.5f}    {y:>12.5f}    {z:>12.5f}\n")
 
 
-def auto(atoms, box, file_path):
+def auto(atoms, Box, file_path):
     """Automatically choose the appropriate write function based on file extension.
     
     This function will analyze the file extension and call either write_pdb, write_gro, or write_xyz
@@ -286,39 +295,39 @@ def auto(atoms, box, file_path):
     
     Args:
         atoms: List of atom dictionaries
-        box: Either cell parameters for PDB (1x6 list) or Box_dim for GRO/XYZ (1x3 or 1x9 list)
+        Box: Either Cell parameters for PDB (1x6 list) or Box_dim for GRO/XYZ (1x3 or 1x9 list)
         file_path: Path for the output file
     """
     _, ext = os.path.splitext(file_path)
     ext = ext.lower()
     
     if ext == '.pdb':
-        # For PDB, we need 1x6 cell format
-        if box is not None and len(box) == 9:
-            # Convert Box_dim to cell parameters if needed
+        # For PDB, we need 1x6 Cell format
+        if Box is not None and len(Box) == 9:
+            # Convert Box_dim to Cell parameters if needed
             # This is a simplistic conversion and may not be accurate for all cases
-            a = box[0]
-            b = box[4]
-            c = box[8]
+            a = Box[0]
+            b = Box[4]
+            c = Box[8]
             alpha = beta = gamma = 90.0  # Default to orthogonal
-            cell = [a, b, c, alpha, beta, gamma]
+            Cell = [a, b, c, alpha, beta, gamma]
         else:
-            cell = box
-        pdb(atoms, cell, file_path)
+            Cell = Box
+        pdb(atoms, Cell, file_path)
     elif ext == '.gro':
         # For GRO, we need 1x9 Box_dim format
-        if box is not None and len(box) == 6:
-            # Convert cell parameters to Box_dim if needed
-            # This is a simplistic conversion assuming orthogonal cell
-            a, b, c = box[0], box[1], box[2]
+        if Box is not None and len(Box) == 6:
+            # Convert Cell parameters to Box_dim if needed
+            # This is a simplistic conversion assuming orthogonal Cell
+            a, b, c = Box[0], Box[1], Box[2]
             Box_dim = [a, 0, 0, 0, b, 0, 0, 0, c]
         else:
-            Box_dim = box
+            Box_dim = Box
         gro(atoms, Box_dim, file_path)
     elif ext == '.xyz':
-        # For XYZ, we'll use the box parameters as provided
+        # For XYZ, we'll use the Box parameters as provided
         # The xyz function handles different formats internally
-        xyz(atoms, box, file_path)
+        xyz(atoms, Box, file_path)
     else:
         # Default to PDB if the extension is unrecognized
-        pdb(atoms, box, file_path)
+        pdb(atoms, Box, file_path)
