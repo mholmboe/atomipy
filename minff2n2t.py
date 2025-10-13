@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""Minimal MINFF n2t generator."""
-# Example: python generate_n2t_example.py structure.gro --output structure_minff.n2t
+"""MINFF to n2t generator."""
+# Example: python minff2n2t.py structure.gro --output minff_atomname2type.n2t
 
 import argparse
 from pathlib import Path
@@ -18,11 +18,11 @@ def main() -> None:
     if not infile.is_file():
         raise SystemExit(f"Input file '{infile}' not found")
 
-    atoms, _, box = ap.import_auto(str(infile))
-    atoms, _ = ap.minff(atoms, box)
+    atoms, _, Box = ap.import_auto(str(infile))
+    atoms, _ = ap.minff(atoms, Box=Box)
 
-    output = Path(args.output) if args.output else infile.with_name(f"{infile.stem}_minff.n2t")
-    n2t_path = ap.write_n2t(atoms, n2t_file=str(output), box=box)
+    output = Path(args.output) if args.output else infile.with_name(f"{infile.stem}_minff_atomname2type.n2t")
+    n2t_path = ap.write_n2t(atoms, Box=Box, n2t_file=str(output))
     print(f"Written {n2t_path}")
 
 

@@ -64,12 +64,12 @@ from atomipy.import_conf import pdb
 from atomipy.diffraction import xrd
 
 # Import crystal structure
-atoms, cell, box_dim = pdb('structure.pdb')
+atoms, Cell, Box_dim = pdb('structure.pdb')
 
 # Calculate XRD pattern
 two_theta, intensity, fig = xrd(
     atoms=atoms,
-    box_dim=box_dim,
+    Box_dim=Box_dim,
     wavelength=1.54187,  # Cu K-alpha
     two_theta_range=(10, 90),
     plot=True,
@@ -444,7 +444,7 @@ def atomic_scattering_factors(atom_label, wavelength, two_theta, b_iso=0.0):
     return f, element, int(n_electrons)
 
 
-def occupancy_atom(atoms, box_dim, rmax=1.0):
+def occupancy_atom(atoms, Box_dim, rmax=1.0):
     """
     Calculate the occupancy of all atomic sites within a specified radius.
     
@@ -452,7 +452,7 @@ def occupancy_atom(atoms, box_dim, rmax=1.0):
     ----------
     atoms : list of dict
         List of atom dictionaries with position information
-    box_dim : list or array
+    Box_dim : list or array
         Box dimensions with 3, 6, or 9 parameters
     rmax : float, optional
         Maximum radius to consider for occupancy calculation. Default is 1.0 Å
@@ -466,13 +466,13 @@ def occupancy_atom(atoms, box_dim, rmax=1.0):
     """
     print(f"Will calculate the occupancy of all sites, with r_max of: {rmax}")
     
-    # Ensure box_dim is in the right format
-    if len(box_dim) == 6 and box_dim[3] > 0 and box_dim[4] > 0 and box_dim[5] > 0:
-        # box_dim is actually cell parameters [a, b, c, alpha, beta, gamma]
-        box_dim = Cell2Box_dim(box_dim)
+    # Ensure Box_dim is in the right format
+    if len(Box_dim) == 6 and Box_dim[3] > 0 and Box_dim[4] > 0 and Box_dim[5] > 0:
+        # Box_dim is actually Cell parameters [a, b, c, alpha, beta, gamma]
+        Box_dim = Cell2Box_dim(Box_dim)
     
     # Calculate distance matrix
-    distances, _, _, _ = dist_matrix(atoms, box_dim)
+    distances, _, _, _ = dist_matrix(atoms, Box_dim)
     
     # Calculate occupancy for each atom
     occupancy = np.zeros(len(atoms))
@@ -550,7 +550,7 @@ def bragg_law(wavelength, value, mode='distance', n=1):
         raise ValueError("Mode must be 'distance' or 'twotheta'")
 
 
-def xrd(atoms, box_dim, wavelength=1.54187, angle_step=0.02, 
+def xrd(atoms, Box_dim, wavelength=1.54187, angle_step=0.02, 
         two_theta_range=(2, 90), b_all=0.0, lorentzian_factor=1.0,
         neutral_atoms=False, hkl_max=0, fwhm_00l=1.0, fwhm_hk0=0.5, 
         fwhm_hkl=0.5, pref=0, preferred_orientation=(1, 1, 1),
@@ -578,7 +578,7 @@ def xrd(atoms, box_dim, wavelength=1.54187, angle_step=0.02,
     atoms : list of dict
         List of atom dictionaries with position and type information.
         Each atom should have 'x', 'y', 'z' coordinates and 'element' or 'type'.
-    box_dim : list or array
+    Box_dim : list or array
         Box dimensions: [a, b, c] for orthogonal or [a, b, c, α, β, γ] for general
     wavelength : float, optional
         X-ray wavelength in Angstrom (default: Cu K-alpha = 1.54187)
@@ -658,14 +658,14 @@ def xrd(atoms, box_dim, wavelength=1.54187, angle_step=0.02,
     
     >>> from atomipy.import_conf import pdb
     >>> from atomipy.diffraction import xrd
-    >>> atoms, cell, box_dim = pdb('NaCl.pdb')
-    >>> two_theta, intensity, fig = xrd(atoms, box_dim)
+    >>> atoms, Cell, Box_dim = pdb('NaCl.pdb')
+    >>> two_theta, intensity, fig = xrd(atoms, Box_dim)
     
     High-resolution pattern with custom parameters:
     
     >>> two_theta, intensity, fig = xrd(
     ...     atoms=atoms,
-    ...     box_dim=box_dim,
+    ...     Box_dim=Box_dim,
     ...     wavelength=1.54187,
     ...     angle_step=0.01,
     ...     two_theta_range=(5, 120),
@@ -676,20 +676,20 @@ def xrd(atoms, box_dim, wavelength=1.54187, angle_step=0.02,
     """
     print("Starting XRD calculation...")
     
-    # Convert box_dim to cell parameters if needed
-    if len(box_dim) == 9:
-        # Triclinic box format
-        cell = Box_dim2Cell(box_dim)
-    elif len(box_dim) == 6:
+    # Convert Box_dim to Cell parameters if needed
+    if len(Box_dim) == 9:
+        # Triclinic Box format
+        Cell = Box_dim2Cell(Box_dim)
+    elif len(Box_dim) == 6:
         # Cell parameters format
-        cell = box_dim
-    elif len(box_dim) == 3:
-        # Simple orthogonal box
-        cell = list(box_dim) + [90.0, 90.0, 90.0]
+        Cell = Box_dim
+    elif len(Box_dim) == 3:
+        # Simple orthogonal Box
+        Cell = list(Box_dim) + [90.0, 90.0, 90.0]
     else:
-        raise ValueError("box_dim must have 3, 6, or 9 elements")
+        raise ValueError("Box_dim must have 3, 6, or 9 elements")
     
-    a, b, c, alpha, beta, gamma = cell
+    a, b, c, alpha, beta, gamma = Cell
     
     # Convert angles to radians
     alpha_rad = np.radians(alpha)
@@ -699,7 +699,7 @@ def xrd(atoms, box_dim, wavelength=1.54187, angle_step=0.02,
     # Set up occupancy if not already present
     if not all('occupancy' in atom for atom in atoms):
         if len(atoms) < 1000:
-            atoms, occupancy_values = occupancy_atom(atoms, box_dim)
+            atoms, occupancy_values = occupancy_atom(atoms, Box_dim)
         else:
             for atom in atoms:
                 atom['occupancy'] = 1.0
@@ -717,10 +717,10 @@ def xrd(atoms, box_dim, wavelength=1.54187, angle_step=0.02,
         if 'xfrac' not in atom or 'yfrac' not in atom or 'zfrac' not in atom:
             # Convert Cartesian to fractional coordinates
             # This is a simplified conversion for orthogonal cells
-            if len(box_dim) == 3:
-                atom['xfrac'] = atom['x'] / box_dim[0]
-                atom['yfrac'] = atom['y'] / box_dim[1] 
-                atom['zfrac'] = atom['z'] / box_dim[2]
+            if len(Box_dim) == 3:
+                atom['xfrac'] = atom['x'] / Box_dim[0]
+                atom['yfrac'] = atom['y'] / Box_dim[1] 
+                atom['zfrac'] = atom['z'] / Box_dim[2]
             else:
                 # For non-orthogonal cells, use proper transformation
                 # This would need more complex matrix operations
@@ -779,7 +779,7 @@ def xrd(atoms, box_dim, wavelength=1.54187, angle_step=0.02,
     
     print(f"Generated {len(hkl)} reflections")
     
-    # Calculate volume of unit cell
+    # Calculate volume of unit Cell
     v_cell = a * b * c * np.sqrt(1 - np.cos(alpha_rad)**2 - np.cos(beta_rad)**2 - 
                                 np.cos(gamma_rad)**2 + 
                                 2 * np.cos(alpha_rad) * np.cos(beta_rad) * np.cos(gamma_rad))

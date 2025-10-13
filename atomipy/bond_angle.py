@@ -3,7 +3,7 @@ from .dist_matrix import dist_matrix
 from .cell_list_dist_matrix import cell_list_dist_matrix
 
 
-def bond_angle(atoms, box, rmaxH=1.2, rmaxM=2.45, same_element_bonds=False, same_molecule_only=True, calculate_coordination=True, neighbor_element=None):
+def bond_angle(atoms, Box, rmaxH=1.2, rmaxM=2.45, same_element_bonds=False, same_molecule_only=True, calculate_coordination=True, neighbor_element=None):
     """Compute bonds and angles for a given atomic structure.
     
     For each atom, bonds are determined based on a distance threshold:
@@ -16,9 +16,9 @@ def bond_angle(atoms, box, rmaxH=1.2, rmaxM=2.45, same_element_bonds=False, same
 
     Args:
        atoms: list of atom dictionaries (coordinates in Angstroms).
-       box: a 1x3, 1x6 or 1x9 list representing cell dimensions (in Angstroms):
-           - For orthogonal boxes, a 1x3 list [lx, ly, lz] where box = Box_dim, and Cell would be [lx, ly, lz, 90, 90, 90]
-           - For cell parameters, a 1x6 list [a, b, c, alpha, beta, gamma] (Cell format)
+       Box: a 1x3, 1x6 or 1x9 list representing Cell dimensions (in Angstroms):
+           - For orthogonal boxes, a 1x3 list [lx, ly, lz] where Box = Box_dim, and Cell would be [lx, ly, lz, 90, 90, 90]
+           - For Cell parameters, a 1x6 list [a, b, c, alpha, beta, gamma] (Cell format)
            - For triclinic boxes, a 1x9 list [lx, ly, lz, 0, 0, xy, 0, xz, yz] (GROMACS Box_dim format)
        rmaxH: cutoff distance for bonds involving hydrogen (default 1.2 Å).
        rmaxM: cutoff distance for bonds between all other atoms (default 2.45 Å).
@@ -46,13 +46,13 @@ def bond_angle(atoms, box, rmaxH=1.2, rmaxM=2.45, same_element_bonds=False, same
     # For large systems (>20000 atoms), cell_list_dist_matrix is more memory efficient
     # For smaller systems, dist_matrix is faster
     if len(atoms) > 15000:
-        # Large system - use cell list method which is more memory efficient
-        print(f"Large system - using cell list method for the distance matrix")
-        dmat, dx, dy, dz, _, _ = cell_list_dist_matrix(atoms, box, cutoff=max(rmaxH, rmaxM))
+        # Large system - use Cell list method which is more memory efficient
+        print(f"Large system - using Cell list method for the distance matrix")
+        dmat, dx, dy, dz, _, _ = cell_list_dist_matrix(atoms, Box, cutoff=max(rmaxH, rmaxM))
     else:
         # Smaller system - use standard distance matrix which is faster
         print(f"Small system - calculating the full distance matrix")
-        dmat, dx, dy, dz = dist_matrix(atoms, box)
+        dmat, dx, dy, dz = dist_matrix(atoms, Box)
     
     # Since dist_matrix doesn't provide precalculated bond lists, we'll create them based on cutoffs
     precalc_bond_list = []

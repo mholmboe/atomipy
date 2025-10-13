@@ -49,7 +49,7 @@ from .element import element
 from .radius import radius
 
 try:
-    from .mass import mass
+    from .mass import mass, set_atomic_masses, com
 except ImportError:
     pass
 
@@ -68,6 +68,7 @@ from . import transform
 cartesian_to_fractional = transform.cartesian_to_fractional
 fractional_to_cartesian = transform.fractional_to_cartesian
 wrap_coordinates = transform.wrap_coordinates
+wrap = transform.wrap
 triclinic_to_orthogonal = transform.triclinic_to_orthogonal
 orthogonal_to_triclinic = transform.orthogonal_to_triclinic
 get_orthogonal_box = transform.get_orthogonal_box
@@ -80,9 +81,25 @@ replicate_system = replicate.replicate_system
 
 from . import move
 translate = move.translate
+rotate = move.rotate
+place = move.place
+center = move.center
 
 from . import add
 update = add.update
+
+# ===== General functions =====
+from . import general
+scale = general.scale
+
+# ===== Build functions =====
+from . import build
+substitute = build.substitute
+merge = build.merge
+slice = build.slice
+solvate = build.solvate
+ionize = build.ionize
+insert = build.insert
 
 # ===== Force field functions =====
 try:
@@ -108,18 +125,17 @@ __version__ = "0.5.0"
 # Expose key functions at the package level
 __all__ = [
     'import_pdb', 'import_gro', 'import_xyz', 'import_auto',
-    'read_pdb', 'read_gro', 'read_xyz', 'read_auto',
     'write_pdb', 'write_gro', 'write_xyz', 'write_auto',
     'write_itp', 'write_psf', 'write_lmp',
-    'element', 'radius', 'mass',
+    'element', 'radius', 'mass', 'set_atomic_masses', 'com',
     'dist_matrix', 'cell_list_dist_matrix', 'bond_angle',
     'Box_dim2Cell', 'Cell2Box_dim',
-    'cartesian_to_fractional', 'fractional_to_cartesian', 'wrap_coordinates',
+    'cartesian_to_fractional', 'fractional_to_cartesian', 'wrap', 'wrap_coordinates',
     'triclinic_to_orthogonal', 'orthogonal_to_triclinic', 'get_orthogonal_box', 'get_cell_vectors',
     'direct_cartesian_to_fractional', 'direct_fractional_to_cartesian',
-    'replicate_system', 'translate', 'update',
+    'replicate_system', 'translate', 'rotate', 'place', 'center', 'update', 'scale',
+    'substitute', 'merge', 'slice', 'solvate', 'ionize', 'insert',
     'minff', 'clayff', 'write_n2t',
-    'charge_minff', 'charge_clayff', 'balance_charges',
-    'assign_formal_charges',
-    'xrd', 'occupancy_atom', 'atomic_scattering_factors'
+    'charge_minff', 'charge_clayff', 'balance_charges', 'assign_formal_charges',
+    'xrd', 'occupancy_atom', 'atomic_scattering_factors', 'calculate_multiplicity', 'bragg_law'
 ]

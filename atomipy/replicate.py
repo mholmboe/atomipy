@@ -1,9 +1,9 @@
 """
-This module provides functions for replicating atomic structures along unit cell dimensions.
+This module provides functions for replicating atomic structures along unit Cell dimensions.
 
 The main function converts atoms to fractional coordinates, replicates the structure
-along the unit cell vectors, and converts back to cartesian coordinates with updated
-box dimensions.
+along the unit Cell vectors, and converts back to cartesian coordinates with updated
+Box dimensions.
 """
 
 import copy
@@ -15,24 +15,24 @@ from .transform import (
 from .cell_utils import Box_dim2Cell, Cell2Box_dim
 from . import write_conf # Import for debug writing
 
-def replicate_system(atoms, box, replicate=[1, 1, 1], keep_molid=True, 
+def replicate_system(atoms, Box, replicate=[1, 1, 1], keep_molid=True, 
                    keep_resname=True, renumber_index=True):
     """
-    Replicates a unit cell along specified directions using crystallographic approach.
+    Replicates a unit Cell along specified directions using crystallographic approach.
     
     This function implements the standard crystallographic replication process:
     1. Convert input coordinates to fractional coordinates (unit cube)
-    2. Stack the unit cell n1×n2×n3 times in a,b,c directions
-    3. Scale the cell parameters accordingly (preserving angles)
+    2. Stack the unit Cell n1×n2×n3 times in a,b,c directions
+    3. Scale the Cell parameters accordingly (preserving angles)
     4. Convert fractional coordinates back to cartesian
     
     Parameters
     ----------
     atoms : list of dict
         List of atom dictionaries with cartesian coordinates.
-    box : a 1x6 or 1x9 list representing cell dimensions (in Angstroms), either as 
-            a Cell variable having cell parameters array [a, b, c, alpha, beta, gamma], or as 
-            a Box_dim variable having box dimensions [lx, ly, lz, 0, 0, xy, 0, xz, yz] for triclinic cells.
+    Box : a 1x6 or 1x9 list representing Cell dimensions (in Angstroms), either as 
+            a Cell variable having Cell parameters array [a, b, c, alpha, beta, gamma], or as 
+            a Box_dim variable having Box dimensions [lx, ly, lz, 0, 0, xy, 0, xz, yz] for triclinic cells.
             Note that for orthogonal boxes Cell = Box_dim.
     replicate : list or array of length 3, optional
         Number of replications in the a, b, c directions. Default is [1, 1, 1].
@@ -47,39 +47,41 @@ def replicate_system(atoms, box, replicate=[1, 1, 1], keep_molid=True,
     -------
     new_atoms : list of dict
         The replicated atoms list with updated coordinates.
-    new_box_dim : list
-        The updated box dimensions for the replicated cell.
+    new_Box_dim : list
+        The updated Box dimensions for the replicated Cell.
     new_cell : list
-        The replicated cell parameters as [a, b, c, alpha, beta, gamma].
+        The replicated Cell parameters as [a, b, c, alpha, beta, gamma].
         
     Examples
     --------
-    # Replicate 2x2x1 using cell parameters:
-    new_atoms, new_box, new_cell = ap.replicate.replicate_system(
-        atoms, box=[10, 10, 10, 90, 90, 90], replicate=[2, 2, 1]
+    # Replicate 2x2x1 using Cell parameters:
+    new_atoms, new_Box_dim, new_Cell = ap.replicate.replicate_system(
+        atoms, Box=[10, 10, 10, 90, 90, 90], replicate=[2, 2, 1]
     )
     
-    # Replicate 2x2x2 with box dimensions and assign new molecule IDs:
-    new_atoms, new_box, new_cell = ap.replicate.replicate_system(
-        atoms, box=[10, 10, 10], replicate=[2, 2, 2], keep_molid=False
+    # Replicate 2x2x2 with Box dimensions and assign new molecule IDs:
+    new_atoms, new_Box_dim, new_Cell = ap.replicate.replicate_system(
+        atoms, Box=[10, 10, 10], replicate=[2, 2, 2], keep_molid=False
     )
     """
 
-        # Possibly convert Box_dim into [a,b,c,alpha,beta,gamma] form
-    if box is not None:
-        if len(box) == 9:
-            box_dim = box 
+    # Possibly convert Box_dim into [a,b,c,alpha,beta,gamma] form
+    Box_dim = None
+    Cell = None
+    if Box is not None:
+        if len(Box) == 9:
+            Box_dim = Box 
             # Convert from Box_dim format to Cell format
-            cell = Box_dim2Cell(box_dim)
-        elif len(box) == 6:
-            cell = box
-        elif len(box) == 3:
-            # Orthogonal box
-            cell = list(box) + [90.0, 90.0, 90.0]
-            box_dim = box
+            Cell = Box_dim2Cell(Box_dim)
+        elif len(Box) == 6:
+            Cell = Box
+        elif len(Box) == 3:
+            # Orthogonal Box
+            Cell = list(Box) + [90.0, 90.0, 90.0]
+            Box_dim = Box
 
-    if box_dim is None and cell is None:
-        raise ValueError("Either box_dim or cell must be provided")
+    if Box_dim is None and Cell is None:
+        raise ValueError("Either Box_dim or Cell must be provided")
     
     # Handle integer input for replicate
     if isinstance(replicate, int):
@@ -89,12 +91,12 @@ def replicate_system(atoms, box, replicate=[1, 1, 1], keep_molid=True,
     if len(replicate) != 3:
         raise ValueError("replicate must be a list/array of length 3")
     
-    # Calculate box dimensions from cell parameters (for coordinate conversion)
-    box_dim = Cell2Box_dim(cell)
+    # Calculate Box dimensions from Cell parameters (for coordinate conversion)
+    Box_dim = Cell2Box_dim(Cell)
     
     # Step 2: Convert to fractional coordinates (unit cube)
     # Using the new fract.py module which converts through orthogonal coordinates
-    frac_coords, atoms_with_frac = cartesian_to_fractional(atoms, box=cell, add_to_atoms=True)
+    frac_coords, atoms_with_frac = cartesian_to_fractional(atoms, Box=Cell, add_to_atoms=True)
     
     # Step 3: Create storage for replicated atoms
     replicated_atoms = []
@@ -201,65 +203,65 @@ def replicate_system(atoms, box, replicate=[1, 1, 1], keep_molid=True,
     replicated_atoms = current_replication # Final result after all stages
     # --------------------------------------
     
-    # Step 5: Create replicated cell by scaling the original cell parameters
+    # Step 5: Create replicated Cell by scaling the original Cell parameters
     new_cell = [
-        cell[0] * replicate[0],  # a - scale by replication in x
-        cell[1] * replicate[1],  # b - scale by replication in y
-        cell[2] * replicate[2],  # c - scale by replication in z
-        cell[3],                 # alpha - angles remain unchanged
-        cell[4],                 # beta - angles remain unchanged
-        cell[5]                  # gamma - angles remain unchanged
+        Cell[0] * replicate[0],  # a - scale by replication in x
+        Cell[1] * replicate[1],  # b - scale by replication in y
+        Cell[2] * replicate[2],  # c - scale by replication in z
+        Cell[3],                 # alpha - angles remain unchanged
+        Cell[4],                 # beta - angles remain unchanged
+        Cell[5]                  # gamma - angles remain unchanged
     ]
     
-    # Step 6: Generate new box dimensions from the replicated cell
-    new_box_dim = Cell2Box_dim(new_cell)
+    # Step 6: Generate new Box dimensions from the replicated Cell
+    new_Box_dim = Cell2Box_dim(new_cell)
     
     # Step 7: For triclinic cells, we need to be careful with the coordinate transformation
     # to preserve atomic planes
     
-    # First, convert the fractional coordinates to integers (which unit cell they belong to)
-    # and offsets within the unit cell (0-1 range)
+    # First, convert the fractional coordinates to integers (which unit Cell they belong to)
+    # and offsets within the unit Cell (0-1 range)
     for atom in replicated_atoms:
-        # Calculate which unit cell this atom belongs to in each direction
+        # Calculate which unit Cell this atom belongs to in each direction
         ix = int(atom['xfrac'])
         iy = int(atom['yfrac'])
         iz = int(atom['zfrac'])
         
-        # Calculate the fractional offset within that unit cell (0-1 range)
+        # Calculate the fractional offset within that unit Cell (0-1 range)
         x_offset = atom['xfrac'] - ix
         y_offset = atom['yfrac'] - iy
         z_offset = atom['zfrac'] - iz
         
         # For proper replication that preserves planes, we calculate the new position
-        # using the unit cell indices and the original fractional coordinates
+        # using the unit Cell indices and the original fractional coordinates
         atom['xfrac'] = (ix + x_offset) / replicate[0]
         atom['yfrac'] = (iy + y_offset) / replicate[1] 
         atom['zfrac'] = (iz + z_offset) / replicate[2]
     
     # Step 8: Convert replicated atoms back to cartesian coordinates
-    # using the new (scaled) cell parameters directly for crystallographic accuracy
-    cart_coords = direct_fractional_to_cartesian(replicated_atoms, cell=new_cell, add_to_atoms=True)
+    # using the new (scaled) Cell parameters directly for crystallographic accuracy
+    cart_coords = direct_fractional_to_cartesian(replicated_atoms, Box=new_cell, add_to_atoms=True)
     
     # Clean up temporary attributes used during replication
     for atom in replicated_atoms:
         if '_original_idx' in atom:
             del atom['_original_idx']
     
-    # As a final check, recalculate cell parameters from box dimensions to ensure consistency
+    # As a final check, recalculate Cell parameters from Box dimensions to ensure consistency
     # This is redundant but serves as a sanity check
-    new_cell = Box_dim2Cell(new_box_dim)
+    new_cell = Box_dim2Cell(new_Box_dim)
     
-    # Round box dimensions to 5 decimal places
-    new_box_dim = [round(float(val), 5) for val in new_box_dim]
+    # Round Box dimensions to 5 decimal places
+    new_Box_dim = [round(float(val), 5) for val in new_Box_dim]
     
-    # Calculate new cell parameters from new box dimensions
-    new_cell = Box_dim2Cell(new_box_dim)
+    # Calculate new Cell parameters from new Box dimensions
+    new_cell = Box_dim2Cell(new_Box_dim)
     
-    # Return the replicated atoms, new box dimensions, and new cell parameters
-    return replicated_atoms, new_box_dim, new_cell
+    # Return the replicated atoms, new Box dimensions, and new Cell parameters
+    return replicated_atoms, new_Box_dim, new_cell
 
 
-def replicate_atom(atoms, box_dim=None, cell=None, replicate=[1, 1, 1], dim_order='xyz', 
+def replicate_atom(atoms, Box_dim=None, Cell=None, replicate=[1, 1, 1], dim_order='xyz', 
                   add_molid=False, renumber_index=True):
     """
     Legacy function for compatibility with old replicate_atom functionality.
@@ -271,9 +273,9 @@ def replicate_atom(atoms, box_dim=None, cell=None, replicate=[1, 1, 1], dim_orde
     ----------
     atoms : list of dict
         List of atom dictionaries with cartesian coordinates.
-    box : a 1x6 or 1x9 list representing cell dimensions (in Angstroms), either as 
-            a Cell variable having cell parameters array [a, b, c, alpha, beta, gamma], or as 
-            a Box_dim variable having box dimensions [lx, ly, lz, 0, 0, xy, 0, xz, yz] for triclinic cells.
+    Box : a 1x6 or 1x9 list representing Cell dimensions (in Angstroms), either as 
+            a Cell variable having Cell parameters array [a, b, c, alpha, beta, gamma], or as 
+            a Box_dim variable having Box dimensions [lx, ly, lz, 0, 0, xy, 0, xz, yz] for triclinic cells.
             Note that for orthogonal boxes Cell = Box_dim.
     replicate : list or array of length 3, optional
         Number of replications in the a, b, c directions. Default is [1, 1, 1].
@@ -297,9 +299,9 @@ def replicate_atom(atoms, box_dim=None, cell=None, replicate=[1, 1, 1], dim_orde
     The replication is always performed in all three dimensions simultaneously.
     """
     # Call replicate_system with the appropriate parameters
-    replicated_atoms, new_box_dim = replicate_system(
+    replicated_atoms, new_Box_dim, _ = replicate_system(
         atoms=atoms,
-        box_dim=box_dim,
+        Box=Box_dim if Box_dim is not None else Cell,
         replicate=replicate,
         keep_molid=not add_molid,
         keep_resname=True,

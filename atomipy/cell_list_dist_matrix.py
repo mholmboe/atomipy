@@ -24,16 +24,16 @@ def optional_jit(func):
         return numba.jit(nopython=True)(func)
     return func
 
-def cell_list_dist_matrix(atoms, box,cutoff=2.45, rmaxH=1.2, H_type='H'):
-    """Calculate a sparse distance matrix using the cell list algorithm for efficiently 
+def cell_list_dist_matrix(atoms, Box,cutoff=2.45, rmaxH=1.2, H_type='H'):
+    """Calculate a sparse distance matrix using the Cell list algorithm for efficiently 
     finding all atom pairs within a cutoff distance. This function closely follows the MATLAB 
     implementation of cell_list_dist_matrix_MATLAB.m.
     
     Args:
         atoms: list of atom dictionaries, each having 'x', 'y', 'z' coordinates and 'type' field.
-        box: a 1x3, 1x6 or 1x9 list representing cell dimensions (in Angstroms):
-            - For orthogonal boxes, a 1x3 list [lx, ly, lz] where box = Box_dim, and Cell would be [lx, ly, lz, 90, 90, 90]
-            - For cell parameters, a 1x6 list [a, b, c, alpha, beta, gamma] (Cell format)
+        Box: a 1x3, 1x6 or 1x9 list representing Cell dimensions (in Angstroms):
+            - For orthogonal boxes, a 1x3 list [lx, ly, lz] where Box = Box_dim, and Cell would be [lx, ly, lz, 90, 90, 90]
+            - For Cell parameters, a 1x6 list [a, b, c, alpha, beta, gamma] (Cell format)
             - For triclinic boxes, a 1x9 list [lx, ly, lz, 0, 0, xy, 0, xz, yz] (GROMACS Box_dim format)
         cutoff: maximum distance to consider for non-hydrogen bonds (default: 2.45 Å).
         rmaxH: cutoff distance for bonds involving hydrogen atoms (default: 1.2 Å).
@@ -47,7 +47,7 @@ def cell_list_dist_matrix(atoms, box,cutoff=2.45, rmaxH=1.2, H_type='H'):
         - X_dist, Y_dist, Z_dist: NxN numpy arrays with distance vector components
         
     Note:
-        This implementation closely follows the MATLAB version, including the same cell grid
+        This implementation closely follows the MATLAB version, including the same Cell grid
         approach and handling of different cutoffs for hydrogen atoms.
     """
     # Parse input & setup
@@ -58,26 +58,26 @@ def cell_list_dist_matrix(atoms, box,cutoff=2.45, rmaxH=1.2, H_type='H'):
     Cell = None
     Box_dim = None
     
-    if box is None:
+    if Box is None:
         raise ValueError("Box parameter must be provided")
         
-    # Determine box format and convert as needed
-    if len(box) == 9:
-        # Triclinic box in GROMACS format [lx, ly, lz, 0, 0, xy, 0, xz, yz]
-        Box_dim = box
+    # Determine Box format and convert as needed
+    if len(Box) == 9:
+        # Triclinic Box in GROMACS format [lx, ly, lz, 0, 0, xy, 0, xz, yz]
+        Box_dim = Box
         Cell = Box_dim2Cell(Box_dim)
-    elif len(box) == 6:
+    elif len(Box) == 6:
         # Cell parameters [a, b, c, alpha, beta, gamma]
-        Cell = box
+        Cell = Box
         Box_dim = Cell2Box_dim(Cell)
-    elif len(box) == 3:
-        # Simple orthogonal box [lx, ly, lz]
-        Box_dim = box
-        Cell = list(box) + [90.0, 90.0, 90.0]
+    elif len(Box) == 3:
+        # Simple orthogonal Box [lx, ly, lz]
+        Box_dim = Box
+        Cell = list(Box) + [90.0, 90.0, 90.0]
     else:
         raise ValueError("Box must be length 3, 6, or 9")
     
-    # Extract cell parameters
+    # Extract Cell parameters
     a, b, c = Cell[0], Cell[1], Cell[2]
     
     # For orthogonal, angles = 90
@@ -89,7 +89,7 @@ def cell_list_dist_matrix(atoms, box,cutoff=2.45, rmaxH=1.2, H_type='H'):
         alpha_rad = np.radians(Cell[3])
         beta_rad = np.radians(Cell[4])
         gamma_rad = np.radians(Cell[5])
-    # Construct triclinic box matrix H
+    # Construct triclinic Box matrix H
     ax = a
     bx = b * np.cos(gamma_rad)
     by = b * np.sin(gamma_rad)
@@ -104,11 +104,11 @@ def cell_list_dist_matrix(atoms, box,cutoff=2.45, rmaxH=1.2, H_type='H'):
     ])
     Hinv = np.linalg.inv(H)
     
-    # Build the cell list
-    # Pick a cell size that ensures neighbors can be found
+    # Build the Cell list
+    # Pick a Cell size that ensures neighbors can be found
     cellSize = 2 * cutoff
     
-    # Bounding box size calculation
+    # Bounding Box size calculation
     boundingBoxSize = np.array([
         max(abs(np.array([ax, bx, cx]))),
         max(abs(np.array([0, by, cy]))),
@@ -126,7 +126,7 @@ def cell_list_dist_matrix(atoms, box,cutoff=2.45, rmaxH=1.2, H_type='H'):
     # Keep coordinates in [0,1) range
     fracCoords = fracCoords - np.floor(fracCoords)
     
-    # Compute which cell each atom belongs to
+    # Compute which Cell each atom belongs to
     cellIndex = np.floor(fracCoords * nCells).astype(int)
     
     # Fix boundary cases
@@ -142,11 +142,11 @@ def cell_list_dist_matrix(atoms, box,cutoff=2.45, rmaxH=1.2, H_type='H'):
     # Convert (ix,iy,iz) -> single linear index
     cellLinIdx = np.ravel_multi_index((cellIndex[:, 0], cellIndex[:, 1], cellIndex[:, 2]), nCells)
     
-    # Initialize cell lists
+    # Initialize Cell lists
     numCells = np.prod(nCells)
     cellList = [[] for _ in range(numCells)]
     
-    # Populate cell lists - vectorized approach with bincount and digitize would be faster,
+    # Populate Cell lists - vectorized approach with bincount and digitize would be faster,
     # but we need to maintain the list structure for compatibility
     for iAtom in range(N):
         cIdx = cellLinIdx[iAtom]
@@ -179,11 +179,11 @@ def cell_list_dist_matrix(atoms, box,cutoff=2.45, rmaxH=1.2, H_type='H'):
     
     # Setup progress tracking
     total_distances_processed = 0
-    estimated_total = numCells * 27  # Approximate maximum number of cell neighbor combinations
+    estimated_total = numCells * 27  # Approximate maximum number of Cell neighbor combinations
     
     # Setup progress bar
     if has_tqdm:
-        cell_iterator = tqdm(range(numCells), desc="Finding dists", unit="cell")
+        cell_iterator = tqdm(range(numCells), desc="Finding dists", unit="Cell")
     else:
         print("Finding dists...")
         cell_iterator = range(numCells)
@@ -195,17 +195,17 @@ def cell_list_dist_matrix(atoms, box,cutoff=2.45, rmaxH=1.2, H_type='H'):
         if not atomListC:
             continue
             
-        # Get cell indices
+        # Get Cell indices
         cx, cy, cz = np.unravel_index(cID, nCells)
         
-        # Check this cell and all neighboring cells
+        # Check this Cell and all neighboring cells
         for dxIdx, dyIdx, dzIdx in neighborOffsets:
-            # Calculate neighbor cell with periodic wrapping
+            # Calculate neighbor Cell with periodic wrapping
             nx = (cx + dxIdx) % nCells[0]
             ny = (cy + dyIdx) % nCells[1] 
             nz = (cz + dzIdx) % nCells[2]
             
-            # Get linear index of neighbor cell
+            # Get linear index of neighbor Cell
             neighborCellLin = np.ravel_multi_index((nx, ny, nz), nCells)
             atomListN = cellList[neighborCellLin]
             if not atomListN:
@@ -224,7 +224,7 @@ def cell_list_dist_matrix(atoms, box,cutoff=2.45, rmaxH=1.2, H_type='H'):
             # Compute pairwise distances iAtom <-> jAtom
             for i, iAtom in enumerate(atomListC):
                 for j, jAtom in enumerate(atomListN):
-                    # If in the same cell, only consider jAtom > iAtom to avoid duplicates
+                    # If in the same Cell, only consider jAtom > iAtom to avoid duplicates
                     if neighborCellLin == cID and jAtom <= iAtom:
                         continue
                         

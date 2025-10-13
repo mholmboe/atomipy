@@ -16,9 +16,9 @@ def get_structure_stats(atoms, total_charge, ffname, Box_dim=None, Cell=None, lo
         atoms: List of atom dictionaries containing 'type', 'neigh', 'charge', etc. keys.
         total_charge: The total charge of the system.
         ffname: The name of the forcefield used (e.g., 'minff', 'clayff').
-        Box_dim: Optional box dimensions array. Can be a 3-element array [Lx, Ly, Lz] for 
+        Box_dim: Optional Box dimensions array. Can be a 3-element array [Lx, Ly, Lz] for 
                 orthogonal boxes or a 6/9-element array for triclinic boxes.
-        Cell: Optional cell parameters array [a, b, c, alpha, beta, gamma].
+        Cell: Optional Cell parameters array [a, b, c, alpha, beta, gamma].
         log_file: Optional path to a log file. If provided, statistics will be
                  written to this file.
     
@@ -127,7 +127,7 @@ def get_structure_stats(atoms, total_charge, ffname, Box_dim=None, Cell=None, lo
     # Calculate total mass for density calculation
     total_mass = sum(atom.get('mass', 0.0) for atom in atoms)
     
-    # Add box dimensions, volume, and density information
+    # Add Box dimensions, volume, and density information
     if Box_dim is not None or Cell is not None:
         output.append("System Dimensions and Properties")
         output.append("-" * 80)
@@ -136,11 +136,11 @@ def get_structure_stats(atoms, total_charge, ffname, Box_dim=None, Cell=None, lo
         if Box_dim is not None:
             output.append("Box_dim (Å):")
             if len(Box_dim) == 3:
-                output.append(f"  Orthogonal box: [{Box_dim[0]:.4f}, {Box_dim[1]:.4f}, {Box_dim[2]:.4f}]")
+                output.append(f"  Orthogonal Box: [{Box_dim[0]:.4f}, {Box_dim[1]:.4f}, {Box_dim[2]:.4f}]")
                 volume = Box_dim[0] * Box_dim[1] * Box_dim[2]
                 output.append(f"  Volume: {volume:.4f} Å³")
             elif len(Box_dim) == 6:
-                output.append(f"  Triclinic box: [{Box_dim[0]:.4f}, {Box_dim[1]:.4f}, {Box_dim[2]:.4f}, {Box_dim[3]:.4f}, {Box_dim[4]:.4f}, {Box_dim[5]:.4f}]")
+                output.append(f"  Triclinic Box: [{Box_dim[0]:.4f}, {Box_dim[1]:.4f}, {Box_dim[2]:.4f}, {Box_dim[3]:.4f}, {Box_dim[4]:.4f}, {Box_dim[5]:.4f}]")
             elif len(Box_dim) == 9:
                 output.append(f"  Full matrix: [{Box_dim[0]:.4f}, {Box_dim[1]:.4f}, {Box_dim[2]:.4f}, {Box_dim[3]:.4f}, {Box_dim[4]:.4f}, {Box_dim[5]:.4f}, {Box_dim[6]:.4f}, {Box_dim[7]:.4f}, {Box_dim[8]:.4f}]")
         
@@ -152,12 +152,12 @@ def get_structure_stats(atoms, total_charge, ffname, Box_dim=None, Cell=None, lo
             output.append(f"  a, b, c (Å): {a:.4f}, {b:.4f}, {c:.4f}")
             output.append(f"  α, β, γ (°): {alpha:.4f}, {beta:.4f}, {gamma:.4f}")
             
-            # Calculate volume from cell parameters
+            # Calculate volume from Cell parameters
             if abs(alpha - 90) < 1e-6 and abs(beta - 90) < 1e-6 and abs(gamma - 90) < 1e-6:
-                # Orthogonal box
+                # Orthogonal Box
                 volume = a * b * c
             else:
-                # Triclinic box, use the general formula
+                # Triclinic Box, use the general formula
                 alpha_rad = math.radians(alpha)
                 beta_rad = math.radians(beta)
                 gamma_rad = math.radians(gamma)
@@ -177,10 +177,10 @@ def get_structure_stats(atoms, total_charge, ffname, Box_dim=None, Cell=None, lo
         
         # Explanation of variables
         output.append("\nBox_dim and Cell explanations:")
-        output.append("  Box_dim: A 1D array of box dimensions, typically in Angstroms.")
+        output.append("  Box_dim: A 1D array of Box dimensions, typically in Angstroms.")
         output.append("          For orthogonal boxes: [Lx, Ly, Lz]")
         output.append("          For triclinic boxes: [Lx, Ly, Lz, xy, xz, yz] or [Lx, Ly, Lz, α, β, γ]")
-        output.append("  Cell: A 1×6 array with cell parameters [a, b, c, α, β, γ]")
+        output.append("  Cell: A 1×6 array with Cell parameters [a, b, c, α, β, γ]")
         output.append("        where a, b, c are lengths and α, β, γ are angles in degrees.")
         output.append("-" * 80)
         output.append("")
@@ -305,7 +305,7 @@ def get_structure_stats(atoms, total_charge, ffname, Box_dim=None, Cell=None, lo
     
     return result
 
-def minff(atoms, box, ffname='minff', rmaxlong=2.45, rmaxH=1.2, log=False, log_file=None):
+def minff(atoms, Box, ffname='minff', rmaxlong=2.45, rmaxH=1.2, log=False, log_file=None):
     """Assign MINFF forcefield specific atom types to atoms based on their coordination environment.
     
     This function updates the 'fftype' field based on the atom's element and its bonding environment,
@@ -317,9 +317,9 @@ def minff(atoms, box, ffname='minff', rmaxlong=2.45, rmaxH=1.2, log=False, log_f
     Args:
         atoms: A list of atom dictionaries, each atom is expected to have position coordinates
               and element/type information.
-        box: a 1x3, 1x6 or 1x9 list representing cell dimensions (in Angstroms):
-            - For orthogonal boxes, a 1x3 list [lx, ly, lz] where box = Box_dim, and Cell would be [lx, ly, lz, 90, 90, 90]
-            - For cell parameters, a 1x6 list [a, b, c, alpha, beta, gamma] (Cell format)
+        Box: a 1x3, 1x6 or 1x9 list representing Cell dimensions (in Angstroms):
+            - For orthogonal boxes, a 1x3 list [lx, ly, lz] where Box = Box_dim, and Cell would be [lx, ly, lz, 90, 90, 90]
+            - For Cell parameters, a 1x6 list [a, b, c, alpha, beta, gamma] (Cell format)
             - For triclinic boxes, a 1x9 list [lx, ly, lz, 0, 0, xy, 0, xz, yz] (GROMACS Box_dim format)
         ffname: The forcefield name, default is 'minff'.
         rmaxlong: Maximum bond distance for non-hydrogen bonds, default is 2.45 Å.
@@ -341,19 +341,19 @@ def minff(atoms, box, ffname='minff', rmaxlong=2.45, rmaxH=1.2, log=False, log_f
     # Set atom masses using the mass.py module
     atoms = set_atomic_masses(atoms)
 
-    # Determine box format and convert as needed
-    if len(box) == 9:
-        # Triclinic box in GROMACS format [lx, ly, lz, 0, 0, xy, 0, xz, yz]
-        Box_dim = box
+    # Determine Box format and convert as needed
+    if len(Box) == 9:
+        # Triclinic Box in GROMACS format [lx, ly, lz, 0, 0, xy, 0, xz, yz]
+        Box_dim = Box
         Cell = Box_dim2Cell(Box_dim)
-    elif len(box) == 6:
+    elif len(Box) == 6:
         # Cell parameters [a, b, c, alpha, beta, gamma]
-        Cell = box
+        Cell = Box
         Box_dim = Cell2Box_dim(Cell)
-    elif len(box) == 3:
-        # Simple orthogonal box [lx, ly, lz]
-        Box_dim = box
-        Cell = list(box) + [90.0, 90.0, 90.0]
+    elif len(Box) == 3:
+        # Simple orthogonal Box [lx, ly, lz]
+        Box_dim = Box
+        Cell = list(Box) + [90.0, 90.0, 90.0]
     else:
         raise ValueError("Box must be length 3, 6, or 9")
     
@@ -416,7 +416,7 @@ def minff(atoms, box, ffname='minff', rmaxlong=2.45, rmaxH=1.2, log=False, log_f
         # Only calculate bonds in the first pass
         if _ == 0:
             # Get bonds and angles using bond_angle function (this also calculates coordination numbers)
-            atoms, bond_index, angle_index = bond_angle(atoms, box, rmaxH=rmaxH, rmaxM=rmaxlong)
+            atoms, bond_index, angle_index = bond_angle(atoms, Box, rmaxH=rmaxH, rmaxM=rmaxlong)
             
             # Store bond information and prepare for atom typing
             for i, atom in enumerate(atoms):
@@ -788,7 +788,7 @@ def minff(atoms, box, ffname='minff', rmaxlong=2.45, rmaxH=1.2, log=False, log_f
                1.884, 2.413, 0.86, 0.4]
     # By default, apply charges to all atoms (set resname=None)
     # To limit charge assignment to specific residues, provide a resname (e.g., 'MIN')
-    atoms = charge_minff(atoms, box, atom_labels, charges, resname=None)
+    atoms = charge_minff(atoms, Box, atom_labels, charges, resname=None)
     
     # Find unique types of atomtypes and their neighbors
     # This is equivalent to the MATLAB code for finding unique types after atom type assignment
@@ -912,7 +912,7 @@ def minff(atoms, box, ffname='minff', rmaxlong=2.45, rmaxH=1.2, log=False, log_f
 
 
 
-def clayff(atoms, box, ffname='clayff', rmaxlong=2.45, rmaxH=1.2, log=False, log_file=None):
+def clayff(atoms, Box, ffname='clayff', rmaxlong=2.45, rmaxH=1.2, log=False, log_file=None):
     """Assign CLAYFF forcefield specific atom types to atoms based on their coordination environment.
     
     This function updates the 'fftype' field based on the atom's element and its bonding environment,
@@ -924,9 +924,9 @@ def clayff(atoms, box, ffname='clayff', rmaxlong=2.45, rmaxH=1.2, log=False, log
     Args:
         atoms: A list of atom dictionaries, each atom is expected to have position coordinates
               and element/type information.
-        box: a 1x3, 1x6 or 1x9 list representing cell dimensions (in Angstroms):
-            - For orthogonal boxes, a 1x3 list [lx, ly, lz] where box = Box_dim, and Cell would be [lx, ly, lz, 90, 90, 90]
-            - For cell parameters, a 1x6 list [a, b, c, alpha, beta, gamma] (Cell format)
+        Box: a 1x3, 1x6 or 1x9 list representing Cell dimensions (in Angstroms):
+            - For orthogonal boxes, a 1x3 list [lx, ly, lz] where Box = Box_dim, and Cell would be [lx, ly, lz, 90, 90, 90]
+            - For Cell parameters, a 1x6 list [a, b, c, alpha, beta, gamma] (Cell format)
             - For triclinic boxes, a 1x9 list [lx, ly, lz, 0, 0, xy, 0, xz, yz] (GROMACS Box_dim format)
         ffname: The forcefield name, default is 'clayff'.
         rmaxlong: Maximum bond distance for non-hydrogen bonds, default is 2.45 Å.
@@ -945,19 +945,19 @@ def clayff(atoms, box, ffname='clayff', rmaxlong=2.45, rmaxH=1.2, log=False, log
     # Set atom masses using the mass.py module
     atoms = set_atomic_masses(atoms)
 
-    # Determine box format and convert as needed
-    if len(box) == 9:
-        # Triclinic box in GROMACS format [lx, ly, lz, 0, 0, xy, 0, xz, yz]
-        Box_dim = box
+    # Determine Box format and convert as needed
+    if len(Box) == 9:
+        # Triclinic Box in GROMACS format [lx, ly, lz, 0, 0, xy, 0, xz, yz]
+        Box_dim = Box
         Cell = Box_dim2Cell(Box_dim)
-    elif len(box) == 6:
+    elif len(Box) == 6:
         # Cell parameters [a, b, c, alpha, beta, gamma]
-        Cell = box
+        Cell = Box
         Box_dim = Cell2Box_dim(Cell)
-    elif len(box) == 3:
-        # Simple orthogonal box [lx, ly, lz]
-        Box_dim = box
-        Cell = list(box) + [90.0, 90.0, 90.0]
+    elif len(Box) == 3:
+        # Simple orthogonal Box [lx, ly, lz]
+        Box_dim = Box
+        Cell = list(Box) + [90.0, 90.0, 90.0]
     else:
         raise ValueError("Box must be length 3, 6, or 9")
     
@@ -1016,7 +1016,7 @@ def clayff(atoms, box, ffname='clayff', rmaxlong=2.45, rmaxH=1.2, log=False, log
         # Only calculate bonds in the first pass
         if _ == 0:
             # Get bonds and angles using bond_angle function (this also calculates coordination numbers)
-            atoms, bond_index, angle_index = bond_angle(atoms, box, rmaxH=rmaxH, rmaxM=rmaxlong)
+            atoms, bond_index, angle_index = bond_angle(atoms, Box, rmaxH=rmaxH, rmaxM=rmaxlong)
             
             # Store bond information and prepare for atom typing
             for i, atom in enumerate(atoms):
@@ -1466,20 +1466,20 @@ def clayff(atoms, box, ffname='clayff', rmaxlong=2.45, rmaxH=1.2, log=False, log
         print(f"Structure statistics written to {log_path}")
     
     return atoms, all_neighbors
-def write_n2t(atoms, box=None, n2t_file=None, verbose=True):
+def write_n2t(atoms, Box=None, n2t_file=None, verbose=True):
     """Generate a GROMACS-compatible atomname2type (.n2t) file.
 
     The layout mirrors the MATLAB implementation in ``n2t_atom.m`` and
     aggregates unique coordination environments per (element, atom type,
     neighbor sequence). Neighbor distances are reported in nanometers and
     are obtained from bond data when available, or from minimum-image
-    distances when ``box`` is supplied. Environments that only differ by
+    distances when ``Box`` is supplied. Environments that only differ by
     small numerical noise in their neighbor distances are merged.
 
     Args:
         atoms: List of atom dictionaries.
-        box: Optional simulation cell in any standard atomipy format. Accepts
-             orthogonal ``[lx, ly, lz]`` vectors, 1×6 cell parameters, or the
+        Box: Optional simulation Cell in any standard atomipy format. Accepts
+             orthogonal ``[lx, ly, lz]`` vectors, 1×6 Cell parameters, or the
              1×9 ``Box_dim`` layout used by GROMACS. When provided, distances
              fall back to periodic minimum-image values.
         n2t_file: Optional output path (defaults to ``atomname2type.n2t``).
@@ -1500,28 +1500,28 @@ def write_n2t(atoms, box=None, n2t_file=None, verbose=True):
             value = value.tolist()
         return isinstance(value, (list, tuple, np.ndarray)) and len(value) in {3, 6, 9}
 
-    # Backwards compatibility with legacy signature: write_n2t(atoms, n2t_file, box)
-    if isinstance(box, path_like):
+    # Backwards compatibility with legacy signature: write_n2t(atoms, n2t_file, Box)
+    if isinstance(Box, path_like):
         if n2t_file is None:
-            n2t_file, box = box, None
+            n2t_file, Box = Box, None
         elif _looks_like_box(n2t_file):
-            box, n2t_file = n2t_file, box
+            Box, n2t_file = n2t_file, Box
 
     normalized_box = None
-    if box is not None:
-        if isinstance(box, np.ndarray):
-            box = box.tolist()
-        if not _looks_like_box(box):
-            raise ValueError("box must be a sequence of length 3, 6, or 9")
-        if len(box) == 6:
-            normalized_box = Cell2Box_dim(box)
+    if Box is not None:
+        if isinstance(Box, np.ndarray):
+            Box = Box.tolist()
+        if not _looks_like_box(Box):
+            raise ValueError("Box must be a sequence of length 3, 6, or 9")
+        if len(Box) == 6:
+            normalized_box = Cell2Box_dim(Box)
             if isinstance(normalized_box, np.ndarray):
                 normalized_box = normalized_box.tolist()
-        elif len(box) == 9:
-            normalized_box = list(box)
+        elif len(Box) == 9:
+            normalized_box = list(Box)
         else:  # len == 3
-            normalized_box = list(box)
-    box = normalized_box
+            normalized_box = list(Box)
+    Box = normalized_box
 
     if not atoms:
         raise ValueError("No atoms supplied to write_n2t")
@@ -1537,12 +1537,12 @@ def write_n2t(atoms, box=None, n2t_file=None, verbose=True):
     has_bonds = any(atom.get('bonds') for atom in atoms)
 
     if not has_neighbors or not has_bonds:
-        if box is not None:
+        if Box is not None:
             try:
-                atoms, _, _ = bond_angle(atoms, box=box, rmaxH=1.2, rmaxM=2.45)
+                atoms, _, _ = bond_angle(atoms, Box=Box, rmaxH=1.2, rmaxM=2.45)
             except Exception as exc:
                 if verbose:
-                    print(f"Warning: failed to infer bonds with provided box ({exc})")
+                    print(f"Warning: failed to infer bonds with provided Box ({exc})")
         elif all(key in atoms[0] for key in ['x', 'y', 'z']):
             try:
                 min_x = min(atom.get('x', 0.0) for atom in atoms) - 5.0
@@ -1551,10 +1551,10 @@ def write_n2t(atoms, box=None, n2t_file=None, verbose=True):
                 max_y = max(atom.get('y', 0.0) for atom in atoms) + 5.0
                 min_z = min(atom.get('z', 0.0) for atom in atoms) - 5.0
                 max_z = max(atom.get('z', 0.0) for atom in atoms) + 5.0
-                default_box = [max_x - min_x, max_y - min_y, max_z - min_z]
+                default_Box = [max_x - min_x, max_y - min_y, max_z - min_z]
                 if verbose:
-                    print(f"Calculating bonds with default box {default_box}")
-                atoms, _, _ = bond_angle(atoms, box=default_box, rmaxH=1.2, rmaxM=2.45)
+                    print(f"Calculating bonds with default Box {default_Box}")
+                atoms, _, _ = bond_angle(atoms, Box=default_Box, rmaxH=1.2, rmaxM=2.45)
             except Exception as exc:
                 if verbose:
                     print(f"Warning: failed to infer bonds automatically ({exc})")
@@ -1571,10 +1571,10 @@ def write_n2t(atoms, box=None, n2t_file=None, verbose=True):
     env_map = {}
 
     distance_matrix = None
-    if box is not None and all(key in atoms[0] for key in ['x', 'y', 'z']):
+    if Box is not None and all(key in atoms[0] for key in ['x', 'y', 'z']):
         try:
             from .dist_matrix import dist_matrix
-            distance_matrix, _, _, _ = dist_matrix(atoms, box)
+            distance_matrix, _, _, _ = dist_matrix(atoms, Box)
         except Exception as exc:
             if verbose:
                 print(f"Warning: failed to compute PBC distances ({exc})")

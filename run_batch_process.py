@@ -44,7 +44,7 @@ def main():
             # ------------------------------
             print(f"Loading structure from: {input_file}")
             try:
-                atoms, cell, box_dim = ap.import_conf.gro(input_file)
+                atoms, Cell, Box_dim = ap.import_conf.gro(input_file)
                 print(f"Successfully loaded {len(atoms)} atoms")
                 
                 # Store original atom types before processing
@@ -79,7 +79,7 @@ def main():
             # rmaxM = maximum bond length for metal-oxygen bonds (2.45 Å)
             atoms, Bond_index, Angle_index = ap.bond_angle(
                 atoms, 
-                box_dim, 
+                Box=Box_dim, 
                 rmaxH=1.2, 
                 rmaxM=2.45
             )
@@ -91,7 +91,7 @@ def main():
             print("\nAssigning specialized atom types using MINFF...")
             # MINFF classifies atoms based on their chemical environment
             # This function modifies atoms in-place (doesn't return anything)
-            ap.minff(atoms, box_dim)  # Use the minff function from the ap package
+            ap.minff(atoms, Box=Box_dim)  # Use the minff function from the ap package
             
             # Calculate total charge
             total_charge = sum(atom.get('charge', 0.0) for atom in atoms)
@@ -134,12 +134,12 @@ def main():
             # Output GRO file
             output_gro = f"output/pypreem{i}.gro"
             print(f"\nWriting processed structure to {output_gro}...")
-            ap.write_gro(atoms, box=box_dim, file_path=output_gro)
+            ap.write_gro(atoms, Box=Box_dim, file_path=output_gro)
             
             # Output ITP file
             output_itp = f"output/pymin{i}.itp"
             print(f"Generating molecular topology file {output_itp}...")
-            ap.write_itp(atoms, box=box_dim, file_path=output_itp)
+            ap.write_itp(atoms, Box=Box_dim, file_path=output_itp)
             
             print(f"Completed processing {input_file}")
     
