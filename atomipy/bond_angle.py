@@ -241,3 +241,198 @@ def bond_angle(atoms, Box, rmaxH=1.2, rmaxM=2.45, same_element_bonds=False, same
     
     return atoms, Bond_index, Angle_index
 
+
+def bond_angle_dihedral(atoms, Box, rmaxH=1.2, rmaxM=2.45, same_element_bonds=False,
+                        same_molecule_only=True, calculate_coordination=True, neighbor_element=None):
+    """
+    Calculate bonds, angles, dihedrals, and 1-4 pair interactions.
+
+    This mirrors the MATLAB bond_angle_dihedral_atom.m flow: bonds/angles are built first,
+    then dihedrals are assembled from adjacency and refined using the angle vectors
+    (including reversed orientations) to compute dihedral angles. The pairlist is derived
+    from terminal atoms of the dihedrals with existing bonds removed.
+
+    Parameters
+    ----------
+    atoms : list of dict
+        List of atom dictionaries containing Cartesian coordinates (keys: ``x``, ``y``, ``z``).
+    Box : list or array-like
+        Simulation cell dimensions in one of the supported formats:
+        - 1x3: [lx, ly, lz] for orthogonal boxes
+        - 1x6: [a, b, c, alpha, beta, gamma] for cell parameters
+        - 1x9: [lx, ly, lz, 0, 0, xy, 0, xz, yz] for GROMACS triclinic format
+    rmaxH : float, optional
+        Cutoff distance (Å) for bonds involving hydrogen (default: 1.2).
+    rmaxM : float, optional
+        Cutoff distance (Å) for bonds between non-hydrogen atoms (default: 2.45).
+    same_element_bonds : bool, optional
+        If False, bonds between atoms of the same element are ignored (default: False).
+    same_molecule_only : bool, optional
+        If True, restrict bonds to atoms sharing the same ``molid`` (default: True).
+    calculate_coordination : bool, optional
+        If True, add coordination numbers to each atom dictionary (default: True).
+    neighbor_element : str, optional
+        If provided, coordination counts only neighbors of this element.
+
+    Returns
+    -------
+    atoms : list of dict
+        Atom list updated with neighbor, bond, angle, and coordination information.
+    Bond_index : numpy.ndarray
+        Array with shape (n_bonds, 3) containing bonded atom indices (0-based) and distances.
+    Angle_index : numpy.ndarray
+        Array with shape (n_angles, 10) describing angles as returned by :func:`bond_angle`.
+    Dihedral_index : numpy.ndarray
+        Array with shape (n_dihedrals, 5): [atom1, atom2, atom3, atom4, dihedral_angle_deg].
+    Pairlist : numpy.ndarray
+        Array with shape (n_pairs, 2) listing unique 1-4 pairs not directly bonded.
+
+    Raises
+    ------
+    ValueError
+        If ``atoms`` is empty or ``Box`` is missing/invalid.
+    """
+    if atoms is None or len(atoms) == 0:
+        raise ValueError("atoms list cannot be empty")
+
+    if Box is None:
+        raise ValueError("Box parameter must be provided")
+
+    atoms, Bond_index, Angle_index = bond_angle(
+        atoms,
+        Box,
+        rmaxH=rmaxH,
+        rmaxM=rmaxM,
+        same_element_bonds=same_element_bonds,
+        same_molecule_only=same_molecule_only,
+        calculate_coordination=calculate_coordination,
+        neighbor_element=neighbor_element,
+    )
+
+    Bond_index = np.atleast_2d(np.array(Bond_index))
+    Angle_index = np.atleast_2d(np.array(Angle_index))
+
+    if Bond_index.size == 0 or Angle_index.size == 0:
+        empty_dihedral = np.empty((0, 5))
+        empty_pairlist = np.empty((0, 2), dtype=int)
+        return atoms, Bond_index, Angle_index, empty_dihedral, empty_pairlist
+
+    # Build adjacency from bonds
+    nbonds = Bond_index.shape[0]
+    adjacency = [[] for _ in range(len(atoms))]
+    for i in range(nbonds):
+        a = int(Bond_index[i, 0])
+        b = int(Bond_index[i, 1])
+        adjacency[a].append(b)
+        adjacency[b].append(a)
+
+    # Oriented angle list using full neighbor permutations (not sorted) for dihedral construction
+    from .dist_matrix import dist_matrix  # local import to avoid cycles
+    _, dx, dy, dz = dist_matrix(atoms, Box)
+    oriented_angles = []
+    for center, neighs in enumerate(adjacency):
+        if len(neighs) < 2:
+            continue
+        for n1 in neighs:
+            for n2 in neighs:
+                if n1 == n2:
+                    continue
+                v1 = np.array([dx[center, n1], dy[center, n1], dz[center, n1]])
+                v2 = np.array([dx[center, n2], dy[center, n2], dz[center, n2]])
+                norm1 = np.linalg.norm(v1)
+                norm2 = np.linalg.norm(v2)
+                if norm1 == 0 or norm2 == 0:
+                    continue
+                cos_angle = np.dot(v1, v2) / (norm1 * norm2)
+                cos_angle = max(min(cos_angle, 1.0), -1.0)
+                angle = np.degrees(np.arccos(cos_angle))
+                oriented_angles.append(
+                    (
+                        n1,
+                        center,
+                        n2,
+                        angle,
+                        v1[0],
+                        v1[1],
+                        v1[2],
+                        v2[0],
+                        v2[1],
+                        v2[2],
+                    )
+                )
+    oriented_angles = np.array(oriented_angles)
+    if oriented_angles.size == 0:
+        empty_dihedral = np.empty((0, 5))
+        empty_pairlist = np.empty((0, 2), dtype=int)
+        return atoms, Bond_index, Angle_index, empty_dihedral, empty_pairlist
+    angle_indices = oriented_angles[:, :3].astype(int)
+
+    # Prepare angle stack (forward + reversed) to compute dihedral angles
+    angles_rev = np.zeros_like(oriented_angles)
+    angles_rev[:, 0] = angle_indices[:, 2]
+    angles_rev[:, 1] = angle_indices[:, 1]
+    angles_rev[:, 2] = angle_indices[:, 0]
+    angles_rev[:, 3] = oriented_angles[:, 3]
+    angles_rev[:, 4:7] = oriented_angles[:, 7:10]
+    angles_rev[:, 7:10] = oriented_angles[:, 4:7]
+
+    angle_stack = np.vstack((angles_rev, oriented_angles))
+    angle_stack_indices = angle_stack[:, :3].astype(int)
+
+    dihedral_list = []
+    for i in range(angle_stack.shape[0]):
+        for j in range(i, angle_stack.shape[0]):
+            if (angle_stack_indices[i, 1] == angle_stack_indices[j, 0] and
+                    angle_stack_indices[i, 2] == angle_stack_indices[j, 1]):
+                A = np.cross(angle_stack[i, 4:7], angle_stack[i, 7:10])
+                B = np.cross(angle_stack[j, 4:7], angle_stack[j, 7:10])
+                normA = np.linalg.norm(A)
+                normB = np.linalg.norm(B)
+                if normA < 1e-8 or normB < 1e-8:
+                    continue
+                cos_phi = np.dot(A, B) / (normA * normB)
+                cos_phi = max(min(cos_phi, 1.0), -1.0)
+                theta = float(np.round(np.degrees(np.arccos(cos_phi)), 2))
+
+                if angle_stack_indices[i, 1] < angle_stack_indices[i, 2]:
+                    dihedral = (
+                        angle_stack_indices[i, 0],
+                        angle_stack_indices[i, 1],
+                        angle_stack_indices[i, 2],
+                        angle_stack_indices[j, 2],
+                        theta,
+                    )
+                else:
+                    dihedral = (
+                        angle_stack_indices[j, 2],
+                        angle_stack_indices[i, 2],
+                        angle_stack_indices[i, 1],
+                        angle_stack_indices[i, 0],
+                        theta,
+                    )
+                dihedral_list.append(dihedral)
+
+    if dihedral_list:
+        Dihedral_index = np.unique(np.array(dihedral_list, dtype=float), axis=0)
+        sort_idx = np.lexsort((Dihedral_index[:, 2], Dihedral_index[:, 1]))
+        Dihedral_index = Dihedral_index[sort_idx]
+    else:
+        Dihedral_index = np.empty((0, 5))
+
+    # Pairlist from dihedral terminals, removing bonded pairs
+    if len(Dihedral_index) > 0:
+        Pairlist = np.sort(Dihedral_index[:, [0, 3]].astype(int), axis=1)
+        Pairlist = np.unique(Pairlist, axis=0)
+        if Bond_index.size > 0:
+            bond_pairs = np.sort(Bond_index[:, :2].astype(int), axis=1)
+            keep_mask = []
+            for pair in Pairlist:
+                if np.any(np.all(bond_pairs == np.sort(pair), axis=1)):
+                    keep_mask.append(False)
+                else:
+                    keep_mask.append(True)
+            Pairlist = Pairlist[np.array(keep_mask, dtype=bool)]
+    else:
+        Pairlist = np.empty((0, 2), dtype=int)
+
+    return atoms, Bond_index, Angle_index, Dihedral_index, Pairlist

@@ -25,7 +25,7 @@ def main():
     # Step 1: Load a structure file in both PDB and GRO formats
     # ------------------------------------------
     import os
-    pdb_file = "Kaolinite_GII_0.0487.pdb"
+    pdb_file = "Kaolinite_GII_0.0487_element.pdb"
     # Use absolute path to ensure file is found regardless of working directory
     pdb_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), pdb_file)
     
