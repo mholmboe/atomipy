@@ -13,7 +13,7 @@ Key features:
 - GROMACS n2t file generation for atom name to type conversions (gmx x2top)
   with periodic minimum-image distances and environment deduplication
 - Distance calculations with efficient algorithms for periodic systems
-- Bond and angle detection
+- Bond/angle/dihedral/1-4 pair detection
 - Coordinate transformations between Cartesian and fractional representations
 - Support for both orthogonal and triclinic simulation cells
 - Structure manipulation (replication, translation)
@@ -42,6 +42,8 @@ from . import write_top
 write_itp = write_top.itp
 write_psf = write_top.psf
 write_lmp = write_top.lmp
+# Itp file import helper
+from .import_top import import_itp as import_itp_topology
 
 # ===== Atom property functions =====
 from .element import element
@@ -56,7 +58,7 @@ except ImportError:
 # ===== Structure analysis functions =====
 from .dist_matrix import dist_matrix
 from .cell_list_dist_matrix import cell_list_dist_matrix
-from .bond_angle import bond_angle
+from .bond_angle import bond_angle, bond_angle_dihedral
 
 # ===== Cell and coordinate transformation functions =====
 from . import cell_utils
@@ -126,9 +128,9 @@ __version__ = "0.5.0"
 __all__ = [
     'import_pdb', 'import_gro', 'import_xyz', 'import_auto',
     'write_pdb', 'write_gro', 'write_xyz', 'write_auto',
-    'write_itp', 'write_psf', 'write_lmp',
+    'write_itp', 'write_psf', 'write_lmp', 'import_itp_topology',
     'element', 'radius', 'mass', 'set_atomic_masses', 'com',
-    'dist_matrix', 'cell_list_dist_matrix', 'bond_angle',
+    'dist_matrix', 'cell_list_dist_matrix', 'bond_angle', 'bond_angle_dihedral',
     'Box_dim2Cell', 'Cell2Box_dim',
     'cartesian_to_fractional', 'fractional_to_cartesian', 'wrap', 'wrap_coordinates',
     'triclinic_to_orthogonal', 'orthogonal_to_triclinic', 'get_orthogonal_box', 'get_cell_vectors',

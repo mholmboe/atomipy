@@ -71,7 +71,7 @@ Understanding the core containers and fields used in atomipy makes it easier to 
   - For .xyz files, system dimensions should be on the second line after a # character
 - Generating topology files for MINFF and CLAYFF forcefields, for Gromacs (.itp), NAMD (.psf) and LAMMPS (.data)
 - Handle both orthogonal and triclinic simulation cells with periodic boundary conditions
-- Calculate bond distances and angles
+- Calculate bond distances, angles, dihedrals, and 1–4 pairs (`bond_angle_dihedral`)
 - Element type assignment
 - Coordination number analysis
 - Distance matrices with PBC corrections (using both full matrix and efficient cell-list algorithms)
@@ -198,6 +198,30 @@ print(f"N2T file saved to: {n2t_path}")
 ```
 
 The `Box` argument accepts orthogonal `[lx, ly, lz]` vectors, 1×6 Cell parameter lists, or the 1×9 `Box_dim` layout and will be normalised internally.
+
+### Dihedrals and 1–4 pair detection
+
+Use `bond_angle_dihedral` to build bonds/angles and derive dihedrals plus 1–4 pairs in one call:
+
+```python
+atoms, Cell, Box_dim = ap.import_gro("NMA_element.gro")
+ap.element(atoms)
+atoms, Bond_index, Angle_index, Dihedral_index, Pairlist = ap.bond_angle_dihedral(
+    atoms, Box_dim, same_molecule_only=False, same_element_bonds=False
+)
+print(len(Bond_index), len(Angle_index), len(Dihedral_index), len(Pairlist))
+```
+
+### Import existing .itp files
+
+To read a GROMACS topology and inspect interaction sections:
+
+```python
+from atomipy import import_itp_topology
+itp = import_itp_topology("NMA.itp")
+print("Pairs:", len(itp.get("pairs", {}).get("ai", [])))
+print("Dihedrals:", len(itp.get("dihedrals", {}).get("ai", [])))
+```
 
 Alternatively, you can use the included MINFF helper script:
 

@@ -646,6 +646,10 @@ def minff(atoms, Box, ffname='minff', rmaxlong=2.45, rmaxH=1.2, log=False, log_f
                     atom['fftype'] = 'Ops'
                 elif neighbors_str == 'AlFeFe' or neighbors_str == 'AlFeoFeo' or neighbors_str == 'AltFeFe' or neighbors_str == 'AltFeoFeo':
                     atom['fftype'] = 'Ops'
+                elif neighbors_str == 'AlFeFet' or neighbors_str == 'AlFeoFet':
+                    atom['fftype'] = 'Ops'
+                elif neighbors_str == 'AlAltFe' or neighbors_str == 'AlAltFeo':
+                    atom['fftype'] = 'Ops'
                 elif neighbors_str == 'AlFeH' or neighbors_str == 'AlFeoH':
                     atom['fftype'] = 'Oh'
                 elif neighbors_str == 'AlFeSi' or neighbors_str == 'AlFeoSi':
@@ -908,7 +912,7 @@ def minff(atoms, Box, ffname='minff', rmaxlong=2.45, rmaxH=1.2, log=False, log_f
         stats = get_structure_stats(atoms, total_charge, ffname, Box_dim=Box_dim, Cell=Cell, log_file=log_path)
         print(f"Structure statistics written to {log_path}")
     
-    return atoms, all_neighbors
+    return atoms # , all_neighbors
 
 
 
@@ -1207,6 +1211,10 @@ def clayff(atoms, Box, ffname='clayff', rmaxlong=2.45, rmaxH=1.2, log=False, log
                     atom['fftype'] = 'Ops'
                 elif neighbors_str == 'AlFeFe' or neighbors_str == 'AlFeoFeo' or neighbors_str == 'AltFeFe' or neighbors_str == 'AltFeoFeo':
                     atom['fftype'] = 'Ops'
+                elif neighbors_str == 'AlFeFet' or neighbors_str == 'AlFeoFet':
+                    atom['fftype'] = 'Ops'
+                elif neighbors_str == 'AlAltFe' or neighbors_str == 'AlAltFeo':
+                    atom['fftype'] = 'Ops'
                 elif neighbors_str == 'AlFeH' or neighbors_str == 'AlFeoH':
                     atom['fftype'] = 'Oh'
                 elif neighbors_str == 'AlFeSi' or neighbors_str == 'AlFeoSi':
@@ -1465,7 +1473,8 @@ def clayff(atoms, Box, ffname='clayff', rmaxlong=2.45, rmaxH=1.2, log=False, log
         stats = get_structure_stats(atoms, total_charge, ffname, Box_dim=Box_dim, Cell=Cell, log_file=log_path)
         print(f"Structure statistics written to {log_path}")
     
-    return atoms, all_neighbors
+    return atoms #, all_neighbors
+
 def write_n2t(atoms, Box=None, n2t_file=None, verbose=True):
     """Generate a GROMACS-compatible atomname2type (.n2t) file.
 
