@@ -30,8 +30,9 @@ def main():
     pdb_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), pdb_file)
     
     print(f"Loading PDB structure from: {pdb_file}")
-    # Read the PDB file - this returns a list of atom dictionaries and Cell parameters
-    atoms, Cell, Box_dim = ap.import_pdb(pdb_file)
+    # Read the PDB file - returns atoms and Cell parameters
+    atoms, Cell = ap.import_pdb(pdb_file)
+    Box_dim = ap.Cell2Box_dim(Cell)
     print(f"Successfully loaded {len(atoms)} atoms from PDB")
     print(f"Cell parameters: {Cell}")
     print(f"Box dimensions: {Box_dim}")

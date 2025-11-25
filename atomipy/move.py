@@ -62,7 +62,7 @@ def translate(atoms, trans_vec, resname="all"):
     return atoms_copy
 
 
-def rotate(atoms, box=None, angles='random'):
+def rotate(atoms, Box=None, angles='random'):
     """
     Rotate atoms around their center of mass.
     
@@ -70,7 +70,7 @@ def rotate(atoms, box=None, angles='random'):
     ----------
     atoms : list of dict
         List of atom dictionaries with cartesian coordinates
-    box : list or array-like, optional
+    Box : list or array-like, optional
         Box dimensions (not used in basic rotation but included for compatibility)
     angles : list or str, optional
         Rotation angles [alpha, beta, gamma] in degrees, or 'random' for random angles
@@ -180,7 +180,7 @@ def place(atoms, position):
     return translate(atoms_copy, trans_vec)
 
 
-def center(atoms, box=None, resname="all", dim="xyz"):
+def center(atoms, Box=None, resname="all", dim="xyz"):
     """
     Center atoms with respect to the box or specified residues along given dimensions.
     
@@ -188,7 +188,7 @@ def center(atoms, box=None, resname="all", dim="xyz"):
     ----------
     atoms : list of dict
         List of atom dictionaries with cartesian coordinates
-    box : list or array-like, optional
+    Box : list or array-like, optional
         Box dimensions in any format supported by atomipy (1x3, 1x6, or 1x9)
     resname : str, optional
         Residue name to center. Default is "all" which centers all atoms.
@@ -204,13 +204,13 @@ def center(atoms, box=None, resname="all", dim="xyz"):
     Examples
     --------
     # Center all atoms in all dimensions:
-    centered_atoms = ap.center(atoms, box)
+    centered_atoms = ap.center(atoms, Box)
     
     # Center only water molecules in xy plane:
-    centered_atoms = ap.center(atoms, box, resname="SOL", dim="xy")
+    centered_atoms = ap.center(atoms, Box, resname="SOL", dim="xy")
     
     # Center all atoms in z dimension only:
-    centered_atoms = ap.center(atoms, box, dim="z")
+    centered_atoms = ap.center(atoms, Box, dim="z")
     """
     print("Centering")
     
@@ -238,15 +238,15 @@ def center(atoms, box=None, resname="all", dim="xyz"):
     center_z = sum(atom['z'] for atom in atoms_to_center) / num_atoms
     
     # Determine box center if box is provided
-    if box is not None:
-        if len(box) == 3:  # Orthogonal box
-            box_center = [box[0] / 2, box[1] / 2, box[2] / 2]
-        elif len(box) == 6:  # Cell parameters format
+    if Box is not None:
+        if len(Box) == 3:  # Orthogonal box
+            box_center = [Box[0] / 2, Box[1] / 2, Box[2] / 2]
+        elif len(Box) == 6:  # Cell parameters format
             # For simplicity, assume box center is halfway along each cell vector
-            box_center = [box[0] / 2, box[1] / 2, box[2] / 2]
-        elif len(box) == 9:  # GROMACS triclinic box format: [lx, ly, lz, 0, 0, xy, 0, xz, yz]
+            box_center = [Box[0] / 2, Box[1] / 2, Box[2] / 2]
+        elif len(Box) == 9:  # GROMACS triclinic box format: [lx, ly, lz, 0, 0, xy, 0, xz, yz]
             # Use the actual box dimensions (first 3 elements), not the tilt factors
-            box_center = [box[0] / 2, box[1] / 2, box[2] / 2]
+            box_center = [Box[0] / 2, Box[1] / 2, Box[2] / 2]
         else:
             print("Warning: Unrecognized box format. Using (0,0,0) as box center.")
             box_center = [0, 0, 0]

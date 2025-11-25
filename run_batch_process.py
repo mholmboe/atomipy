@@ -44,7 +44,7 @@ def main():
             # ------------------------------
             print(f"Loading structure from: {input_file}")
             try:
-                atoms, Cell, Box_dim = ap.import_conf.gro(input_file)
+                atoms, Box_dim = ap.import_conf.gro(input_file)
                 print(f"Successfully loaded {len(atoms)} atoms")
                 
                 # Store original atom types before processing

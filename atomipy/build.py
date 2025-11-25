@@ -11,6 +11,7 @@ from .dist_matrix import dist_matrix
 from .cell_list_dist_matrix import cell_list_dist_matrix
 from .move import translate
 from .transform import cartesian_to_fractional, fractional_to_cartesian
+from .cell_utils import Cell2Box_dim
 
 
 def is_centrosymmetric_along_z(atoms, tolerance=0.1):
@@ -67,7 +68,7 @@ def is_centrosymmetric_along_z(atoms, tolerance=0.1):
     return even_count > odd_count
 
 
-def substitute(atoms, box, num_oct_subst, o1_type, o2_type, min_o2o2_dist,
+def substitute(atoms, Box, num_oct_subst, o1_type, o2_type, min_o2o2_dist,
                num_tet_subst=0, t1_type=None, t2_type=None, min_t2t2_dist=5.5,
                lo_limit=None, hi_limit=None, dimension=3):
     """
@@ -82,7 +83,7 @@ def substitute(atoms, box, num_oct_subst, o1_type, o2_type, min_o2o2_dist,
     ----------
     atoms : list of dict
         List of atom dictionaries with coordinates and types.
-    box : list
+    Box : list
         Box dimensions. Can be:
         - 1x3 list [lx, ly, lz] for orthogonal boxes
         - 1x6 list [a, b, c, alpha, beta, gamma] for cell parameters
@@ -120,14 +121,14 @@ def substitute(atoms, box, num_oct_subst, o1_type, o2_type, min_o2o2_dist,
     Examples
     --------
     # Basic octahedral substitution (5 Al->Mgo replacements):
-    atoms = ap.substitute(atoms, box, 5, 'Al', 'Mgo', 5.5)
+    atoms = ap.substitute(atoms, Box, 5, 'Al', 'Mgo', 5.5)
     
     # Both octahedral and tetrahedral substitutions:
-    atoms = ap.substitute(atoms, box, 5, 'Al', 'Mgo', 5.5, 
+    atoms = ap.substitute(atoms, Box, 5, 'Al', 'Mgo', 5.5, 
                          num_tet_subst=2, t1_type='Si', t2_type='Alt', min_t2t2_dist=5.5)
     
     # With spatial limits (only substitute between z=-2.5 and z=12.5):
-    atoms = ap.substitute(atoms, box, 5, 'Al', 'Mgo', 5.5, 
+    atoms = ap.substitute(atoms, Box, 5, 'Al', 'Mgo', 5.5, 
                          num_tet_subst=2, t1_type='Si', t2_type='Alt', min_t2t2_dist=5.5,
                          lo_limit=-2.5, hi_limit=12.5, dimension=2)
     
@@ -221,7 +222,7 @@ def substitute(atoms, box, num_oct_subst, o1_type, o2_type, min_o2o2_dist,
         
         # Calculate distance matrix for O1 atoms
         print(f"Calculating distance matrix for {len(o1_atoms)} octahedral sites...")
-        o1_dist_matrix, _, _, _ = dist_matrix(o1_atoms, box)
+        o1_dist_matrix, _, _, _ = dist_matrix(o1_atoms, Box)
         
         # Perform substitutions
         i = 0
@@ -315,7 +316,7 @@ def substitute(atoms, box, num_oct_subst, o1_type, o2_type, min_o2o2_dist,
         
         # Calculate distance matrix for T1 atoms
         print(f"Calculating distance matrix for {len(t1_atoms)} tetrahedral sites...")
-        t1_dist_matrix, _, _, _ = dist_matrix(t1_atoms, box)
+        t1_dist_matrix, _, _, _ = dist_matrix(t1_atoms, Box)
         
         # Calculate distance matrix between T1 and O2 atoms if octahedral subst was done
         t1o2_dist_matrix = None
@@ -323,7 +324,7 @@ def substitute(atoms, box, num_oct_subst, o1_type, o2_type, min_o2o2_dist,
             print(f"Calculating T1-O2 distance matrix...")
             # Create combined list with T1 atoms first, then O2 atoms
             combined_atoms = t1_atoms + o2_atoms
-            combined_dist_matrix, _, _, _ = dist_matrix(combined_atoms, box)
+            combined_dist_matrix, _, _, _ = dist_matrix(combined_atoms, Box)
             # Extract the T1-O2 block
             t1o2_dist_matrix = combined_dist_matrix[:len(t1_atoms), len(t1_atoms):]
         
@@ -391,7 +392,7 @@ def substitute(atoms, box, num_oct_subst, o1_type, o2_type, min_o2o2_dist,
         # Check minimum O2-O2 distance
         o2_atoms_final = [atom for atom in atoms if atom['type'] == o2_type]
         if len(o2_atoms_final) > 1:
-            o2_dist_matrix, _, _, _ = dist_matrix(o2_atoms_final, box)
+            o2_dist_matrix, _, _, _ = dist_matrix(o2_atoms_final, Box)
             # Get off-diagonal minimum (exclude diagonal zeros)
             np.fill_diagonal(o2_dist_matrix, np.inf)
             min_o2_dist = np.min(o2_dist_matrix)
@@ -401,7 +402,7 @@ def substitute(atoms, box, num_oct_subst, o1_type, o2_type, min_o2o2_dist,
         # Check minimum T2-T2 distance
         t2_atoms_final = [atom for atom in atoms if atom['type'] == t2_type]
         if len(t2_atoms_final) > 1:
-            t2_dist_matrix, _, _, _ = dist_matrix(t2_atoms_final, box)
+            t2_dist_matrix, _, _, _ = dist_matrix(t2_atoms_final, Box)
             np.fill_diagonal(t2_dist_matrix, np.inf)
             min_t2_dist = np.min(t2_dist_matrix)
             print(f"Minimum {t2_type}-{t2_type} distance: {min_t2_dist:.3f} Å")
@@ -409,7 +410,7 @@ def substitute(atoms, box, num_oct_subst, o1_type, o2_type, min_o2o2_dist,
         # Check minimum T2-O2 distance if both substitutions were done
         if num_oct_subst > 0 and o2_atoms_final and t2_atoms_final:
             combined_atoms = t2_atoms_final + o2_atoms_final
-            combined_dist_matrix, _, _, _ = dist_matrix(combined_atoms, box)
+            combined_dist_matrix, _, _, _ = dist_matrix(combined_atoms, Box)
             t2o2_block = combined_dist_matrix[:len(t2_atoms_final), len(t2_atoms_final):]
             if t2o2_block.size > 0:
                 min_t2o2_dist = np.min(t2o2_block)
@@ -418,10 +419,10 @@ def substitute(atoms, box, num_oct_subst, o1_type, o2_type, min_o2o2_dist,
     print("\n=== Composition ===")
     _print_composition(atoms)
     
-    return atoms, box, None
+    return atoms, Box, None
 
 
-def merge(atoms1, atoms2, box, type_mode='molid', atom_label=None, min_distance=None):
+def merge(atoms1, atoms2, Box, type_mode='molid', atom_label=None, min_distance=None):
     """
     Merge two atom lists by removing atoms from atoms2 that are too close to atoms1.
     
@@ -431,7 +432,7 @@ def merge(atoms1, atoms2, box, type_mode='molid', atom_label=None, min_distance=
         First list of atoms (usually solute)
     atoms2 : list of dict
         Second list of atoms (usually solvent)
-    box : list of float
+    Box : list of float
         Box dimensions for the system
     type_mode : str, optional
         Mode for identifying atoms to check distances: 'molid' or 'index'
@@ -470,7 +471,7 @@ def merge(atoms1, atoms2, box, type_mode='molid', atom_label=None, min_distance=
     if len(atoms1) + len(atoms2) > 20000:
         # For large systems, use cell list method
         combined = atoms1 + atoms2
-        dist_matrix_result = cell_list_dist_matrix(combined, box)
+        dist_matrix_result = cell_list_dist_matrix(combined, Box)
         # Extract only the atoms1-atoms2 part
         dist_matrix_result = dist_matrix_result[:len(atoms1), len(atoms1):]
         if isinstance(dist_matrix_result, tuple):
@@ -489,7 +490,7 @@ def merge(atoms1, atoms2, box, type_mode='molid', atom_label=None, min_distance=
         coords2 = np.column_stack((xs2, ys2, zs2))
         
         # Calculate distances
-        dist_matrix_result = dist_matrix(atoms1 + atoms2, box)
+        dist_matrix_result = dist_matrix(atoms1 + atoms2, Box)
         if isinstance(dist_matrix_result, tuple):
             # If dist_matrix returns a tuple, use the first element (the actual distance matrix)
             dist_matrix_result = dist_matrix_result[0][:len(atoms1), len(atoms1):]
@@ -662,7 +663,7 @@ def solvate(limits, density=1000.0, min_distance=2.0, max_solvent='max',
         raise ValueError("Limits must be a list of length 3 [xhi, yhi, zhi] "
                          "or 6 [xlo, ylo, zlo, xhi, yhi, zhi]")
     
-    # Calculate box dimensions
+    # Calculate Box dimensions
     box_dim = [xhi - xlo, yhi - ylo, zhi - zlo]
     
     # Parse shell thickness if provided
@@ -699,7 +700,7 @@ def solvate(limits, density=1000.0, min_distance=2.0, max_solvent='max',
     unique_molids = set(atom['molid'] for atom in solvent_atoms)
     atoms_per_molecule = len(solvent_atoms) / len(unique_molids)
     
-    # Calculate how many solvent molecules are needed to fill the box
+    # Calculate how many solvent molecules are needed to fill the Box
     # For water, 1000 kg/m³ is about 33.3 molecules per nm³
     volume_nm3 = (box_dim[0] / 10) * (box_dim[1] / 10) * (box_dim[2] / 10)
     molecules_per_nm3 = density / 30  # Approximate for water
@@ -708,12 +709,12 @@ def solvate(limits, density=1000.0, min_distance=2.0, max_solvent='max',
     if isinstance(max_solvent, int):
         n_molecules_needed = min(n_molecules_needed, max_solvent)
     
-    # Calculate how many times to replicate the solvent box
+    # Calculate how many times to replicate the solvent Box
     nx = int(np.ceil((xhi - xlo) / solvent_box[0]))
     ny = int(np.ceil((yhi - ylo) / solvent_box[1]))
     nz = int(np.ceil((zhi - zlo) / solvent_box[2]))
     
-    # Create the full solvent box by replication
+    # Create the full solvent Box by replication
     full_solvent = []
     for ix in range(nx):
         for iy in range(ny):
@@ -736,7 +737,7 @@ def solvate(limits, density=1000.0, min_distance=2.0, max_solvent='max',
     random.shuffle(molid_list)
     
     if shell_thickness is None and solute_atoms is None:
-        # Just fill the box
+        # Just fill the Box
         if n_molecules_needed < len(molid_list):
             # Take only the required number of molecules
             selected_molids = set(molid_list[:n_molecules_needed])
@@ -823,7 +824,7 @@ def solvate(limits, density=1000.0, min_distance=2.0, max_solvent='max',
 
 def _load_solvent(solvent_type='spce'):
     """
-    Load a pre-equilibrated solvent box.
+    Load a pre-equilibrated solvent Box.
     
     Parameters
     ----------
@@ -856,7 +857,8 @@ def _load_solvent(solvent_type='spce'):
         raise ValueError(f"Unsupported solvent type: {solvent_type}")
     
     # Import the solvent structure
-    atoms, box, box_dim = import_pdb(solvent_file)
+    atoms, Cell = import_pdb(solvent_file)
+    box_dim = Cell2Box_dim(Cell)
     
     return atoms, box_dim
 
@@ -895,7 +897,7 @@ def _get_surface_atoms(atoms, distance_threshold=2.5):
         surface_atoms = []
         
         # Use cell list distance matrix for efficiency
-        dist_matrix = cell_list_dist_matrix(atoms, [1000, 1000, 1000])  # Large box to ignore PBC
+        dist_matrix = cell_list_dist_matrix(atoms, [1000, 1000, 1000])  # Large Box to ignore PBC
         
         for i, atom in enumerate(atoms):
             # An atom is on the surface if it has empty space around it
@@ -946,7 +948,7 @@ def ionize(ion_type, resname, limits, num_ions, min_distance=None, solute_atoms=
         
     Examples
     --------
-    # Add 10 Na+ ions randomly in a box:
+    # Add 10 Na+ ions randomly in a Box:
     ions = ap.ionize('Na', 'NA', [0, 0, 0, 50, 50, 50], 10)
     
     # Add 8 Cl- ions near a protein surface with minimum distance 3 Å:
@@ -964,7 +966,7 @@ def ionize(ion_type, resname, limits, num_ions, min_distance=None, solute_atoms=
         raise ValueError("Limits must be a list of length 3 [xhi, yhi, zhi] "
                          "or 6 [xlo, ylo, zlo, xhi, yhi, zhi]")
     
-    # Calculate box dimensions for the region
+    # Calculate Box dimensions for the region
     box_dim = [xhi - xlo, yhi - ylo, zhi - zlo]
     
     # If minimum distance not specified, use ionic radii
@@ -1103,7 +1105,7 @@ def insert(molecule_atoms, limits, rotate='random', min_distance=2.0,
         
     Examples
     --------
-    # Insert 5 copies of a molecule randomly in a box:
+    # Insert 5 copies of a molecule randomly in a Box:
     new_atoms = ap.insert(molecule_atoms, [0, 0, 0, 50, 50, 50], num_molecules=5)
     
     # Insert a molecule with specific orientation and position constraints:
@@ -1123,7 +1125,7 @@ def insert(molecule_atoms, limits, rotate='random', min_distance=2.0,
         raise ValueError("Limits must be a list of length 3 [xhi, yhi, zhi] "
                          "or 6 [xlo, ylo, zlo, xhi, yhi, zhi]")
     
-    # Calculate box dimensions for the region
+    # Calculate Box dimensions for the region
     box_dim = [xhi - xlo, yhi - ylo, zhi - zlo]
     
     # Initialize result

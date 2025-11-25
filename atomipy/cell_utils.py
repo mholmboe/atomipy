@@ -9,6 +9,33 @@ the unit Cell).
 import numpy as np
 
 
+def normalize_box(Box):
+    """
+    Normalize a Box parameter to both Box_dim and Cell representations.
+
+    Accepts Box in 1x3 (orthogonal), 1x6 (Cell parameters), or 1x9
+    (GROMACS triclinic) formats and returns a tuple (Box_dim, Cell).
+    """
+    if Box is None:
+        raise ValueError("Box must be provided")
+
+    Box = np.array(Box, dtype=float)
+
+    if len(Box) == 3:
+        Box_dim = Box
+        Cell = np.array([Box[0], Box[1], Box[2], 90.0, 90.0, 90.0])
+    elif len(Box) == 6:
+        Cell = Box
+        Box_dim = Cell2Box_dim(Cell)
+    elif len(Box) == 9:
+        Box_dim = Box
+        Cell = Box_dim2Cell(Box_dim)
+    else:
+        raise ValueError(f"Invalid Box length: {len(Box)}. Expected 3, 6, or 9.")
+
+    return Box_dim, Cell
+
+
 def Box_dim2Cell(Box_dim):
     """
     Convert Box_dim to Box matrix and Cell parameters.

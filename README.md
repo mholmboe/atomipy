@@ -20,7 +20,7 @@ Understanding the core containers and fields used in atomipy makes it easier to 
 | --- | --- | --- |
 | `atoms` | `list[dict]` | Primary structure container; each dict holds coordinates, typing, charge, and connectivity for one atom. |
 | `Box` | `list[float]` (len 3/6/9) | Canonical Cell dimensions accepted by most APIs; supports `[lx, ly, lz]`, `[a, b, c, alpha, beta, gamma]`, or the GROMACS-style `[lx, ly, lz, 0, 0, xy, 0, xz, yz]` in Angstrom and degrees. |
-| `Box_dim` | `list[float]` (len 3/6/9) | Standardised dimensional form returned by importers and converters; same layout as `Box`. |
+| `Box_dim` | `list[float]` (len 3/9) | Box dimensions returned by GRO import (1x3 orthogonal or 1x9 triclinic) and used for GRO/ITP/LAMMPS writers. |
 | `Cell` | `list[float]` (len 6) | Unit-cell parameters `[a, b, c, alpha, beta, gamma]` in Angstrom and degrees. |
 | `Bond_index` | `numpy.ndarray` or `list` | Bond records `[i, j, distance]` returned by `bond_angle`; indices are 0- or 1-based depending on export step. |
 | `Angle_index` | `numpy.ndarray` or `list` | Angle records `[i, j, k, angle, dx12, dy12, dz12, dx23, dy23, dz23]` returned by `bond_angle`. |
@@ -157,7 +157,7 @@ import atomipy as ap
 
 # Step 1: Load a structure file
 print("Loading a GRO file...")
-atoms, Cell, Box_dim = ap.import_gro("example.gro")  # Replace with your GRO file
+atoms, Box_dim = ap.import_gro("example.gro")  # Replace with your GRO file
 print(f"Loaded {len(atoms)} atoms")
 
 # Step 2: Assign elements based on atom names
@@ -186,8 +186,18 @@ Here's an example of generating a GROMACS n2t file for use with gmx x2top:
 ```python
 import atomipy as ap
 
-# Load structure
-atoms, Cell, Box = ap.import_auto("structure.gro")
+# Load structure (auto-detect format)
+auto_result = ap.import_auto("structure.gro")
+if len(auto_result) == 2:
+    atoms, box_like = auto_result
+else:
+    atoms, box_like = auto_result[0], auto_result[-1]
+
+# Normalise Box (Cell -> Box_dim if needed)
+if len(box_like) == 6:
+    Box = ap.Cell2Box_dim(box_like)
+else:
+    Box = box_like
 
 # Process with forcefield (optional)
 atoms, _ = ap.minff(atoms, Box)
@@ -204,7 +214,7 @@ The `Box` argument accepts orthogonal `[lx, ly, lz]` vectors, 1×6 Cell paramete
 Use `bond_angle_dihedral` to build bonds/angles and derive dihedrals plus 1–4 pairs in one call:
 
 ```python
-atoms, Cell, Box_dim = ap.import_gro("NMA_element.gro")
+atoms, Box_dim = ap.import_gro("NMA_element.gro")
 ap.element(atoms)
 atoms, Bond_index, Angle_index, Dihedral_index, Pairlist = ap.bond_angle_dihedral(
     atoms, Box_dim, same_molecule_only=False, same_element_bonds=False
@@ -247,10 +257,10 @@ This script auto-detects the input format, forwards the Box dimensions, and writ
 
 ### File I/O
 
-- `import_pdb(file_path)`: Import a PDB file, returning `(atoms, Cell, Box_dim)` - a list of atom dictionaries, Cell parameters, and Box dimensions
-- `import_gro(file_path)`: Import a Gromacs GRO file, returning `(atoms, Cell, Box_dim)`, including velocities if present
-- `import_xyz(file_path)`: Import an XYZ file, returning `(atoms, Cell, Box_dim)`
-- `import_auto(file_path)`: Auto-detect format and import, returning `(atoms, Cell, Box_dim)`
+- `import_pdb(file_path)`: Import a PDB file, returning `(atoms, Cell)` - a list of atom dictionaries and Cell parameters
+- `import_gro(file_path)`: Import a Gromacs GRO file, returning `(atoms, Box_dim)` (1x3 orthogonal or 1x9 triclinic), including velocities if present
+- `import_xyz(file_path)`: Import an XYZ file, returning `(atoms, Cell)`
+- `import_auto(file_path)`: Auto-detect format and import, returning `(atoms, Cell)` for PDB/XYZ or `(atoms, Box_dim)` for GRO
 - `write_pdb(atoms, Box, file_path)`: Write atoms to a PDB file
 - `write_gro(atoms, Box, file_path)`: Write atoms to a Gromacs GRO file, including velocities if present
 - `write_xyz(atoms, Box, file_path)`: Write atoms to an XYZ file
@@ -285,15 +295,15 @@ This script auto-detects the input format, forwards the Box dimensions, and writ
 ### Coordinate Transformations
 
 - `orthogonal_to_triclinic(ortho_coords, Box, atoms=None)`: Convert coordinates from orthogonal to triclinic space
-- `triclinic_to_orthogonal(atoms=None, coords=None, Box_dim=None, Box=None)`: Convert coordinates from triclinic to orthogonal space
-- `cartesian_to_fractional(atoms=None, cart_coords=None, Box_dim=None, Box=None)`: Convert Cartesian coordinates to fractional coordinates
-- `fractional_to_cartesian(atoms=None, frac_coords=None, Box_dim=None, Box=None)`: Convert fractional coordinates to Cartesian
-- `direct_cartesian_to_fractional(atoms=None, cart_coords=None, Box_dim=None, Cell=None)`: Direct conversion using crystallographic matrices
-- `direct_fractional_to_cartesian(atoms=None, frac_coords=None, Box_dim=None, Cell=None)`: Direct conversion using crystallographic matrices
-- `wrap(atoms, box, return_type='cartesian')`: Wrap atom coordinates into the primary simulation cell. Simple interface supporting orthogonal (1x3), triclinic (1x9), and Cell parameter (1x6) formats. Returns atoms with updated coordinates and fractional coordinates
-- `wrap_coordinates(atoms=None, coords=None, frac_coords=None, Box_dim=None, Box=None, add_to_atoms=True, return_type='fractional')`: Advanced wrapping function with more control over input/output formats
+- `triclinic_to_orthogonal(atoms=None, coords=None, Box)`: Convert coordinates from triclinic to orthogonal space
+- `cartesian_to_fractional(atoms=None, cart_coords=None, Box)`: Convert Cartesian coordinates to fractional coordinates
+- `fractional_to_cartesian(atoms=None, frac_coords=None, Box)`: Convert fractional coordinates to Cartesian
+- `direct_cartesian_to_fractional(atoms=None, cart_coords=None, Box)`: Direct conversion using crystallographic matrices
+- `direct_fractional_to_cartesian(atoms=None, frac_coords=None, Box)`: Direct conversion using crystallographic matrices
+- `wrap(atoms, Box, return_type='cartesian')`: Wrap atom coordinates into the primary simulation cell. Simple interface supporting orthogonal (1x3), triclinic (1x9), and Cell parameter (1x6) formats. Returns atoms with updated coordinates and fractional coordinates
+- `wrap_coordinates(atoms=None, coords=None, frac_coords=None, Box=None, add_to_atoms=True, return_type='fractional')`: Advanced wrapping function with more control over input/output formats
 - `get_cell_vectors(Box)`: Calculate Cell vectors from Box parameters
-- `get_orthogonal_box(Box_dim=None, Box=None)`: Get orthogonal Box dimensions from triclinic parameters
+- `get_orthogonal_box(Box)`: Get orthogonal Box dimensions from triclinic parameters
 - `replicate_system(atoms, Box, replicate=[1, 1, 1])`: Create supercells by replicating in a, b, c directions
 
 ### Structure Building
@@ -350,14 +360,13 @@ Here are some common workflows that demonstrate how to use Atomipy for specific 
 
 Atomipy now uses a standardized approach for handling simulation Box parameters across all functions:
 
-- All functions accept a generalized `Box` parameter (replacing the previous `Box_dim` parameter in most functions)
+- All functions accept a generalized `Box` parameter and normalise internally
 - The `Box` parameter supports three formats:
   1. **Orthogonal box**: A 1x3 array `[lx, ly, lz]` for simple rectangular boxes
   2. **Cell parameters**: A 1x6 array `[a, b, c, alpha, beta, gamma]` for crystallographic notation
   3. **Triclinic box**: A 1x9 array `[lx, ly, lz, 0, 0, xy, 0, xz, yz]` using GROMACS triclinic Box format
 
 - Conversion utilities are automatically applied internally based on the format provided
-- Backward compatibility is maintained for functions still using `Box_dim` and `Cell` parameters
 
 Example usage with the different formats:
 
@@ -381,7 +390,7 @@ atoms = ap.bond_angle(atoms, Box=Box_triclinic)
 import atomipy as ap
 
 # Load structure
-atoms, Cell, Box_dim = ap.import_gro("my_structure.gro")
+atoms, Box_dim = ap.import_gro("my_structure.gro")
 
 # Assign elements
 atoms = ap.element(atoms)
@@ -399,7 +408,7 @@ ap.write_gro(atoms, Box=Box_dim, file_path="processed.gro")
 import atomipy as ap
 
 # Load structure
-atoms, Cell, Box_dim = ap.import_gro("my_molecule.gro")
+atoms, Box_dim = ap.import_gro("my_molecule.gro")
 
 # Ensure atoms have element information (needed for mass assignment)
 atoms = ap.element(atoms)
@@ -421,26 +430,26 @@ com_coords_only = ap.com(atoms, add_to_atoms=False)
 import atomipy as ap
 
 # Load structure
-atoms, Cell, Box_dim = ap.import_gro("my_mineral.gro")
+atoms, Box = ap.import_gro("my_mineral.gro")
 
 # Process the structure (elements, bonds, etc.)
 atoms = ap.element(atoms)
 
 # Assign forcefield atom types (choose either MINFF or CLAYFF)
 # For MINFF:
-ap.minff(atoms, Box=Box_dim)
+ap.minff(atoms, Box=Box)
 # OR for CLAYFF:
-# ap.clayff(atoms, Box=Box_dim)
+# ap.clayff(atoms, Box=Box)
 
 # Write a topology file for different simulation programs
 # For GROMACS:
-ap.write_itp(atoms, Box=Box_dim, file_path="topology.itp")
+ap.write_itp(atoms, Box=Box, file_path="topology.itp")
 
 # For LAMMPS:
-ap.write_lmp(atoms, Box=Box_dim, file_path="topology.lmp") 
+ap.write_lmp(atoms, Box=Box, file_path="topology.lmp") 
 
 # For NAMD:
-ap.write_psf(atoms, Box=Box_dim, file_path="topology.psf")
+ap.write_psf(atoms, Box=Box, file_path="topology.psf")
 ```
 
 ### Creating a Supercell
@@ -449,16 +458,16 @@ ap.write_psf(atoms, Box=Box_dim, file_path="topology.psf")
 import atomipy as ap
 
 # Load structure
-atoms, Cell, Box_dim = ap.import_gro("unit_cell.gro")
+atoms, Box = ap.import_gro("unit_cell.gro")
 
 # Process atoms
 atoms = ap.element(atoms)
 
 # Create a 2x2x2 supercell
-replicated_atoms, new_Box_dim, new_Cell = ap.replicate_system(atoms, Box_dim, replicate=[2, 2, 2])
+replicated_atoms, new_Box, new_Cell = ap.replicate_system(atoms, Box, replicate=[2, 2, 2])
 
 # Save the supercell
-ap.write_gro(replicated_atoms, Box=new_Box_dim, file_path="supercell.gro")
+ap.write_gro(replicated_atoms, Box=new_Box, file_path="supercell.gro")
 ```
 
 ### Isomorphous Substitution in Clay Minerals
@@ -467,7 +476,7 @@ ap.write_gro(replicated_atoms, Box=new_Box_dim, file_path="supercell.gro")
 import atomipy as ap
 
 # Load a clay mineral structure (e.g., pyrophyllite or montmorillonite)
-atoms, Box_dim = ap.import_pdb("Pyrophyllite_GII_0.071.pdb")
+atoms, Cell = ap.import_pdb("Pyrophyllite_GII_0.071.pdb")
 
 # The substitute function now automatically detects if a structure is centrosymmetric
 # and centers it appropriately during substitution (important for pyrophyllite)
@@ -476,7 +485,7 @@ atoms, Box_dim = ap.import_pdb("Pyrophyllite_GII_0.071.pdb")
 # Using the mineral-specific atom types (will automatically look up by element if type not found)
 atoms = ap.substitute(
     atoms, 
-    Box_dim, 
+    Cell, 
     num_oct_subst=16, 
     o1_type='Alo',   # Uses 'Alo' atom type for octahedral Al
     o2_type='Mgo',   # Will become Mg in octahedral position
@@ -488,7 +497,7 @@ atoms = ap.substitute(
 # If atom types aren't found, it will try to match by element instead
 atoms = ap.substitute(
     atoms, 
-    Box_dim, 
+    Cell, 
     num_oct_subst=4, 
     o1_type='Al',    # Will find atoms by element if 'Al' type not found
     o2_type='Mgo', 
@@ -503,7 +512,7 @@ atoms = ap.substitute(
 # The function ensures even distribution between upper and lower parts
 atoms = ap.substitute(
     atoms, 
-    Box_dim, 
+    Box, 
     num_oct_subst=4, 
     o1_type='Al', 
     o2_type='Mgo', 
@@ -561,34 +570,34 @@ import atomipy as ap
 import numpy as np
 
 # Import a PDB file
-atoms, Cell, Box_dim = ap.import_pdb("structure.pdb")
+atoms, Cell = ap.import_pdb("structure.pdb")
 
 # Guess elements for all atoms
 atoms = ap.element(atoms)
 
 # Calculate bonds and angles
-atoms, bonds, angles = ap.bond_angle(atoms, Box=Box_dim)
+atoms, bonds, angles = ap.bond_angle(atoms, Box=Cell)
 
 # Assign charges using one of the available methods
 # For formal charges (ions and water):
 atoms = ap.assign_formal_charges(atoms)
 # For MINFF charges:
-# atoms = ap.charge_minff(atoms, Box=Box_dim)
+# atoms = ap.charge_minff(atoms, Box=Cell)
 # For CLAYFF charges:
-# atoms = ap.charge_clayff(atoms, Box=Box_dim)
+# atoms = ap.charge_clayff(atoms, Box=Cell)
 
 # Convert to fractional coordinates
-frac_coords, atoms = ap.cartesian_to_fractional(atoms, Box=Box_dim)
+frac_coords, atoms = ap.cartesian_to_fractional(atoms, Box=Cell)
 
 # Create a 2x2x1 supercell
-replicated_atoms, new_Box_dim, new_Cell = ap.replicate_system(atoms, Box_dim, replicate=[2, 2, 1])
+replicated_atoms, new_Box, new_Cell = ap.replicate_system(atoms, Cell, replicate=[2, 2, 1])
 
 # Convert from triclinic to orthogonal coordinates if needed
-ortho_atoms = ap.triclinic_to_orthogonal(replicated_atoms, Box_dim=new_Box_dim)
+ortho_atoms, _, _ = ap.triclinic_to_orthogonal(replicated_atoms, Box=new_Box)
 
 
 # Export to GRO format
-ap.write_gro(replicated_atoms, Box=new_Box_dim, file_path="structure.gro")
+ap.write_gro(replicated_atoms, Box=new_Box, file_path="structure.gro")
 ```
 
 

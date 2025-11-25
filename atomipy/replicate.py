@@ -261,7 +261,7 @@ def replicate_system(atoms, Box, replicate=[1, 1, 1], keep_molid=True,
     return replicated_atoms, new_Box_dim, new_cell
 
 
-def replicate_atom(atoms, Box_dim=None, Cell=None, replicate=[1, 1, 1], dim_order='xyz', 
+def replicate_atom(atoms, Box, replicate=[1, 1, 1], dim_order='xyz', 
                   add_molid=False, renumber_index=True):
     """
     Legacy function for compatibility with old replicate_atom functionality.
@@ -273,10 +273,7 @@ def replicate_atom(atoms, Box_dim=None, Cell=None, replicate=[1, 1, 1], dim_orde
     ----------
     atoms : list of dict
         List of atom dictionaries with cartesian coordinates.
-    Box : a 1x6 or 1x9 list representing Cell dimensions (in Angstroms), either as 
-            a Cell variable having Cell parameters array [a, b, c, alpha, beta, gamma], or as 
-            a Box_dim variable having Box dimensions [lx, ly, lz, 0, 0, xy, 0, xz, yz] for triclinic cells.
-            Note that for orthogonal boxes Cell = Box_dim.
+    Box : a 1x3, 1x6, or 1x9 list representing Cell dimensions (in Angstroms).
     replicate : list or array of length 3, optional
         Number of replications in the a, b, c directions. Default is [1, 1, 1].
     dim_order : str, optional
@@ -298,10 +295,13 @@ def replicate_atom(atoms, Box_dim=None, Cell=None, replicate=[1, 1, 1], dim_orde
     The dim_order parameter is accepted for backward compatibility but is ignored.
     The replication is always performed in all three dimensions simultaneously.
     """
+    if Box is None:
+        raise ValueError("Box must be provided for replication")
+
     # Call replicate_system with the appropriate parameters
     replicated_atoms, new_Box_dim, _ = replicate_system(
         atoms=atoms,
-        Box=Box_dim if Box_dim is not None else Cell,
+        Box=Box,
         replicate=replicate,
         keep_molid=not add_molid,
         keep_resname=True,

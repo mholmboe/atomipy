@@ -9,10 +9,10 @@ from .transform import (
     triclinic_to_orthogonal,
     orthogonal_to_triclinic
 )
-from .cell_utils import Box_dim2Cell, Cell2Box_dim
+from .cell_utils import normalize_box, Cell2Box_dim
 
 
-def scale(atoms, box, scale_factors, resname=None):
+def scale(atoms, Box, scale_factors, resname=None):
     """
     Scale atom coordinates and box dimensions.
     
@@ -20,9 +20,8 @@ def scale(atoms, box, scale_factors, resname=None):
     ----------
     atoms : list of dict
         List of atom dictionaries with coordinates
-    box : list of float
-        Box dimensions (can be orthogonal [lx, ly, lz] or 
-        triclinic [lx, ly, lz, 0, 0, xy, 0, xz, yz])
+    Box : list of float
+        Box dimensions (1x3, 1x6, or 1x9).
     scale_factors : list of float or float
         Scaling factors for x, y, z dimensions. If a single value is provided,
         it will be applied to all dimensions.
@@ -58,13 +57,16 @@ def scale(atoms, box, scale_factors, resname=None):
     else:
         indices_to_scale = list(range(len(atoms)))
     
+    # Normalize box
+    Box_dim, Cell = normalize_box(Box)
+    
     # Handle triclinic box if needed
-    is_triclinic = len(box) > 3 and any(box[i] != 0 for i in [5, 7, 8])
+    is_triclinic = len(Box_dim) > 3 and any(Box_dim[i] != 0 for i in [5, 7, 8])
     
     if is_triclinic:
         # Convert to orthogonal coordinates
-        cell_params = Box_dim2Cell(box)
-        ortho_atoms = triclinic_to_orthogonal(atoms=atoms, Box=box)
+        cell_params = Cell
+        ortho_atoms = triclinic_to_orthogonal(atoms=atoms, Box=Box_dim)
         
         # Scale orthogonal coordinates
         for i in indices_to_scale:
@@ -89,8 +91,8 @@ def scale(atoms, box, scale_factors, resname=None):
             atoms[i]['z'] *= scale_factors[2]
         
         # Scale box dimensions
-        new_box = box.copy() if hasattr(box, 'copy') else list(box)
-        for i in range(min(3, len(box))):
+        new_box = Box_dim.copy() if hasattr(Box_dim, 'copy') else list(Box_dim)
+        for i in range(min(3, len(Box_dim))):
             new_box[i] *= scale_factors[i]
             
         scaled_atoms = atoms
