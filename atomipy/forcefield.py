@@ -1,11 +1,11 @@
 import numpy as np
 from .bond_angle import bond_angle
-from .cell_utils import Box_dim2Cell, Cell2Box_dim
+from .cell_utils import Box_dim2Cell, Cell2Box_dim, normalize_box
 from .charge import charge_minff, charge_clayff, assign_formal_charges
 from .element import element  # Correct function name is 'element' not 'set_element'
 from .mass import set_atomic_masses
 
-def get_structure_stats(atoms, total_charge, ffname, Box_dim=None, Cell=None, log_file=None):
+def get_structure_stats(atoms, total_charge, ffname, Box=None, log_file=None):
     """Generate statistics about atom types, coordination, and charges in the structure.
     
     This function analyzes atom types, their coordination environment, charges,
@@ -16,9 +16,8 @@ def get_structure_stats(atoms, total_charge, ffname, Box_dim=None, Cell=None, lo
         atoms: List of atom dictionaries containing 'type', 'neigh', 'charge', etc. keys.
         total_charge: The total charge of the system.
         ffname: The name of the forcefield used (e.g., 'minff', 'clayff').
-        Box_dim: Optional Box dimensions array. Can be a 3-element array [Lx, Ly, Lz] for 
-                orthogonal boxes or a 6/9-element array for triclinic boxes.
-        Cell: Optional Cell parameters array [a, b, c, alpha, beta, gamma].
+        Box: Optional simulation cell dimensions. Accepts 1x3 (orthogonal),
+             1x6 (Cell parameters), or 1x9 (triclinic GROMACS-style) arrays.
         log_file: Optional path to a log file. If provided, statistics will be
                  written to this file.
     
@@ -31,6 +30,12 @@ def get_structure_stats(atoms, total_charge, ffname, Box_dim=None, Cell=None, lo
     # Conversion factor for density calculation: amu/Å³ to g/cm³
     # 1 amu = 1.66053886e-24 g and 1 Å³ = 1e-24 cm³
     AMU_TO_G_PER_CM3 = 1.66053886
+    
+    # Normalize Box input
+    Box_dim = None
+    Cell = None
+    if Box is not None:
+        Box_dim, Cell = normalize_box(Box)
     
     # Initialize statistics storage
     all_neighbor_str_list = []
@@ -909,7 +914,7 @@ def minff(atoms, Box, ffname='minff', rmaxlong=2.45, rmaxH=1.2, log=False, log_f
         # Use provided log_file path or generate default name if not provided
         log_path = log_file if log_file is not None else f"{ffname}_structure_stats.log"
         # Cell is already available from earlier in the function
-        stats = get_structure_stats(atoms, total_charge, ffname, Box_dim=Box_dim, Cell=Cell, log_file=log_path)
+        stats = get_structure_stats(atoms, total_charge, ffname, Box=Box, log_file=log_path)
         print(f"Structure statistics written to {log_path}")
     
     return atoms # , all_neighbors
@@ -1353,7 +1358,7 @@ def clayff(atoms, Box, ffname='clayff', rmaxlong=2.45, rmaxH=1.2, log=False, log
     charges = [1.575, 1.575, 1.8125, 1.575, 1.575, 1.36, 1.36, 1.05, 1.36, 1.05, 2.1, 0.86, 0.425, 1.0, 1.0, 1.0, 2.0]
     # By default, apply charges to all atoms (set resname=None)
     # To limit charge assignment to specific residues, provide a resname (e.g., 'MIN')
-    atoms = charge_clayff(atoms, Box_dim, atom_labels, charges, resname=None)
+    atoms = charge_clayff(atoms, Box, atom_labels, charges, resname=None)
     
     # Find unique types of atomtypes and their neighbors
     # This is equivalent to the MATLAB code for finding unique types after atom type assignment
@@ -1470,7 +1475,7 @@ def clayff(atoms, Box, ffname='clayff', rmaxlong=2.45, rmaxH=1.2, log=False, log
         # Use provided log_file path or generate default name if not provided
         log_path = log_file if log_file is not None else f"{ffname}_structure_stats.log"
         # Cell is already available from earlier in the function
-        stats = get_structure_stats(atoms, total_charge, ffname, Box_dim=Box_dim, Cell=Cell, log_file=log_path)
+        stats = get_structure_stats(atoms, total_charge, ffname, Box=Box, log_file=log_path)
         print(f"Structure statistics written to {log_path}")
     
     return atoms #, all_neighbors

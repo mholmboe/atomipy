@@ -1,7 +1,7 @@
 import numpy as np
 import os
 from . import element as element_module
-from .cell_utils import Cell2Box_dim, Box_dim2Cell  # Will use lowercase Box_dim in our code
+from .cell_utils import Cell2Box_dim, Box_dim2Cell  # Will use lowercase Box in our code
 
 def pdb(file_path):
     """Import atoms from a PDB file.
@@ -9,11 +9,9 @@ def pdb(file_path):
     Returns:
        atoms: list of dictionaries, each with keys: molid, index, resname, x, y, z, neigh, bonds, angles, element, type, fftype.
        Cell: a 1x6 list [a, b, c, alpha, beta, gamma] if available from CRYST1 record.
-       Box_dim: a 1x3 list for orthogonal cells or a 1x9 list representing the triclinic Cell dimensions in Angstroms.
     """
     atoms = []
     Cell = None
-    Box_dim = None
     with open(file_path, 'r') as f:
         for line in f:
             if line.startswith("CRYST1"):
@@ -106,12 +104,7 @@ def pdb(file_path):
     # Now use the element.py function to properly determine elements
     element_module.element(atoms)
     
-    # Convert Cell to Box_dim if Cell is available
-    Box_dim = None
-    if Cell is not None:
-        Box_dim = Cell2Box_dim(Cell)
-    
-    return atoms, Cell, Box_dim
+    return atoms, Cell
 
 
 def gro(file_path):
@@ -123,8 +116,7 @@ def gro(file_path):
     Returns:
        atoms: list of dictionaries, each with keys: molid, index, resname, x, y, z, vx, vy, vz, neigh, bonds, angles, element, type, fftype.
                 Coordinates (x, y, z) are converted to Angstroms.
-       Cell: a 1x6 list [a, b, c, alpha, beta, gamma] derived from Box_dim.
-       Box_dim: a 1x3 list for orthogonal cells or a 1x9 list representing the triclinic Cell dimensions in Angstroms.
+       Box_dim: 1x3 (orthogonal) or 1x9 (triclinic) Box dimensions in Angstroms.
     """
     atoms = []
     Box_dim = None
@@ -196,20 +188,13 @@ def gro(file_path):
     except Exception as e:
         values = []
 
-    if len(values) == 3:
-        # Only Box lengths are provided, assume orthorhombic
-        Box_dim = [values[0],values[1], values[2]]
-    elif len(values) == 9:
+    if len(values) in (3, 9):
         Box_dim = values
-    else:
-        Box_dim = values  # arbitrary
+    elif values:
+        Box_dim = values  # fall back to whatever was provided
 
-    # Convert Box_dim to Cell
-    Cell = None
-    if Box_dim is not None:
-        Cell = Box_dim2Cell(Box_dim)  # Using function name as imported
-    
-    return atoms, Cell, Box_dim
+    # Convert Box to Cell
+    return atoms, Box_dim
 
 
 def xyz(file_path):
@@ -223,7 +208,6 @@ def xyz(file_path):
     Returns:
        atoms: list of dictionaries, each with keys: molid, index, resname, x, y, z, neigh, bonds, angles, element, type, fftype.
        Cell: a 1x6 list [a, b, c, alpha, beta, gamma] derived from Box_dim or directly from comment.
-       Box_dim: a 1x3 or 1x9 list representing the Box dimensions in Angstroms if available from comment line.
     """
     atoms = []
     Box_dim = None
@@ -244,15 +228,11 @@ def xyz(file_path):
         try:
             # Parse out the values after the # symbol
             values = comment_line.split('#')[1].strip().split()
-            if len(values) == 9:
-                # Assuming format is a 1x9 Box_dim array
+            if len(values) in (3, 9):
                 Box_dim = [float(val) for val in values]
             elif len(values) == 6:
-                # Assuming format is a 1x6 Cell array [a, b, c, alpha, beta, gamma]
-                Box_dim = [float(val) for val in values]
-            elif len(values) == 3:
-                # Assuming format is a 1x3 Box_dim array for orthogonal Box
-                Box_dim = [float(val) for val in values]
+                # If Cell provided directly, convert to Box_dim for consistency
+                Box_dim = Cell2Box_dim([float(val) for val in values])
         except (ValueError, IndexError):
             # If parsing fails, ignore and continue without Box dimensions
             pass
@@ -291,12 +271,12 @@ def xyz(file_path):
     # Ensure the element is properly set for all atoms
     element_module.element(atoms)
     
-    # Convert Box_dim to Cell
+    # Convert Box to Cell
     Cell = None
     if Box_dim is not None:
-        Cell = Box_dim2Cell(Box_dim)  # Using function name as imported
+        Cell = Box_dim2Cell(Box_dim)
     
-    return atoms, Cell, Box_dim
+    return atoms, Cell
 
 
 def auto(file_path):
@@ -310,8 +290,9 @@ def auto(file_path):
         
     Returns:
         atoms: List of atom dictionaries
-        Cell: A 1x6 list [a, b, c, alpha, beta, gamma] representing Cell parameters
-        Box_dim: A 1x3 list for orthogonal cells or a 1x9 list for triclinic cells
+        Cell or Box_dim depending on format:
+            - pdb/xyz: Cell
+            - gro: Box_dim
     """
     ext = os.path.splitext(file_path)[1].lower()
     

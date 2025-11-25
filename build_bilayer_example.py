@@ -32,7 +32,8 @@ basal_spacing = 22
 nWaters = 360
 
 # Step 1: Load and replicate the pyrophyllite unit cell
-atoms, cell, box_dim = ap.import_pdb(input_pdb)
+atoms, cell = ap.import_pdb(input_pdb)
+box_dim = ap.Cell2Box_dim(cell)
 box = box_dim  # Using cell parameters format for this script
 
 # Center the structure along z and then translate to have z=0 at the center

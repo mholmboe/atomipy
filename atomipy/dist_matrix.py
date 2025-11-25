@@ -1,6 +1,6 @@
 import numpy as np
 
-from atomipy.cell_utils import Cell2Box_dim, Box_dim2Cell
+from atomipy.cell_utils import Cell2Box_dim, Box_dim2Cell, normalize_box
 
 # Try to import tqdm for progress bar
 try:
@@ -33,28 +33,11 @@ def dist_matrix(atoms, Box):
         using per-atom iteration.
     """
     
-    # Initialize variables
-    Cell = None
-    Box_dim = None
-    
     if Box is None:
         raise ValueError("Box parameter must be provided")
     
     # Determine Box format and convert as needed
-    if len(Box) == 9:
-        # Triclinic Box in GROMACS format [lx, ly, lz, 0, 0, xy, 0, xz, yz]
-        Box_dim = Box
-        Cell = Box_dim2Cell(Box_dim)
-    elif len(Box) == 6:
-        # Cell parameters [a, b, c, alpha, beta, gamma]
-        Cell = Box
-        Box_dim = Cell2Box_dim(Cell)
-    elif len(Box) == 3:
-        # Simple orthogonal Box [lx, ly, lz]
-        Box_dim = Box
-        Cell = list(Box) + [90.0, 90.0, 90.0]
-    else:
-        raise ValueError("Box must be length 3, 6, or 9")
+    Box_dim, Cell = normalize_box(Box)
     
     # Extract Box dimensions
     if len(Box_dim) == 3:
@@ -226,7 +209,7 @@ def dist_matrix_direct(atoms):
     
     return distances, dx, dy, dz
 
-def dist_matrix_hybrid(atoms, Box=None, use_pbc=True, Box_dim=None):
+def dist_matrix_hybrid(atoms, Box=None, use_pbc=True):
     """Calculate the distance matrix using either direct or PBC approach based on use_pbc flag.
     
     Args:
@@ -236,17 +219,12 @@ def dist_matrix_hybrid(atoms, Box=None, use_pbc=True, Box_dim=None):
             - For Cell parameters, a 1x6 list [a, b, c, alpha, beta, gamma] (Cell format)
             - For triclinic boxes, a 1x9 list [lx, ly, lz, 0, 0, xy, 0, xz, yz] (Box_dim format)
         use_pbc: Whether to use periodic boundary conditions (default: True).
-        Box_dim: Deprecated. Use 'Box' instead. Maintained for backward compatibility.
        
     Returns:
         A tuple of four numpy arrays: 
         - A numpy array of shape (N, N) with pairwise distances.
         - Three numpy arrays of shape (N, N) with pairwise x, y, z differences.
     """
-    # Backward compatibility for Box_dim parameter
-    if Box is None and Box_dim is not None:
-        Box = Box_dim
-        
     if use_pbc:
         if Box is None:
             raise ValueError("Box parameter must be provided when use_pbc=True")

@@ -1,5 +1,5 @@
 import numpy as np
-from .cell_utils import Box_dim2Cell
+from .cell_utils import Box_dim2Cell, normalize_box
 
 # Try to import tqdm for progress bar
 try:
@@ -54,28 +54,11 @@ def cell_list_dist_matrix(atoms, Box,cutoff=2.45, rmaxH=1.2, H_type='H'):
     N = len(atoms)
     positions = np.array([[atom['x'], atom['y'], atom['z']] for atom in atoms])
     
-    # Initialize variables
-    Cell = None
-    Box_dim = None
-    
     if Box is None:
         raise ValueError("Box parameter must be provided")
-        
+
     # Determine Box format and convert as needed
-    if len(Box) == 9:
-        # Triclinic Box in GROMACS format [lx, ly, lz, 0, 0, xy, 0, xz, yz]
-        Box_dim = Box
-        Cell = Box_dim2Cell(Box_dim)
-    elif len(Box) == 6:
-        # Cell parameters [a, b, c, alpha, beta, gamma]
-        Cell = Box
-        Box_dim = Cell2Box_dim(Cell)
-    elif len(Box) == 3:
-        # Simple orthogonal Box [lx, ly, lz]
-        Box_dim = Box
-        Cell = list(Box) + [90.0, 90.0, 90.0]
-    else:
-        raise ValueError("Box must be length 3, 6, or 9")
+    Box_dim, Cell = normalize_box(Box)
     
     # Extract Cell parameters
     a, b, c = Cell[0], Cell[1], Cell[2]

@@ -64,12 +64,12 @@ from atomipy.import_conf import pdb
 from atomipy.diffraction import xrd
 
 # Import crystal structure
-atoms, Cell, Box_dim = pdb('structure.pdb')
+atoms, Cell, Box = pdb('structure.pdb')
 
 # Calculate XRD pattern
 two_theta, intensity, fig = xrd(
     atoms=atoms,
-    Box_dim=Box_dim,
+    Box=Box,
     wavelength=1.54187,  # Cu K-alpha
     two_theta_range=(10, 90),
     plot=True,
@@ -83,7 +83,7 @@ import matplotlib.pyplot as plt
 from scipy.signal import find_peaks
 from atomipy.transform import direct_cartesian_to_fractional, direct_fractional_to_cartesian
 from atomipy.dist_matrix import dist_matrix
-from atomipy.cell_utils import Box_dim2Cell, Cell2Box_dim
+from atomipy.cell_utils import Box_dim2Cell, Cell2Box_dim, normalize_box
 
 # Waasmaier-Kirfel coefficients table for atomic scattering factors
 WAASMAIER_KIRFEL_DATA = [ # Plain Python list for mixed types
@@ -444,7 +444,7 @@ def atomic_scattering_factors(atom_label, wavelength, two_theta, b_iso=0.0):
     return f, element, int(n_electrons)
 
 
-def occupancy_atom(atoms, Box_dim, rmax=1.0):
+def occupancy_atom(atoms, Box, rmax=1.0):
     """
     Calculate the occupancy of all atomic sites within a specified radius.
     
@@ -452,8 +452,8 @@ def occupancy_atom(atoms, Box_dim, rmax=1.0):
     ----------
     atoms : list of dict
         List of atom dictionaries with position information
-    Box_dim : list or array
-        Box dimensions with 3, 6, or 9 parameters
+    Box : list or array
+        Simulation cell dimensions (1x3, 1x6, or 1x9)
     rmax : float, optional
         Maximum radius to consider for occupancy calculation. Default is 1.0 Å
         
@@ -466,10 +466,7 @@ def occupancy_atom(atoms, Box_dim, rmax=1.0):
     """
     print(f"Will calculate the occupancy of all sites, with r_max of: {rmax}")
     
-    # Ensure Box_dim is in the right format
-    if len(Box_dim) == 6 and Box_dim[3] > 0 and Box_dim[4] > 0 and Box_dim[5] > 0:
-        # Box_dim is actually Cell parameters [a, b, c, alpha, beta, gamma]
-        Box_dim = Cell2Box_dim(Box_dim)
+    Box_dim, _ = normalize_box(Box)
     
     # Calculate distance matrix
     distances, _, _, _ = dist_matrix(atoms, Box_dim)
@@ -550,7 +547,7 @@ def bragg_law(wavelength, value, mode='distance', n=1):
         raise ValueError("Mode must be 'distance' or 'twotheta'")
 
 
-def xrd(atoms, Box_dim, wavelength=1.54187, angle_step=0.02, 
+def xrd(atoms, Box, wavelength=1.54187, angle_step=0.02, 
         two_theta_range=(2, 90), b_all=0.0, lorentzian_factor=1.0,
         neutral_atoms=False, hkl_max=0, fwhm_00l=1.0, fwhm_hk0=0.5, 
         fwhm_hkl=0.5, pref=0, preferred_orientation=(1, 1, 1),
@@ -578,8 +575,8 @@ def xrd(atoms, Box_dim, wavelength=1.54187, angle_step=0.02,
     atoms : list of dict
         List of atom dictionaries with position and type information.
         Each atom should have 'x', 'y', 'z' coordinates and 'element' or 'type'.
-    Box_dim : list or array
-        Box dimensions: [a, b, c] for orthogonal or [a, b, c, α, β, γ] for general
+    Box : list or array
+        Simulation cell dimensions (1x3, 1x6, or 1x9)
     wavelength : float, optional
         X-ray wavelength in Angstrom (default: Cu K-alpha = 1.54187)
     angle_step : float, optional
@@ -658,14 +655,14 @@ def xrd(atoms, Box_dim, wavelength=1.54187, angle_step=0.02,
     
     >>> from atomipy.import_conf import pdb
     >>> from atomipy.diffraction import xrd
-    >>> atoms, Cell, Box_dim = pdb('NaCl.pdb')
-    >>> two_theta, intensity, fig = xrd(atoms, Box_dim)
+    >>> atoms, Cell, Box = pdb('NaCl.pdb')
+    >>> two_theta, intensity, fig = xrd(atoms, Box)
     
     High-resolution pattern with custom parameters:
     
     >>> two_theta, intensity, fig = xrd(
     ...     atoms=atoms,
-    ...     Box_dim=Box_dim,
+    ...     Box=Box,
     ...     wavelength=1.54187,
     ...     angle_step=0.01,
     ...     two_theta_range=(5, 120),
@@ -676,18 +673,7 @@ def xrd(atoms, Box_dim, wavelength=1.54187, angle_step=0.02,
     """
     print("Starting XRD calculation...")
     
-    # Convert Box_dim to Cell parameters if needed
-    if len(Box_dim) == 9:
-        # Triclinic Box format
-        Cell = Box_dim2Cell(Box_dim)
-    elif len(Box_dim) == 6:
-        # Cell parameters format
-        Cell = Box_dim
-    elif len(Box_dim) == 3:
-        # Simple orthogonal Box
-        Cell = list(Box_dim) + [90.0, 90.0, 90.0]
-    else:
-        raise ValueError("Box_dim must have 3, 6, or 9 elements")
+    Box_dim, Cell = normalize_box(Box)
     
     a, b, c, alpha, beta, gamma = Cell
     
@@ -1148,5 +1134,3 @@ def xrd(atoms, Box_dim, wavelength=1.54187, angle_step=0.02,
     
     print("XRD calculation completed!")
     return exp_twotheta, intensity
-
-

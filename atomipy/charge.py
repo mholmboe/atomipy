@@ -292,7 +292,7 @@ def charge_minff(atoms, Box, atom_labels=None, charges=None, resname=None):
 # =====================================================
 # CLAYFF forcefield charge functions (from charge_clayff.py)
 # =====================================================
-def charge_clayff(atoms, Box_dim, atom_labels=None, charges=None, resname=None):
+def charge_clayff(atoms, Box, atom_labels=None, charges=None, resname=None):
     """
     Assign charges to atoms based on CLAYFF forcefield principles.
     
@@ -301,7 +301,7 @@ def charge_clayff(atoms, Box_dim, atom_labels=None, charges=None, resname=None):
     
     Args:
         atoms: List of atom dictionaries.
-        Box_dim: Box dimensions for periodic boundary conditions.
+        Box: Simulation cell dimensions (1x3, 1x6, or 1x9).
         atom_labels: Optional list of atom types to assign specific charges.
         charges: Optional list of charge values corresponding to atom_labels.
         resname: Optional residue name filter (e.g., 'MIN').
@@ -341,7 +341,7 @@ def charge_clayff(atoms, Box_dim, atom_labels=None, charges=None, resname=None):
     ox_indices = [i for i in target_atoms if 'type' in atoms[i] and atoms[i]['type'].lower().startswith('o')]
 
     if 'bonds' not in atoms[0] and 'neigh' not in atoms[0]:
-        atoms, _, _ = bond_angle(atoms, Box_dim, rmaxH=1.2, rmaxM=2.45)
+        atoms, _, _ = bond_angle(atoms, Box, rmaxH=1.2, rmaxM=2.45)
 
     for i in ox_indices:
         neighbors = atoms[i].get('neigh', [])

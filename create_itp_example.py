@@ -13,7 +13,7 @@ pdb_file_out = 'minff_Kao.pdb'
 itp_file_out = 'minff_Kao.itp'
 log_file_out = 'minff_Kao.log'
 
-atoms, cell, _ = import_pdb(file_path=pdb_file)
+atoms, cell = import_pdb(file_path=pdb_file)
 minff_atoms = minff(atoms, Box=cell, log=True)
 
 write_itp(minff_atoms, Box=cell, file_path=itp_file_out)

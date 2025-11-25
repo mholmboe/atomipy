@@ -23,7 +23,7 @@ def main():
     if not os.path.isfile(args.structure):
         parser.error(f"Input file '{args.structure}' does not exist")
 
-    atoms, Cell, Box = ap.import_auto(args.structure)
+    atoms, Box = ap.import_auto(args.structure)
 
     # write_n2t internally ensures elements/masses and will infer bonds if required
     out_path = args.output
@@ -32,7 +32,7 @@ def main():
         out_path = f"{stem}_atomname2type.n2t"
 
     try:
-        n2t_path = ap.write_n2t(atoms, Box=Box, n2t_file=out_path, verbose=True)
+        n2t_path = ap.write_n2t(atoms, Box, n2t_file=out_path, verbose=True)
     except Exception as exc:
         print(f"Failed to generate .n2t: {exc}", file=sys.stderr)
         return 1

@@ -29,10 +29,10 @@ making them flexible for various use cases.
 """
 
 import numpy as np
-from .cell_utils import Box_dim2Cell, Cell2Box_dim
+from .cell_utils import Box_dim2Cell, Cell2Box_dim, normalize_box
 
 
-def cartesian_to_fractional(atoms=None, cart_coords=None, Box_dim=None, Box=None, add_to_atoms=True):
+def cartesian_to_fractional(atoms=None, cart_coords=None, Box=None, add_to_atoms=True):
     """
     Convert cartesian coordinates to fractional coordinates.
     
@@ -44,43 +44,33 @@ def cartesian_to_fractional(atoms=None, cart_coords=None, Box_dim=None, Box=None
     cart_coords : numpy.ndarray, optional
         Nx3 array of cartesian coordinates, where N is the number of atoms.
         Either atoms or cart_coords must be provided.
-    Box_dim : list or array, optional
-        Box dimensions in any of these formats:
-        - [Lx, Ly, Lz] for orthogonal boxes (1x3)
-        - [Lx, Ly, Lz, xy, xz, yz] for triclinic boxes (1x6)
-        - [xx, xy, xz, yx, yy, yz, zx, zy, zz] for full 3×3 matrix in row-major order (1x9)
-        Either Box_dim or Box must be provided.
-    Box : list or array, optional
-        Box parameters (Cell parameters) in the format [a, b, c, alpha, beta, gamma] (1x6).
-        Either Box_dim or Box must be provided.
+    Box : list or array
+        Simulation cell dimensions (1x3, 1x6, or 1x9).
     add_to_atoms : bool, optional
         If True and atoms is provided, adds fractional coordinates to the atom dictionaries
         as 'xfrac', 'yfrac', 'zfrac'. Default is True.
         
     Returns
     -------
-    frac_coords : numpy.ndarray
+        frac_coords : numpy.ndarray
         Nx3 array of fractional coordinates, where N is the number of atoms.
     atoms : list of dict, optional
         The original atoms list with updated fractional coordinate fields
         if add_to_atoms is True.
     """
-    if (atoms is None and cart_coords is None) or (Box_dim is None and Box is None):
-        raise ValueError("Either (atoms or cart_coords) and (Box_dim or Box) must be provided")
+    if atoms is None and cart_coords is None:
+        raise ValueError("Either atoms or cart_coords must be provided")
+    if Box is None:
+        raise ValueError("Box must be provided")
     
     # Get cartesian coordinates from atoms if needed
     if cart_coords is None:
         cart_coords = np.array([[atom['x'], atom['y'], atom['z']] for atom in atoms])
     
-    # Get Box parameters if not provided
-    if Box is None:
-        Box = Box_dim2Cell(Box_dim)
-    
-    # Extract Box parameters
-    a, b, c, alpha, beta, gamma = Box
+    _, Cell = normalize_box(Box)
     
     # Get Cell vectors
-    cell_vectors = get_cell_vectors(Box)
+    cell_vectors = get_cell_vectors(Cell)
     
     # Compute the transformation matrix
     # This is the inverse of the matrix used in fractional_to_cartesian
@@ -106,7 +96,7 @@ def cartesian_to_fractional(atoms=None, cart_coords=None, Box_dim=None, Box=None
     return frac_coords
 
 
-def fractional_to_cartesian(atoms=None, frac_coords=None, Box_dim=None, Box=None, add_to_atoms=True):
+def fractional_to_cartesian(atoms=None, frac_coords=None, Box=None, add_to_atoms=True):
     """
     Convert fractional coordinates to cartesian coordinates.
     
@@ -118,15 +108,8 @@ def fractional_to_cartesian(atoms=None, frac_coords=None, Box_dim=None, Box=None
     frac_coords : numpy.ndarray, optional
         Nx3 array of fractional coordinates, where N is the number of atoms.
         Either atoms or frac_coords must be provided.
-    Box_dim : list or array, optional
-        Box dimensions in any of these formats:
-        - [Lx, Ly, Lz] for orthogonal boxes (1x3)
-        - [Lx, Ly, Lz, xy, xz, yz] for triclinic boxes (1x6)
-        - [xx, xy, xz, yx, yy, yz, zx, zy, zz] for full 3×3 matrix in row-major order (1x9)
-        Either Box_dim or Box must be provided.
-    Box : list or array, optional
-        Box parameters (Cell parameters) in the format [a, b, c, alpha, beta, gamma] (1x6).
-        Either Box_dim or Box must be provided.
+    Box : list or array
+        Simulation cell dimensions (1x3, 1x6, or 1x9).
     add_to_atoms : bool, optional
         If True and atoms is provided, adds cartesian coordinates to the atom dictionaries
         as 'x', 'y', 'z'. Default is True.
@@ -139,12 +122,12 @@ def fractional_to_cartesian(atoms=None, frac_coords=None, Box_dim=None, Box=None
         The original atoms list with updated cartesian coordinate fields
         if add_to_atoms is True.
     """
-    if (atoms is None and frac_coords is None) or (Box_dim is None and Box is None):
-        raise ValueError("Either (atoms or frac_coords) and (Box_dim or Box) must be provided")
-    
-    # Get Box parameters if not provided
+    if atoms is None and frac_coords is None:
+        raise ValueError("Either atoms or frac_coords must be provided")
     if Box is None:
-        Box = Box_dim2Cell(Box_dim)
+        raise ValueError("Box must be provided")
+    
+    _, Cell = normalize_box(Box)
     
     # Get fractional coordinates from atoms if needed
     if frac_coords is None:
@@ -154,7 +137,7 @@ def fractional_to_cartesian(atoms=None, frac_coords=None, Box_dim=None, Box=None
                                 for atom in atoms])
     
     # Get Cell vectors
-    cell_vectors = get_cell_vectors(Box)
+    cell_vectors = get_cell_vectors(Cell)
     
     # Apply transformation to each point
     cart_coords = np.zeros_like(frac_coords)
@@ -174,7 +157,7 @@ def fractional_to_cartesian(atoms=None, frac_coords=None, Box_dim=None, Box=None
     return cart_coords
 
 
-def wrap_coordinates(atoms=None, coords=None, frac_coords=None, Box_dim=None, Box=None,
+def wrap_coordinates(atoms=None, coords=None, frac_coords=None, Box=None,
          add_to_atoms=True, return_type='fractional'):
     """
     Wrap coordinates to ensure they are within the primary unit Cell (0 to 1 in fractional coordinates).
@@ -188,15 +171,9 @@ def wrap_coordinates(atoms=None, coords=None, frac_coords=None, Box_dim=None, Bo
         Nx3 array of cartesian coordinates to wrap.
     frac_coords : numpy.ndarray, optional
         Nx3 array of fractional coordinates to wrap. If provided, coords is ignored.
-    Box_dim : list or array, optional
-        Box dimensions in any of these formats:
-        - [Lx, Ly, Lz] for orthogonal boxes (1x3)
-        - [Lx, Ly, Lz, xy, xz, yz] for triclinic boxes (1x6)
-        - [xx, xy, xz, yx, yy, yz, zx, zy, zz] for full 3×3 matrix in row-major order (1x9)
-        Required if coords is provided.
     Box : list or array, optional
-        Box parameters (Cell parameters) in the format [a, b, c, alpha, beta, gamma] (1x6).
-        Required if coords is provided.
+        Simulation cell dimensions (1x3, 1x6, or 1x9). Required when conversions
+        between cartesian and fractional coordinates are needed.
     add_to_atoms : bool, optional
         If True and atoms is provided, updates the atom dictionaries with wrapped coordinates.
     return_type : str, optional
@@ -212,11 +189,24 @@ def wrap_coordinates(atoms=None, coords=None, frac_coords=None, Box_dim=None, Bo
     if atoms is None and coords is None and frac_coords is None:
         raise ValueError("Either atoms, coords, or frac_coords must be provided")
     
+    return_cartesian = return_type.lower() == 'cartesian'
+    needs_box = (
+        coords is not None
+        or frac_coords is None
+        or return_cartesian
+        or (atoms is not None and frac_coords is None and not all('xfrac' in atom for atom in atoms))
+    )
+
+    if needs_box and Box is None:
+        raise ValueError("Box must be provided when converting coordinates")
+    if needs_box:
+        normalize_box(Box)
+    
     # Step 1: Get fractional coordinates
     if frac_coords is None:
         if coords is not None:
             # Convert cartesian to fractional
-            frac_coords = cartesian_to_fractional(cart_coords=coords, Box_dim=Box_dim, Box=Box)
+            frac_coords = cartesian_to_fractional(cart_coords=coords, Box=Box)
         elif atoms is not None:
             # Check if atoms already have fractional coordinates
             if all('xfrac' in atom for atom in atoms):
@@ -224,7 +214,7 @@ def wrap_coordinates(atoms=None, coords=None, frac_coords=None, Box_dim=None, Bo
             else:
                 # Extract cartesian coordinates and convert to fractional
                 cart_coords = np.array([[atom['x'], atom['y'], atom['z']] for atom in atoms])
-                frac_coords = cartesian_to_fractional(cart_coords=cart_coords, Box_dim=Box_dim, Box=Box)
+                frac_coords = cartesian_to_fractional(cart_coords=cart_coords, Box=Box)
     
     # Step 2: Perform the wrapping operation on fractional coordinates
     wrapped_frac = frac_coords.copy()
@@ -240,7 +230,7 @@ def wrap_coordinates(atoms=None, coords=None, frac_coords=None, Box_dim=None, Bo
     # Step 4: Return coordinates in the requested format
     if return_type.lower() == 'cartesian':
         # Convert wrapped fractional coordinates back to cartesian
-        wrapped_cart = fractional_to_cartesian(frac_coords=wrapped_frac, Box_dim=Box_dim, Box=Box)
+        wrapped_cart = fractional_to_cartesian(frac_coords=wrapped_frac, Box=Box)
         if atoms is not None and add_to_atoms:
             for i, atom in enumerate(atoms):
                 atom['x'] = float(round(wrapped_cart[i, 0], 6))
@@ -254,7 +244,7 @@ def wrap_coordinates(atoms=None, coords=None, frac_coords=None, Box_dim=None, Bo
         return wrapped_frac
 
 
-def wrap(atoms, box, return_type='cartesian'):
+def wrap(atoms, Box, return_type='cartesian'):
     """
     Wrap atom coordinates to ensure they are within the primary simulation cell.
     
@@ -266,7 +256,7 @@ def wrap(atoms, box, return_type='cartesian'):
     ----------
     atoms : list of dict
         List of atom dictionaries with coordinate information ('x', 'y', 'z').
-    box : list or array
+    Box : list or array
         Simulation cell dimensions in one of the following formats:
         - Box_dim format (1x3): [Lx, Ly, Lz] for orthogonal boxes
         - Box_dim format (1x9): [lx, ly, lz, 0, 0, xy, 0, xz, yz] for triclinic boxes
@@ -306,17 +296,13 @@ def wrap(atoms, box, return_type='cartesian'):
     >>> # GROMACS triclinic format
     >>> atoms = wrap(atoms, [10.0, 10.0, 10.0, 0, 0, 2.0, 0, 0.5, 1.5])
     """
-    from .cell_utils import Box_dim2Cell, Cell2Box_dim
-    
-    box = np.array(box, dtype=float)
+    _, Cell = normalize_box(Box)
     
     # Step 1: Extract cartesian coordinates from atoms
     cart_coords = np.array([[atom['x'], atom['y'], atom['z']] for atom in atoms])
     
     # Step 2: Convert box to Cell parameters using helper function
     # This automatically handles all box format detection
-    Cell = Box_dim2Cell(box)
-    
     # Step 3: Build cell matrix from Cell parameters
     # The cell matrix has lattice vectors as COLUMNS (crystallographic convention)
     a, b, c, alpha, beta, gamma = Cell
@@ -391,7 +377,7 @@ def wrap(atoms, box, return_type='cartesian'):
         return atoms
 
 
-def triclinic_to_orthogonal(atoms=None, coords=None, Box_dim=None, Box=None, add_to_atoms=True):
+def triclinic_to_orthogonal(atoms=None, coords=None, Box=None, add_to_atoms=True):
     """
     Convert coordinates from triclinic to orthogonal representation.
 {{ ... }}
@@ -404,10 +390,8 @@ def triclinic_to_orthogonal(atoms=None, coords=None, Box_dim=None, Box=None, add
         will be added to atoms as 'x_ortho', 'y_ortho', 'z_ortho'.
     coords : numpy.ndarray, optional
         Nx3 array of triclinic coordinates.
-    Box_dim : list or array, optional
-        Box dimensions as [Lx, Ly, Lz] or [Lx, Ly, Lz, xy, xz, yz].
-    Box : list or array, optional
-        Box parameters as [a, b, c, alpha, beta, gamma].
+    Box : list or array
+        Simulation cell dimensions (1x3, 1x6, or 1x9).
     add_to_atoms : bool, optional
         If True and atoms is provided, adds orthogonal coordinates to the atom dictionaries.
         
@@ -421,19 +405,19 @@ def triclinic_to_orthogonal(atoms=None, coords=None, Box_dim=None, Box=None, add
     ortho_box : array
         The orthogonal Box dimensions [a', b', c'].
     """
-    if (atoms is None and coords is None) or (Box_dim is None and Box is None):
-        raise ValueError("Either (atoms or coords) and (Box_dim or Box) must be provided")
+    if atoms is None and coords is None:
+        raise ValueError("Either atoms or coords must be provided")
+    if Box is None:
+        raise ValueError("Box must be provided")
     
     # Get the coordinate array from atoms if needed
     if coords is None and atoms is not None:
         coords = np.array([[atom['x'], atom['y'], atom['z']] for atom in atoms])
     
-    # Convert Box_dim to Box parameters if needed
-    if Box is None:
-        Box = Box_dim2Cell(Box_dim)
+    _, Cell = normalize_box(Box)
     
     # Extract Box parameters
-    a, b, c, alpha, beta, gamma = Box
+    a, b, c, alpha, beta, gamma = Cell
     
     # Convert to radians
     alpha_rad = np.radians(alpha)
@@ -538,32 +522,28 @@ def orthogonal_to_triclinic(ortho_coords, Box, atoms=None, add_to_atoms=True):
     return cart_coords
 
 
-def get_orthogonal_box(Box_dim=None, Box=None):
+def get_orthogonal_box(Box):
     """
     Get the dimensions of the orthogonal Box representing 
     the triclinic Cell.
     
     Parameters
     ----------
-    Box_dim : list or array, optional
-        Box dimensions with 3, 6, or 9 parameters.
-    Box : list or array, optional
-        Box parameters in the format [a, b, c, alpha, beta, gamma].
+    Box : list or array
+        Simulation cell dimensions (1x3, 1x6, or 1x9).
         
     Returns
     -------
     ortho_box : numpy.ndarray
         Orthogonal Box dimensions [a', b', c'].
     """
-    if Box_dim is None and Box is None:
-        raise ValueError("Either Box_dim or Box must be provided")
-    
-    # Convert Box_dim to Box parameters if needed
     if Box is None:
-        Box = Box_dim2Cell(Box_dim)
+        raise ValueError("Box must be provided")
+    
+    _, Cell = normalize_box(Box)
     
     # Extract Box parameters
-    a, b, c, alpha, beta, gamma = Box
+    a, b, c, alpha, beta, gamma = Cell
     
     # Convert to radians
     alpha_rad = np.radians(alpha)
@@ -613,7 +593,7 @@ def get_cell_vectors(Box):
     return np.array([v1, v2, v3])
 
 
-def direct_cartesian_to_fractional(atoms=None, cart_coords=None, Box_dim=None, Box=None, add_to_atoms=True):
+def direct_cartesian_to_fractional(atoms=None, cart_coords=None, Box=None, add_to_atoms=True):
     """
     Direct conversion from cartesian coordinates to fractional coordinates.
     This function provides a direct implementation that follows the MATLAB approach
@@ -627,12 +607,8 @@ def direct_cartesian_to_fractional(atoms=None, cart_coords=None, Box_dim=None, B
     cart_coords : numpy.ndarray, optional
         Nx3 array of cartesian coordinates, where N is the number of atoms.
         Either atoms or cart_coords must be provided.
-    Box_dim : list or array, optional
-        Box dimensions in the format [lx, ly, lz] or [lx, ly, lz, 0, 0, xy, 0, xz, yz].
-        Either Box_dim or Cell must be provided.
-    Cell : list or array, optional
-        Cell parameters in the format [a, b, c, alpha, beta, gamma].
-        Either Box_dim or Cell must be provided.
+    Box : list or array
+        Simulation cell dimensions (1x3, 1x6, or 1x9).
     add_to_atoms : bool, optional
         If True and atoms is provided, adds fractional coordinates to the atom dictionaries
         as 'xfrac', 'yfrac', 'zfrac'. Default is True.
@@ -645,19 +621,15 @@ def direct_cartesian_to_fractional(atoms=None, cart_coords=None, Box_dim=None, B
         The original atoms list with updated fractional coordinate fields
         if add_to_atoms is True.
     """
-    if (atoms is None and cart_coords is None) or (Box_dim is None and Box is None):
-        raise ValueError("Either (atoms or cart_coords) and (Box_dim or Box) must be provided")
-    
-    # If Box is provided but not Box_dim, calculate Box_dim
-    if Box_dim is None:
-        Box_dim = Cell2Box_dim(Box)
-    
-    # If Box is not provided, calculate from Box_dim
+    if atoms is None and cart_coords is None:
+        raise ValueError("Either atoms or cart_coords must be provided")
     if Box is None:
-        Box = Box_dim2Cell(Box_dim)
+        raise ValueError("Box must be provided")
+    
+    _, Cell = normalize_box(Box)
     
     # Extract Box parameters
-    a, b, c, alpha, beta, gamma = Box
+    a, b, c, alpha, beta, gamma = Cell
     
     # Convert angles to radians
     alpha_rad = np.radians(alpha)
@@ -703,7 +675,7 @@ def direct_cartesian_to_fractional(atoms=None, cart_coords=None, Box_dim=None, B
     return frac_coords
 
 
-def direct_fractional_to_cartesian(atoms=None, frac_coords=None, Box_dim=None, Box=None, add_to_atoms=True):
+def direct_fractional_to_cartesian(atoms=None, frac_coords=None, Box=None, add_to_atoms=True):
     """
     Direct conversion from fractional coordinates to Cartesian coordinates.
     This function provides a direct implementation that follows the MATLAB approach
@@ -717,12 +689,8 @@ def direct_fractional_to_cartesian(atoms=None, frac_coords=None, Box_dim=None, B
     frac_coords : numpy.ndarray, optional
         Nx3 array of fractional coordinates, where N is the number of atoms.
         Either atoms or frac_coords must be provided.
-    Box_dim : list or array, optional
-        Box dimensions in the format [lx, ly, lz] or [lx, ly, lz, 0, 0, xy, 0, xz, yz].
-        Either Box_dim or Cell must be provided.
-    Cell : list or array, optional
-        Cell parameters in the format [a, b, c, alpha, beta, gamma].
-        Either Box_dim or Cell must be provided.
+    Box : list or array
+        Simulation cell dimensions (1x3, 1x6, or 1x9).
     add_to_atoms : bool, optional
         If True and atoms is provided, adds cartesian coordinates to the atom dictionaries
         as 'x', 'y', 'z'. Default is True.
@@ -735,19 +703,15 @@ def direct_fractional_to_cartesian(atoms=None, frac_coords=None, Box_dim=None, B
         The original atoms list with updated cartesian coordinate fields
         if add_to_atoms is True.
     """
-    if (atoms is None and frac_coords is None) or (Box_dim is None and Box is None):
-        raise ValueError("Either (atoms or frac_coords) and (Box_dim or Box) must be provided")
-    
-    # If Box is provided but not Box_dim, calculate Box_dim
-    if Box_dim is None:
-        Box_dim = Cell2Box_dim(Box)
-    
-    # If Box is not provided, calculate from Box_dim
+    if atoms is None and frac_coords is None:
+        raise ValueError("Either atoms or frac_coords must be provided")
     if Box is None:
-        Box = Box_dim2Cell(Box_dim)
+        raise ValueError("Box must be provided")
+    
+    _, Cell = normalize_box(Box)
     
     # Extract Box parameters
-    a, b, c, alpha, beta, gamma = Box
+    a, b, c, alpha, beta, gamma = Cell
     
     # Convert angles to radians
     alpha_rad = np.radians(alpha)

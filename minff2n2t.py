@@ -18,8 +18,8 @@ def main() -> None:
     if not infile.is_file():
         raise SystemExit(f"Input file '{infile}' not found")
 
-    atoms, _, Box = ap.import_auto(str(infile))
-    atoms, _ = ap.minff(atoms, Box=Box)
+    atoms, Box = ap.import_auto(str(infile))
+    atoms = ap.minff(atoms, Box)
 
     output = Path(args.output) if args.output else infile.with_name(f"{infile.stem}_minff_atomname2type.n2t")
     n2t_path = ap.write_n2t(atoms, Box=Box, n2t_file=str(output))
