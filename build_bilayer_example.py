@@ -2,6 +2,7 @@
 """
 Build a montmorillonite bilayer system with counter-ions and water.
 
+
 This script creates a montmorillonite bilayer by:
 1. Replicating a pyrophyllite unit cell
 2. Creating two montmorillonite layers through isomorphic substitution
