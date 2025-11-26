@@ -16,6 +16,7 @@ def scale(atoms, Box, scale_factors, resname=None):
     """
     Scale atom coordinates and box dimensions.
     
+    
     Parameters
     ----------
     atoms : list of dict

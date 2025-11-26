@@ -1,6 +1,7 @@
 """
 Utility functions for converting between different Cell representations.
 
+
 This module provides functions to convert between Box_dim (a 1D array of
 the simulation Box dimensions) and Cell (a 3×3 matrix representation of
 the unit Cell).

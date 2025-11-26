@@ -12,6 +12,7 @@ def translate(atoms, trans_vec, resname="all"):
     """
     Translate atom coordinates by a specified vector.
     
+    
     Parameters
     ----------
     atoms : list of dict

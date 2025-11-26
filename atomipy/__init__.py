@@ -1,6 +1,7 @@
 """
 atomipy: The atom Toolbox in Python
 
+
 This package provides tools for working with molecular structures, particularly
 focused on mineral systems with periodic boundary conditions. It supports both
 orthogonal and triclinic simulation cells, and provides efficient distance

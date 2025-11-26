@@ -1,6 +1,7 @@
 def element(atoms):
     """Guess the chemical element for multiple atom entries.
     
+    
     Uses explicit prefix matching on the 'type' field to determine the element,
     similar to the MATLAB implementation. If 'type' is not available, falls back to
     'atname' or 'resname'. Supports special cases like 'Ale', 'Alt', 'Fee', 'Fet', 'Ow', 'Hw'.

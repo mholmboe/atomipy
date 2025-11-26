@@ -1,6 +1,7 @@
 """
 This module provides functions for replicating atomic structures along unit Cell dimensions.
 
+
 The main function converts atoms to fractional coordinates, replicates the structure
 along the unit Cell vectors, and converts back to cartesian coordinates with updated
 Box dimensions.

@@ -1,6 +1,7 @@
 def mass():
     """Return dictionary mapping elements to their atomic masses in atomic mass units (amu).
     
+    
     Returns
     -------
     dict

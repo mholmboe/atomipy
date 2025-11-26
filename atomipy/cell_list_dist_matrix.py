@@ -29,6 +29,7 @@ def cell_list_dist_matrix(atoms, Box,cutoff=2.45, rmaxH=1.2, H_type='H'):
     finding all atom pairs within a cutoff distance. This function closely follows the MATLAB 
     implementation of cell_list_dist_matrix_MATLAB.m.
     
+    
     Args:
         atoms: list of atom dictionaries, each having 'x', 'y', 'z' coordinates and 'type' field.
         Box: a 1x3, 1x6 or 1x9 list representing Cell dimensions (in Angstroms):

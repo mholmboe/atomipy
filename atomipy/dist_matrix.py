@@ -13,6 +13,7 @@ except ImportError:
 def dist_matrix(atoms, Box):
     """Calculate the distance matrix between atoms following the MATLAB implementation approach.
     
+    
     This function closely mimics the behavior of the MATLAB dist_matrix_MATLAB.m function,
     calculating distances with periodic boundary conditions in a per-atom loop approach.
     
