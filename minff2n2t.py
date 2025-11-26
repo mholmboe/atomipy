@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""MINFF to n2t generator."""
+"""MINFF to n2t generator"""
 # Example: python minff2n2t.py structure.gro --output minff_atomname2type.n2t
 
 import argparse

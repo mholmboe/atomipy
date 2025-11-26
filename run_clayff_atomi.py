@@ -2,6 +2,7 @@
 """
 run_clayff_atomi.py - A beginner-friendly script to demonstrate atomipy functionality
 
+
 This simple script shows the basic workflow for processing clay mineral structures
 using the atomipy package. It demonstrates how to:
 1. Import a structure file

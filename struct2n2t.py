@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Minimal CLI for converting a structure (.pdb/.gro) into an .n2t file.
 
+
 The script loads coordinates, forwards the simulation Cell so that
 `atomipy.write_n2t` can honour periodic boundary conditions, and writes
 the consolidated environment table to disk.
