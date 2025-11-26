@@ -2,6 +2,7 @@ def vdw_radius():
     """Return dictionary mapping elements to their van der Waals radii.
     Values in angstroms.
     
+    
     Returns
     -------
     dict

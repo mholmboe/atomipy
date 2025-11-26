@@ -3,6 +3,7 @@
 """
 Advanced X-ray Diffraction Simulation Module for atomipy.
 
+
 This module provides comprehensive functionality for calculating X-ray diffraction (XRD) 
 patterns from atomic structures with high accuracy and performance. Originally based on 
 MATLAB functions (xrd_atom.m, occupancy_atom.m, atomic_scattering_factors.m), it has been 

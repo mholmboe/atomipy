@@ -6,6 +6,7 @@ from .cell_utils import Cell2Box_dim, Box_dim2Cell  # Will use lowercase Box in 
 def pdb(file_path):
     """Import atoms from a PDB file.
     
+    
     Returns:
        atoms: list of dictionaries, each with keys: molid, index, resname, x, y, z, neigh, bonds, angles, element, type, fftype.
        Cell: a 1x6 list [a, b, c, alpha, beta, gamma] if available from CRYST1 record.

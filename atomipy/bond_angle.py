@@ -6,6 +6,7 @@ from .cell_list_dist_matrix import cell_list_dist_matrix
 def bond_angle(atoms, Box, rmaxH=1.2, rmaxM=2.45, same_element_bonds=False, same_molecule_only=True, calculate_coordination=True, neighbor_element=None):
     """Compute bonds and angles for a given atomic structure.
     
+    
     For each atom, bonds are determined based on a distance threshold:
       - rmaxH (default 1.2 Å) if either atom is hydrogen
       - rmaxM (default 2.45 Å) for bonds between non-hydrogen atoms.

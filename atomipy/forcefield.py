@@ -8,6 +8,7 @@ from .mass import set_atomic_masses
 def get_structure_stats(atoms, total_charge, ffname, Box=None, log_file=None):
     """Generate statistics about atom types, coordination, and charges in the structure.
     
+    
     This function analyzes atom types, their coordination environment, charges,
     coordination numbers, bond distances, and angles, and outputs a formatted report.
     The report can be written to a log file and/or returned as a string.

@@ -10,6 +10,7 @@ def itp(atoms, Box=None, file_path=None, molecule_name=None, nrexcl=1, comment=N
     """
     Write atoms to a Gromacs molecular topology (.itp) file.
     
+    
     This function takes a list of atom dictionaries from atomipy and outputs a formatted
     Gromacs topology file containing atom, bond, and angle definitions similar to the 
     MATLAB write_minff_itp.m script.

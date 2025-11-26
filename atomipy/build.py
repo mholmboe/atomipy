@@ -18,6 +18,7 @@ def is_centrosymmetric_along_z(atoms, tolerance=0.1):
     """
     Check if a structure is approximately centrosymmetric along the z-axis.
     
+    
     This function analyzes the distribution of z-coordinates to determine if the
     structure is centrosymmetric, without checking atom by atom.
     
