@@ -3,7 +3,6 @@
 """
 Advanced X-ray Diffraction Simulation Module for atomipy.
 
-
 This module provides comprehensive functionality for calculating X-ray diffraction (XRD) 
 patterns from atomic structures with high accuracy and performance. Originally based on 
 MATLAB functions (xrd_atom.m, occupancy_atom.m, atomic_scattering_factors.m), it has been 
@@ -65,7 +64,7 @@ from atomipy.import_conf import pdb
 from atomipy.diffraction import xrd
 
 # Import crystal structure
-atoms, Cell, Box = pdb('structure.pdb')
+atoms, Box = pdb('structure.pdb')
 
 # Calculate XRD pattern
 two_theta, intensity, fig = xrd(

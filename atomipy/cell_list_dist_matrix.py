@@ -1,6 +1,7 @@
 import numpy as np
 from .cell_utils import Box_dim2Cell, normalize_box
 
+
 # Try to import tqdm for progress bar
 try:
     from tqdm import tqdm

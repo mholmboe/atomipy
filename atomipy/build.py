@@ -3,6 +3,7 @@ Build module for atomipy - provides functions for isomorphous substitution, solv
 and other structure building operations.
 """
 
+
 import copy
 import os
 import random

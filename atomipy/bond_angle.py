@@ -2,7 +2,6 @@ import numpy as np
 from .dist_matrix import dist_matrix
 from .cell_list_dist_matrix import cell_list_dist_matrix
 
-
 def bond_angle(atoms, Box, rmaxH=1.2, rmaxM=2.45, same_element_bonds=False, same_molecule_only=True, calculate_coordination=True, neighbor_element=None):
     """Compute bonds and angles for a given atomic structure.
     

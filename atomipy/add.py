@@ -1,7 +1,6 @@
 """
 Add module for atomipy - provides functions for combining and updating atom structures.
 
-
 This module contains functions to update atom indices and combine multiple atom structures.
 """
 

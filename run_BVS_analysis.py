@@ -1,6 +1,7 @@
 """
 Run Bond Valence Sum (BVS) and Shannon radii analysis on a structure file.
 
+
 Usage:
   python run_BVS_analysis.py input.(pdb|gro|xyz) [--params bvparm2020.cif] [--csv output.csv]
        [--elements Al Si O H] [--oxidations 3 4 -2 1]

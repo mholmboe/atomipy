@@ -1,6 +1,7 @@
 """
 Move module for atomipy - provides functions for translating and rotating atoms.
 
+
 This module contains functions to translate, rotate, and place atomic coordinates in atomipy data structures.
 """
 

@@ -1,12 +1,20 @@
 #!/usr/bin/env python3
-"""Minimal CLI for converting a structure (.pdb/.gro) into an .n2t file.
+"""Structure → n2t generator for gmx x2top workflows.
 
+This CLI loads a structure (PDB/GRO/XYZ), preserves the box/cell, and writes
+an atom-name-to-type table via `atomipy.write_n2t`. Environments are merged so
+nearly identical sites share the same type definitions.
 
-The script loads coordinates, forwards the simulation Cell so that
-`atomipy.write_n2t` can honour periodic boundary conditions, and writes
-the consolidated environment table to disk.
+Usage examples (run from repo root):
+  python struct2n2t.py Kaolinite_GII_0.0487.pdb
+  python struct2n2t.py conf/preem1.gro --output preem1_atomname2type.n2t
+  python struct2n2t.py unitcell.xyz --output unitcell_atomname2type.n2t
+
+What it does:
+  - Autodetects format with `import_auto` and keeps any box/cell info.
+  - Hands atoms and box to `write_n2t`, which infers bonds if needed.
+  - Writes <input>_atomname2type.n2t unless --output is provided.
 """
-# Example: python struct2n2t.py structure.gro --output out_atomname2type.n2t
 
 import argparse
 import os

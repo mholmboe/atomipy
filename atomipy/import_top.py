@@ -1,7 +1,6 @@
 """
 Import GROMACS .itp topology files.
 
-
 This module mirrors the MATLAB `import_itp.m` utility and parses sections into
 plain Python dictionaries (column name -> list of values) to make subsequent
 editing straightforward.

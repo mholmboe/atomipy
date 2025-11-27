@@ -1,7 +1,6 @@
 """
 This module provides functions for assigning residue names to atoms.
 
-
 The main function guesses and assigns residue names (resname) based on atom types,
 with special handling for water and ions.
 """

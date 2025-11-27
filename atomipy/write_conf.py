@@ -1,9 +1,9 @@
 import os
 from .cell_utils import Box_dim2Cell, Cell2Box_dim, normalize_box
 
+
 def pdb(atoms, Box, file_path):
     """Write atoms and Cell dimensions to a PDB file.
-
 
     Args:
        atoms: list of atom dictionaries.

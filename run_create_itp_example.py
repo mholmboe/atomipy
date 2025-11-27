@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Minimal MINFF workflow for a single structure.
 
-
 This script loads a PDB structure, assigns MINFF atom types and charges,
 logs structure statistics, and writes both a GROMACS ``.itp`` topology file
 and a typed PDB.

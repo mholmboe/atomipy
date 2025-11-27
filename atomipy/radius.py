@@ -2,6 +2,7 @@ def vdw_radius():
     """
     Return a dictionary mapping elements to their van der Waals radii (Å).
 
+
     Returns
     -------
     dict

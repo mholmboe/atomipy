@@ -3,6 +3,7 @@ import os
 from . import element as element_module
 from .cell_utils import Cell2Box_dim, Box_dim2Cell  # Will use lowercase Box in our code
 
+
 def pdb(file_path):
     """Import atoms from a PDB file.
     
