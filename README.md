@@ -221,7 +221,7 @@ n2t_path = ap.write_n2t(atoms, Box=Box, n2t_file="minff_atomtypes.n2t")
 print(f"N2T file saved to: {n2t_path}")
 ```
 
-The `Box` argument accepts orthogonal `[lx, ly, lz]` vectors, 1×6 Cell parameter lists, or the 1×9 `Box_dim` layout and will be normalised internally.
+The `Box` argument accepts orthogonal `[lx, ly, lz]` vectors, 1×6 Cell parameter lists, or the 1×9 `Box_dim` layout and will be normalised internally. This applies across writers (`write_itp`, `write_psf`, `write_lmp`, `write_pdb`, `write_gro`, `write_xyz`).
 
 ### Dihedrals and 1–4 pair detection
 
@@ -250,13 +250,13 @@ print("Dihedrals:", len(itp.get("dihedrals", {}).get("ai", [])))
 Alternatively, you can use the included MINFF helper script:
 
 ```bash
-python minff2n2t.py structure.gro --output minff_atomtypes.n2t
+python run_minff2n2t.py structure.gro --output minff_atomtypes.n2t
 ```
 
 For the simplest possible conversion you can call the structure-only helper:
 
 ```bash
-python struct2n2t.py structure.gro
+python run_struct2n2t.py structure.gro
 ```
 
 This script auto-detects the input format, forwards the Box dimensions, and writes `<structure>.n2t`.
@@ -273,11 +273,11 @@ typed = ap.minff(atoms, Box=cell, log=True)
 
 # Write out topologies
 ap.write_itp(typed, Box=cell, file_path="minff_Kao.itp")
-ap.write_pdb(typed, Box=cell, file_path="minff_Kao.pdb")
+ap.write_psf(typed, Box=cell, file_path="minff_Kao.psf")
 ap.write_lmp(typed, Box=cell, file_path="minff_Kao.data")
 ```
 
-If your input is GRO, pass the returned `Box_dim` to `minff`/writers:
+If your input is GRO, pass the returned `Box_dim` to `minff`/writers (they accept 1×3 Box_dim, 1×6 Cell, or 1×9 triclinic boxes interchangeably):
 
 ```python
 atoms, Box_dim = ap.import_gro("structure.gro")
@@ -287,7 +287,7 @@ ap.write_itp(typed, Box=Box_dim, file_path="structure.itp")
 
 Convenient helpers:
 - `run_create_itp_example.py` shows a minimal end-to-end MINFF + ITP + typed PDB workflow.
-- `minff2n2t.py` generates a MINFF-typed `.n2t` mapping for gmx x2top.
+- `run_minff2n2t.py` generates a MINFF-typed `.n2t` mapping for gmx x2top.
 
 ### XRD pattern simulation
 
