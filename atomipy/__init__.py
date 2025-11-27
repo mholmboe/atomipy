@@ -1,7 +1,6 @@
 """
 atomipy: The atom Toolbox in Python
 
-
 This package provides tools for working with molecular structures, particularly
 focused on mineral systems with periodic boundary conditions. It supports both
 orthogonal and triclinic simulation cells, and provides efficient distance
@@ -63,6 +62,7 @@ from .bond_angle import bond_angle, bond_angle_dihedral
 
 # ===== Cell and coordinate transformation functions =====
 from . import cell_utils
+normalize_box = cell_utils.normalize_box
 Box_dim2Cell = cell_utils.Box_dim2Cell
 Cell2Box_dim = cell_utils.Cell2Box_dim
 
@@ -116,6 +116,20 @@ try:
 except ImportError:
     pass
 
+# ===== Bond valence functions =====
+try:
+    from .bond_valence import compute_bvs, global_instability_index, load_bv_params, load_shannon_radii, bond_valence, summarize_bvs
+except ImportError:
+    pass
+try:
+    from .bond_valence import analyze_bvs, conf2bvs
+except ImportError:
+    pass
+try:
+    from .size import get_radius, bond_distance
+except ImportError:
+    pass
+
 # ===== Diffraction functions =====
 try:
     from .diffraction import xrd, occupancy_atom, atomic_scattering_factors, calculate_multiplicity, bragg_law
@@ -132,7 +146,7 @@ __all__ = [
     'write_itp', 'write_psf', 'write_lmp', 'import_itp_topology',
     'element', 'radius', 'mass', 'set_atomic_masses', 'com',
     'dist_matrix', 'cell_list_dist_matrix', 'bond_angle', 'bond_angle_dihedral',
-    'Box_dim2Cell', 'Cell2Box_dim',
+    'normalize_box','Box_dim2Cell', 'Cell2Box_dim',
     'cartesian_to_fractional', 'fractional_to_cartesian', 'wrap', 'wrap_coordinates',
     'triclinic_to_orthogonal', 'orthogonal_to_triclinic', 'get_orthogonal_box', 'get_cell_vectors',
     'direct_cartesian_to_fractional', 'direct_fractional_to_cartesian',
@@ -140,5 +154,8 @@ __all__ = [
     'substitute', 'merge', 'slice', 'solvate', 'ionize', 'insert',
     'minff', 'clayff', 'write_n2t',
     'charge_minff', 'charge_clayff', 'balance_charges', 'assign_formal_charges',
+    'compute_bvs', 'global_instability_index', 'load_bv_params', 'load_shannon_radii', 'bond_valence', 'summarize_bvs',
+    'analyze_bvs', 'conf2bvs',
+    'get_radius', 'bond_distance',
     'xrd', 'occupancy_atom', 'atomic_scattering_factors', 'calculate_multiplicity', 'bragg_law'
 ]

@@ -30,9 +30,11 @@ def itp(atoms, Box=None, file_path=None, molecule_name=None, nrexcl=1, comment=N
         
     Returns:
         None
-    
-    Example:
-        itp(atoms, Box=[50, 50, 50], file_path="molecule.itp", molecule_name="MMT")
+
+    Examples
+    --------
+    itp(atoms, Box=[50, 50, 50], file_path="molecule.itp", molecule_name="MMT")
+    itp(atoms, Box=Cell2Box_dim([50, 50, 50, 90, 90, 90]), file_path="topology.itp", explicit_angles=0)
     """
     if Box is None:
         raise ValueError("Box parameter must be provided")
@@ -333,9 +335,11 @@ def psf(atoms, Box=None, file_path=None, segid=None, rmaxH=1.2, rmaxM=2.45, comm
         
     Returns:
         None
-    
-    Example:
-        psf(atoms, Box=[50, 50, 50], file_path="molecule.psf", segid="CLAY")
+
+    Examples
+    --------
+    psf(atoms, Box=[50, 50, 50], file_path="molecule.psf", segid="CLAY")
+    psf(atoms, Box=Cell2Box_dim([50, 50, 50, 90, 90, 90]), file_path="system.psf")
     """
     if Box is None:
         raise ValueError("Box parameter must be provided")
@@ -546,9 +550,11 @@ def lmp(atoms, Box=None, file_path=None, forcefield=None, rmaxH=1.2, rmaxM=2.45,
         
     Returns:
         The file path to which the data was written.
-    
-    Example:
-        lmp(atoms, Box=[50, 50, 50], file_path="molecule.data")
+
+    Examples
+    --------
+    lmp(atoms, Box=[50, 50, 50], file_path="molecule.data")
+    lmp(atoms, Box=Cell2Box_dim([50, 50, 50, 90, 90, 90]), file_path="clay.data", forcefield="clayff")
     """
     import numpy as np
     from datetime import datetime

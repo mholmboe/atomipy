@@ -654,23 +654,23 @@ def xrd(atoms, Box, wavelength=1.54187, angle_step=0.02,
     --------
     Basic usage with PDB file:
     
-    >>> from atomipy.import_conf import pdb
-    >>> from atomipy.diffraction import xrd
-    >>> atoms, Cell, Box = pdb('NaCl.pdb')
-    >>> two_theta, intensity, fig = xrd(atoms, Box)
+    from atomipy.import_conf import pdb
+    from atomipy.diffraction import xrd
+    atoms, Cell, Box = pdb('NaCl.pdb')
+    two_theta, intensity, fig = xrd(atoms, Box)
     
     High-resolution pattern with custom parameters:
     
-    >>> two_theta, intensity, fig = xrd(
-    ...     atoms=atoms,
-    ...     Box=Box,
-    ...     wavelength=1.54187,
-    ...     angle_step=0.01,
-    ...     two_theta_range=(5, 120),
-    ...     b_all=0.5,
-    ...     lorentzian_factor=0.7,
-    ...     hkl_max=8
-    ... )
+    two_theta, intensity, fig = xrd(
+        atoms=atoms,
+        Box=Box,
+        wavelength=1.54187,
+        angle_step=0.01,
+        two_theta_range=(5, 120),
+        b_all=0.5,
+        lorentzian_factor=0.7,
+        hkl_max=8
+    )
     """
     print("Starting XRD calculation...")
     

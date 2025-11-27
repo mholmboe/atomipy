@@ -13,19 +13,22 @@ def assign_resname(atoms, default_resname='MIN'):
     This function assigns 'SOL' to water atoms, 'ION' to ion atoms,
     and the specified default residue name to all other atoms.
     
-    Args:
-        atoms: List of atom dictionaries
-        default_resname: The residue name to assign to non-water, non-ion atoms (default: 'MIN')
-    
-    Returns:
-        The updated list of atom dictionaries with 'resname' field assigned
-    
-    Example:
-        # Assign residue names to all atoms
-        atoms = ap.resname.assign_resname(atoms)
-        
-        # Assign 'CLAY' as the default residue name
-        atoms = ap.resname.assign_resname(atoms, default_resname='CLAY')
+    Parameters
+    ----------
+    atoms : list of dict
+        Atom dictionaries.
+    default_resname : str, optional
+        Residue name to assign to non-water, non-ion atoms (default 'MIN').
+
+    Returns
+    -------
+    list of dict
+        Updated atoms with `resname` assigned.
+
+    Examples
+    --------
+    atoms = assign_resname(atoms)
+    atoms = assign_resname(atoms, default_resname='CLAY')
     """
     # Define atom type patterns for water and ions
     water_types = ['Hw', 'Ow', 'OW', 'HW']

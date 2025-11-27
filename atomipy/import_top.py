@@ -5,6 +5,12 @@ Import GROMACS .itp topology files.
 This module mirrors the MATLAB `import_itp.m` utility and parses sections into
 plain Python dictionaries (column name -> list of values) to make subsequent
 editing straightforward.
+
+Examples
+--------
+from atomipy import import_itp_topology
+data = import_itp_topology("topology.itp")
+data["atomtypes"]["name"][:3]  # ['opls_135', 'opls_136', 'opls_137']
 """
 
 import os
@@ -98,6 +104,12 @@ def import_itp(filename: str, itp_prev: Optional[Dict[str, Dict]] = None) -> Dic
     dict
         Mapping of section name to column dictionary (for tabular sections) or
         raw string (for ``enddata``).
+
+    Examples
+    --------
+    data = import_itp("molecule.itp")
+    list(data.keys())[:3]  # ['defaults', 'atomtypes', 'atoms']
+    merged = import_itp("child.itp", itp_prev=data)  # merge with previous
     """
     if not os.path.isfile(filename):
         raise FileNotFoundError(f"Could not find itp file: {filename}")

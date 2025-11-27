@@ -4,9 +4,22 @@ A modular Python toolbox for handling and analyzing molecular structures, partic
 
 The package now supports generating GROMACS n2t (atom name to type) files for both MINFF and CLAYFF forcefields, enabling seamless integration with GROMACS utilities like gmx x2top for enhanced topology handling.
 
+## Contents
+- [Overview](#overview)
+- [Common Variables](#common-variables)
+  - [Structure Containers](#structure-containers)
+  - [Atom dictionary fields](#atom-dictionary-fields)
+- [Key Features](#key-features)
+- [Requirements](#requirements)
+- [Installation](#installation)
+- [Bond valence analysis](#bond-valence-analysis)
+- [Ionic/crystal radii and bond estimates (Shannon radii)](#ioniccrystal-radii-and-bond-estimates-shannon-radii)
+
 ## Overview
 
 This toolbox is designed to import, export, and analyze molecular structures with a focus on mineral slabs containing the elements Si, Al, Fe, Mg, Ca, Ti, Li, F, O, H. It handles periodic and triclinic simulation cells, and provides functions for calculating bonds, angles, and distances while taking periodic boundary conditions into account, and hence is ideal for generating molecular topology files for mineral bulk/slab systems that can be modelled using the [**MINFF**](https://github.com/mholmboe/minff) forcefield. However it also has the capability to handle clay minerals, hydroxides, and oxyhydroxides using CLAYFF (Cygan, R.T.; Liang, J.J.; Kalinichev, A.G. Molecular Models of Hydroxide, Oxyhydroxide, and Clay Phases and the Development of a General Force Field. *J. Phys. Chem. B* **2004**, *108*, 1255-1266).
+
+Built-in atom typing for MINFF and CLAYFF is a core feature: you can assign atom types, charges, and generate ITP/PSF/LAMMPS topologies directly from structures. For quick runs without local setup, use the web server at [www.atomipy.io](https://www.atomipy.io).
 
 The molecular structure information is stored in dictionaries where each atom has fields for coordinates, neighbors, bonds, angles, element type, and more.
 
@@ -72,6 +85,8 @@ Understanding the core containers and fields used in atomipy makes it easier to 
 - Generating topology files for MINFF and CLAYFF forcefields, for Gromacs (.itp), NAMD (.psf) and LAMMPS (.data)
 - Handle both orthogonal and triclinic simulation cells with periodic boundary conditions
 - Calculate bond distances, angles, dihedrals, and 1–4 pairs (`bond_angle_dihedral`)
+- Bond valence analysis utilities (bond valence sums and Global Instability Index)
+- Ionic/crystal radii utilities from Revised Shannon radii, including bond-distance estimates
 - Element type assignment
 - Coordination number analysis
 - Distance matrices with PBC corrections (using both full matrix and efficient cell-list algorithms)
@@ -561,6 +576,39 @@ Simply execute `python run_minff_atomi.py` or `python run_clayff_atomi.py` from 
 - `replicated_structure.pdb` - The enlarged supercell in PDB format
 - `molecular_topology.itp` - GROMACS topology file with bond and angle definitions
 - `preem.gro` - Final structure with MINFF typing and calculated properties
+
+### Bond valence analysis
+
+Compute bond valence sums (BVS) and the Global Instability Index (GII) using the IUCr parameter table (`bvparm2020.cif`):
+
+```python
+import atomipy as ap
+
+atoms, Box_dim = ap.import_gro("structure.gro")
+params = ap.load_bv_params()  # optional, uses bvparm2020.cif by default
+results, gii = ap.compute_bvs(atoms, Box_dim, params=params)
+print("GII =", gii)
+for atom in results[:5]:
+    print(atom["index"], atom["element"], atom["bvs"], atom["expected_ox"], atom["delta"])
+```
+
+`results` contains per-atom bond valence sums, the inferred oxidation state, and the deviation (`delta`). Use `ap.summarize_bvs(results)` to get quick per-element averages and the worst-offending sites.
+
+### Ionic/crystal radii and bond estimates (Shannon radii)
+
+Use the Revised Shannon radii table to fetch ionic/crystal radii and estimate bond distances:
+
+```python
+import atomipy as ap
+
+# Radii lookups
+r_al = ap.get_radius("Al", 3, 6)                     # ionic radius
+r_si_cryst = ap.get_radius("Si", 4, 4, prefer="crystal")
+
+# Bond distance estimates (radius sums)
+d_al_o = ap.bond_distance("Al", 3, 6, "O", -2, 4)
+d_si_o = ap.bond_distance("Si", 4, 4, "O", -2, 4, use_crystal=True)
+```
 
 ### Other Examples
 

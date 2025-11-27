@@ -288,14 +288,14 @@ def wrap(atoms, Box, return_type='cartesian'):
     
     Examples
     --------
-    >>> # Orthogonal box
-    >>> atoms = wrap(atoms, [10.0, 10.0, 10.0])
-    >>> 
-    >>> # Cell parameters
-    >>> atoms = wrap(atoms, [10.0, 10.0, 10.0, 90.0, 90.0, 120.0])
-    >>> 
-    >>> # GROMACS triclinic format
-    >>> atoms = wrap(atoms, [10.0, 10.0, 10.0, 0, 0, 2.0, 0, 0.5, 1.5])
+    # Orthogonal box
+    atoms = wrap(atoms, [10.0, 10.0, 10.0])
+     
+    # Cell parameters
+    atoms = wrap(atoms, [10.0, 10.0, 10.0, 90.0, 90.0, 120.0])
+     
+    # GROMACS triclinic format
+    atoms = wrap(atoms, [10.0, 10.0, 10.0, 0, 0, 2.0, 0, 0.5, 1.5])
     """
     _, Cell = normalize_box(Box)
     

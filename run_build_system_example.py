@@ -58,6 +58,10 @@ mmt1_atoms, _, _ = ap.substitute(
     o2_type=subst_o_type,
     min_o2o2_dist=5.2
 )
+# Tag first layer residue name for clean separation
+for atom in mmt1_atoms:
+    atom['resname'] = 'MMT1'
+    atom['molid'] = 1
 z_coords_1 = [atom['z'] for atom in mmt1_atoms]
 
 # Step 3: Create second montmorillonite layer with different substitution pattern
@@ -69,7 +73,6 @@ mmt2_atoms, _, _ = ap.substitute(
     o2_type=subst_o_type,
     min_o2o2_dist=5.2
 )
-z_coords_2 = [atom['z'] for atom in mmt2_atoms]
 
 # Step 4: Compute the new box dimensions with basal spacing of 18.9 Å
 full_box = box_6x4x1.copy()
@@ -80,10 +83,6 @@ full_box[2] = 2 * basal_spacing
 # Layer 1: centered at z=0 (split across bottom/top PBC)
 # Layer 2: centered at z=basal_spacing (middle of box)
 mmt2_atoms = ap.translate(mmt2_atoms, [0, 0, basal_spacing])
-
-# Check if translation affected mmt1_atoms (should not!)
-z_coords_1_after = [atom['z'] for atom in mmt1_atoms]
-z_coords_2_after = [atom['z'] for atom in mmt2_atoms]
 
 # Step 6: Combine the two layers
 combined_atoms = ap.update(mmt1_atoms, mmt2_atoms)
@@ -143,7 +142,7 @@ water_lower = ap.solvate(
     max_solvent=nWaters,
     solute_atoms=all_atoms,
     min_distance=2.0,
-    solvent_type='spce'
+    solvent_type='spce',
 )
 
 # Solvate upper interlayer - use the same limits as for ions
@@ -152,11 +151,15 @@ water_upper = ap.solvate(
     max_solvent=nWaters,
     solute_atoms=all_atoms,
     min_distance=2.0,
-    solvent_type='spce'
+    solvent_type='spce',
 )
 
 # Combine everything and update indices
 final_atoms = ap.update(all_atoms, water_lower, water_upper)
+
+# Step 8b: Write output files
+# PDB file
+ap.write_pdb(final_atoms, Box=full_box, file_path=f"{output_name}_final_atoms.pdb")
 
 # Step 9: Apply MINFF force field
 
