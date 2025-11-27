@@ -1,6 +1,7 @@
 """
 Bond valence sum utilities.
 
+
 This module parses the IUCr bond valence parameter table (bvparm2020.cif)
 and provides helpers to compute bond valence sums (BVS) and the Global
 Instability Index (GII) for inorganic structures.

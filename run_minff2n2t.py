@@ -1,6 +1,20 @@
 #!/usr/bin/env python3
-"""MINFF to n2t generator"""
-# Example: python minff2n2t.py structure.gro --output minff_atomname2type.n2t
+"""MINFF-typed n2t generator for gmx x2top.
+
+
+This CLI imports a structure, runs MINFF typing, and writes an n2t mapping that
+captures the typed environment ready for gmx x2top.
+
+Usage examples (run from repo root):
+  python minff2n2t.py Kaolinite_GII_0.0487.pdb
+  python minff2n2t.py conf/preem1.gro --output preem1_minff_atomname2type.n2t
+  python minff2n2t.py unitcell.xyz --output unitcell_minff_atomname2type.n2t
+
+What it does:
+  - Autodetects format with `import_auto` (keeps box/cell data).
+  - Applies `minff` typing before writing the n2t file.
+  - Writes <input>_minff_atomname2type.n2t unless --output is provided.
+"""
 
 import argparse
 from pathlib import Path

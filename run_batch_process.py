@@ -2,7 +2,6 @@
 """
 run_batch_process.py - Script to batch process multiple GRO files
 
-
 This script processes multiple GRO files from a specified folder by:
 1. Loading each GRO file (preem1.gro through preem45.gro)
 2. Assigning MINFF atom types to each structure

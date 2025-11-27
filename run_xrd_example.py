@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Quick XRD runner using atomipy.diffraction.xrd.
 
+
 This test script loads a structure (PDB/GRO/XYZ), prepares it for diffraction,
 and plots the calculated XRD profile. Optional flags let you tweak the scan
 range, wavelength, and whether to save the generated data files.

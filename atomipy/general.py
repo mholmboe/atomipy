@@ -2,6 +2,7 @@
 General module for atomipy - provides utility functions for structure manipulation.
 """
 
+
 import numpy as np
 from .transform import (
     cartesian_to_fractional,

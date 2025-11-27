@@ -1,6 +1,7 @@
 """
 Atomic size utilities backed by the Revised Shannon radii table.
 
+
 This module provides helper functions to retrieve crystal/ionic radii for single
 atoms and to estimate bond distances for pairs of atoms using oxidation state
 and coordination number.
