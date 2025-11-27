@@ -10,8 +10,14 @@ def pdb(atoms, Box, file_path):
        Box: a 1x6 or 1x9 list representing Cell dimensions (in Angstroms), either as 
             a Cell variable having Cell parameters array [a, b, c, alpha, beta, gamma], or as 
             a Box_dim variable having Box dimensions [lx, ly, lz, 0, 0, xy, 0, xz, yz] for triclinic cells.
-            Note that for orthogonal boxes Cell = Box_dim.
+           Note that for orthogonal boxes Cell = Box_dim.
        file_path: output filepath.
+
+    Examples
+    --------
+    import atomipy as ap
+    atoms, Box_dim = ap.import_gro("structure.gro")
+    ap.write_conf.pdb(atoms, Box_dim, "out.pdb")
     """
     # Normalize Box to Cell parameters
     _, Cell = normalize_box(Box)
@@ -90,7 +96,11 @@ def pdb(atoms, Box, file_path):
 
             # Charge (cols 79-80), right-justified. Default to empty if not found.
             raw_charge = atom.get('charge', '') 
-            charge_str = f"{str(raw_charge).strip()[:2]:>2}"
+            # PDB formal charge (cols 79-80) rarely used for partial charges; leave blank if non-numeric
+            if isinstance(raw_charge, (int, float)):
+                charge_str = f"{raw_charge:>2.0f}"
+            else:
+                charge_str = "  "
             
             # Construct the ATOM line using f-string formatting for precise columns
             # ATOM record fields and their typical column formatting:
@@ -134,6 +144,12 @@ def gro(atoms, Box, file_path):
             a Box_dim variable having Box dimensions [lx, ly, lz, 0, 0, xy, 0, xz, yz] for triclinic cells.
             Note that for orthogonal boxes Cell = Box_dim.
        file_path: output filepath.
+
+    Examples
+    --------
+    import atomipy as ap
+    atoms, Box_dim = ap.import_gro("structure.gro")
+    ap.write_conf.gro(atoms, Box_dim, "out.gro")
     """
     # Conversion factor from Angstroms to nm
     angstrom_to_nm = 0.1
@@ -216,6 +232,12 @@ def xyz(atoms, Box=None, file_path=None):
        Box: Optional 1x6 list [a, b, c, alpha, beta, gamma] or Box_dim (1x3 or 1x9 list).
            Default is to write Cell parameters if provided.
        file_path: output filepath.
+
+    Examples
+    --------
+    import atomipy as ap
+    atoms, Cell = ap.import_xyz("structure.xyz")
+    ap.write_conf.xyz(atoms, Cell, "out.xyz")
     """
     # Normalize Box to Cell parameters
     Cell = None

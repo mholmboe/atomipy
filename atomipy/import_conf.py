@@ -10,6 +10,11 @@ def pdb(file_path):
     Returns:
        atoms: list of dictionaries, each with keys: molid, index, resname, x, y, z, neigh, bonds, angles, element, type, fftype.
        Cell: a 1x6 list [a, b, c, alpha, beta, gamma] if available from CRYST1 record.
+
+    Examples
+    --------
+    atoms, Cell = pdb("structure.pdb")
+    atoms, Cell = pdb(file_path="structure.pdb")
     """
     atoms = []
     Cell = None
@@ -118,6 +123,11 @@ def gro(file_path):
        atoms: list of dictionaries, each with keys: molid, index, resname, x, y, z, vx, vy, vz, neigh, bonds, angles, element, type, fftype.
                 Coordinates (x, y, z) are converted to Angstroms.
        Box_dim: 1x3 (orthogonal) or 1x9 (triclinic) Box dimensions in Angstroms.
+
+    Examples
+    --------
+    atoms, Box_dim = gro("structure.gro")
+    atoms, Box_dim = gro(file_path="unitcell.gro")
     """
     atoms = []
     Box_dim = None
@@ -209,6 +219,11 @@ def xyz(file_path):
     Returns:
        atoms: list of dictionaries, each with keys: molid, index, resname, x, y, z, neigh, bonds, angles, element, type, fftype.
        Cell: a 1x6 list [a, b, c, alpha, beta, gamma] derived from Box_dim or directly from comment.
+
+    Examples
+    --------
+    atoms, Cell = xyz("structure.xyz")
+    atoms, Cell = xyz(file_path="with_box.xyz")
     """
     atoms = []
     Box_dim = None

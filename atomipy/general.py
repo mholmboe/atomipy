@@ -39,6 +39,12 @@ def scale(atoms, Box, scale_factors, resname=None):
     - For triclinic cells, the function first converts to orthogonal coordinates, 
       applies scaling, and then converts back to triclinic.
     - The function preserves the original cell angles for triclinic boxes.
+
+    Examples
+    --------
+    atoms, Box_dim = ap.import_gro("structure.gro")
+    atoms_scaled, Box_scaled = scale(atoms, Box_dim, 2.0)
+    atoms_scaled, Box_scaled = scale(atoms, Box_dim, [1.0, 1.0, 2.0], resname="WAT")
     """
     # Make a deep copy to avoid modifying the original atoms
     atoms = [atom.copy() for atom in atoms]

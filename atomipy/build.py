@@ -33,6 +33,12 @@ def is_centrosymmetric_along_z(atoms, tolerance=0.1):
     -------
     bool
         True if the structure appears to be centrosymmetric along z, False otherwise.
+
+    Examples
+    --------
+    from atomipy import is_centrosymmetric_along_z
+    atoms, Box = ap.import_gro("structure.gro")
+    is_centrosymmetric_along_z(atoms)
     """
     # Extract all z-coordinates
     z_coords = [atom['z'] for atom in atoms]
@@ -612,7 +618,8 @@ def slice(atoms, limits, remove_partial_molecules=True):
 
 
 def solvate(limits, density=1000.0, min_distance=2.0, max_solvent='max', 
-           solute_atoms=None, solvent_type='spce', custom_solvent=None, custom_box=None):
+           solute_atoms=None, solvent_type='spce', custom_solvent=None, custom_box=None,
+           include_solute=False):
     """
     Solvate a structure or region with water or other solvent molecules.
     
@@ -641,6 +648,8 @@ def solvate(limits, density=1000.0, min_distance=2.0, max_solvent='max',
         Custom solvent atoms structure. Default is None.
     custom_box : list of float, optional
         Box dimensions for the custom solvent. Default is None.
+    include_solute : bool, optional
+        If True, return solute + solvent; if False (default), return solvent only.
         
     Returns
     -------
@@ -816,7 +825,7 @@ def solvate(limits, density=1000.0, min_distance=2.0, max_solvent='max',
             atom['molid'] += max_solute_molid + 1
         
         # Combine
-        result = solute_atoms + solvent_result
+        result = solute_atoms + solvent_result if include_solute else solvent_result
     else:
         result = solvent_result
     

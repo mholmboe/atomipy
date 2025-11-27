@@ -57,78 +57,69 @@ def update(*atoms_list, molid=None, use_resname=True):
     if not atoms_copies:
         return []
     
-    # Ensure field consistency across all atom structures
-    # Find common fields across all structures
-    all_fields = set(atoms_copies[0][0].keys()) if atoms_copies[0] else set()
-    for atoms in atoms_copies[1:]:
-        if atoms:  # Skip empty structures
-            all_fields = all_fields.intersection(atoms[0].keys())
-    
-    # Remove fields not common to all structures
+    # Normalize field consistency across all structures:
+    # Use the union of all fields and fill missing ones with None to avoid dropping keys
+    all_fields = set()
+    for atoms in atoms_copies:
+        if atoms:
+            all_fields.update(atoms[0].keys())
     for i, atoms in enumerate(atoms_copies):
-        if not atoms:  # Skip empty structures
+        if not atoms:
             continue
         for j, atom in enumerate(atoms):
-            # Keep only common fields
-            atoms_copies[i][j] = {k: v for k, v in atom.items() if k in all_fields}
+            atoms_copies[i][j] = {k: atom.get(k) for k in all_fields}
     
-    # Handle single atom structure case
+    # If only one structure, just update indices/molids as requested
     if len(atoms_copies) == 1:
         return _update_single_structure(atoms_copies[0], molid, use_resname)
-    
-    # Combine multiple atom structures
+
     result_atoms = []
     current_molid = 1
-    
-    # Process and combine all structures
-    for i, atoms in enumerate(atoms_copies):
-        if not atoms:  # Skip empty structures
+
+    for atoms in atoms_copies:
+        if not atoms:
             continue
-            
-        # For the first structure, just update it
-        if not result_atoms:
-            result_atoms = _update_single_structure(atoms, current_molid, use_resname)
-            # Get the highest molid for the next structure
-            current_molid = max(atom['molid'] for atom in result_atoms) + 1
+
+        # If all atoms already have molids, preserve them and just adjust to avoid clashes
+        if all('molid' in a for a in atoms):
+            # Deep copy already done; adjust offset if needed
+            unique_molids = set(a['molid'] for a in atoms)
+            min_molid = min(unique_molids)
+            # If this is the first appended chunk, keep molids; otherwise, offset to continue sequence
+            if result_atoms:
+                offset = current_molid - min_molid
+                for a in atoms:
+                    a['molid'] = a['molid'] + offset
+            result_atoms.extend(atoms)
+            current_molid = max(a['molid'] for a in result_atoms) + 1
             continue
-        
-        # Update the current structure
+
+        # Otherwise, compute molids based on boundaries
         updated_atoms = _update_single_structure(atoms, None, use_resname)
-        
-        # Adjust molids to avoid conflicts
-        # Check if the structure has a single molid or multiple molids
+
         unique_molids = set(atom['molid'] for atom in updated_atoms)
-        
         if len(unique_molids) == 1:
-            # If just one molid, simply set all to the current molid
             for atom in updated_atoms:
                 atom['molid'] = current_molid
         else:
-            # If multiple molids, preserve their relative relationships
             min_molid = min(unique_molids)
             offset = current_molid - min_molid
-            
             for atom in updated_atoms:
                 atom['molid'] += offset
-        
-        # Append the updated structure
+
         result_atoms.extend(updated_atoms)
-        
-        # Update the current molid for the next structure
         current_molid = max(atom['molid'] for atom in result_atoms) + 1
-    
+
     # Update indices to be consecutive
     for i, atom in enumerate(result_atoms):
         atom['index'] = i + 1
-    
+
     # If a specific molid was provided, set all to that value
     if molid is not None:
         for atom in result_atoms:
             atom['molid'] = molid
-    
-    # Order attributes consistently
+
     result_atoms = order_attributes(result_atoms)
-    
     return result_atoms
 
 
@@ -165,34 +156,29 @@ def _update_single_structure(atoms, molid=None, use_resname=True):
         for atom in atoms:
             atom['molid'] = molid
         return atoms
-    
+
+    # If all atoms already have a molid, preserve them as-is (no regrouping)
+    if all('molid' in atom for atom in atoms):
+        return atoms
+
     # Make sure all atoms have a molid
     for i, atom in enumerate(atoms):
         if 'molid' not in atom:
-            # If no molids exist, assign sequential molids
             atom['molid'] = i + 1
     
-    # Update molids based on boundaries
-    current_molid = 1
+    # Update molids based on boundaries, starting from the first atom's molid
+    current_molid = atoms[0].get('molid', 1)
     atoms[0]['molid'] = current_molid
     
     for i in range(1, len(atoms)):
-        # Check for molecule boundary
         new_molecule = False
-        
-        # Different molid indicates a boundary
         if atoms[i]['molid'] != atoms[i-1]['molid']:
             new_molecule = True
-        
-        # Different residue name can also indicate a boundary if use_resname is True
         if use_resname and 'resname' in atoms[i] and 'resname' in atoms[i-1]:
             if atoms[i]['resname'] != atoms[i-1]['resname']:
                 new_molecule = True
-        
-        # Set the molid
         if new_molecule:
             current_molid += 1
-        
         atoms[i]['molid'] = current_molid
     
     return atoms

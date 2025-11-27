@@ -1,3 +1,14 @@
+"""
+Forcefield utilities for atom typing and statistics (MINFF, CLAYFF).
+
+Examples
+--------
+import atomipy as ap
+atoms, Box = ap.import_gro("structure.gro")
+atoms = ap.minff(atoms, Box)  # Assign MINFF types
+atoms = ap.clayff(atoms, Box) # Assign CLAYFF types
+"""
+
 import numpy as np
 from .bond_angle import bond_angle
 from .cell_utils import Box_dim2Cell, Cell2Box_dim, normalize_box
@@ -336,6 +347,13 @@ def minff(atoms, Box, ffname='minff', rmaxlong=2.45, rmaxH=1.2, log=False, log_f
     
     Returns:
         The updated atoms list with 'fftype' fields assigned.
+
+    Examples
+    --------
+    import atomipy as ap
+    atoms, Box = ap.import_gro("structure.gro")
+    atoms = ap.minff(atoms, Box)
+    atoms = ap.minff(atoms, [50, 50, 50], log=True, log_file="minff_stats.log")
     """
     # Set the atoms chemical element names
     atoms = element(atoms)  # Use correct function name 'element'
@@ -944,6 +962,13 @@ def clayff(atoms, Box, ffname='clayff', rmaxlong=2.45, rmaxH=1.2, log=False, log
     
     Returns:
         The updated atoms list with 'fftype' fields assigned.
+
+    Examples
+    --------
+    import atomipy as ap
+    atoms, Box = ap.import_gro("clay_structure.gro")
+    atoms = ap.clayff(atoms, Box)
+    atoms = ap.clayff(atoms, [40, 40, 40], log=True)
     """
     # Set the atoms chemical element names
     atoms = element(atoms)  # Use correct function name 'element'

@@ -1,12 +1,18 @@
 def vdw_radius():
-    """Return dictionary mapping elements to their van der Waals radii.
-    Values in angstroms.
-    
-    
+    """
+    Return a dictionary mapping elements to their van der Waals radii (Å).
+
     Returns
     -------
     dict
-        Dictionary mapping element symbols to their van der Waals radii in Angstroms.
+        Element symbol -> van der Waals radius in Angstroms.
+
+    Examples
+    --------
+    # Access oxygen VdW radius
+    from atomipy.radius import vdw_radius
+    radii = vdw_radius()
+    radii['O']  # 1.52
     """
     radii = {
         # Alkali metals
