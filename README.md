@@ -12,6 +12,8 @@ The package now supports generating GROMACS n2t (atom name to type) files for bo
 - [Key Features](#key-features)
 - [Requirements](#requirements)
 - [Installation](#installation)
+- [MINFF atom typing & topology generation](#minff-atom-typing--topology-generation)
+- [XRD pattern simulation](#xrd-pattern-simulation)
 - [Bond valence analysis](#bond-valence-analysis)
 - [Ionic/crystal radii and bond estimates (Shannon radii)](#ioniccrystal-radii-and-bond-estimates-shannon-radii)
 
@@ -83,6 +85,7 @@ Understanding the core containers and fields used in atomipy makes it easier to 
   - For .gro files, Box dimensions should be in the last line
   - For .xyz files, system dimensions should be on the second line after a # character
 - Generating topology files for MINFF and CLAYFF forcefields, for Gromacs (.itp), NAMD (.psf) and LAMMPS (.data)
+- High-performance X-ray diffraction pattern simulation and plotting via `diffraction.xrd`, with optional CLI helper `run_xrd_example.py`
 - Handle both orthogonal and triclinic simulation cells with periodic boundary conditions
 - Calculate bond distances, angles, dihedrals, and 1–4 pairs (`bond_angle_dihedral`)
 - Bond valence analysis utilities (bond valence sums and Global Instability Index)
@@ -262,6 +265,59 @@ python struct2n2t.py structure.gro
 
 This script auto-detects the input format, forwards the Box dimensions, and writes `<structure>.n2t`.
 
+### MINFF atom typing & topology generation
+
+Assign MINFF atom types/charges and write topology files directly from a structure:
+
+```python
+import atomipy as ap
+
+atoms, cell = ap.import_pdb("Kaolinite_GII_0.0487.pdb")
+typed = ap.minff(atoms, Box=cell, log=True)
+
+# Write out topologies
+ap.write_itp(typed, Box=cell, file_path="minff_Kao.itp")
+ap.write_pdb(typed, Box=cell, file_path="minff_Kao.pdb")
+ap.write_lmp(typed, Box=cell, file_path="minff_Kao.data")
+```
+
+If your input is GRO, pass the returned `Box_dim` to `minff`/writers:
+
+```python
+atoms, Box_dim = ap.import_gro("structure.gro")
+typed = ap.minff(atoms, Box=Box_dim)
+ap.write_itp(typed, Box=Box_dim, file_path="structure.itp")
+```
+
+Convenient helpers:
+- `run_create_itp_example.py` shows a minimal end-to-end MINFF + ITP + typed PDB workflow.
+- `minff2n2t.py` generates a MINFF-typed `.n2t` mapping for gmx x2top.
+
+### XRD pattern simulation
+
+atomipy includes a fast X-ray diffraction module (`atomipy.diffraction.xrd`) that can turn a PDB/GRO/XYZ structure plus its box/cell into a calculated powder pattern with optional plotting and data export.
+
+Command-line helper:
+```bash
+python run_xrd_example.py Kaolinite_GII_0.0487.pdb --two-theta 5 70 --save-output
+```
+
+Minimal API example:
+```python
+from atomipy import import_auto, xrd
+
+atoms, box = import_auto("Kaolinite_GII_0.0487.pdb")
+two_theta, intensity, fig = xrd(
+    atoms=atoms,
+    Box=box,
+    wavelength=1.54187,      # Cu K-alpha
+    two_theta_range=(5, 70), # degrees
+    angle_step=0.02,
+    save_output=False,
+)
+fig.show()
+```
+
 ### Common Issues for Beginners
 
 - **ModuleNotFoundError**: Make sure you've installed all required packages.
@@ -318,6 +374,10 @@ This script auto-detects the input format, forwards the Box dimensions, and writ
 - `wrap(atoms, Box, return_type='cartesian')`: Wrap atom coordinates into the primary simulation cell. Simple interface supporting orthogonal (1x3), triclinic (1x9), and Cell parameter (1x6) formats. Returns atoms with updated coordinates and fractional coordinates
 - `wrap_coordinates(atoms=None, coords=None, frac_coords=None, Box=None, add_to_atoms=True, return_type='fractional')`: Advanced wrapping function with more control over input/output formats
 - `get_cell_vectors(Box)`: Calculate Cell vectors from Box parameters
+
+### Diffraction
+
+- `xrd(atoms, Box, wavelength=1.54187, angle_step=0.02, two_theta_range=(2, 90), ...)`: Calculate and optionally plot/save an XRD powder pattern using the high-performance diffraction module (see `run_xrd_example.py` for CLI usage)
 - `get_orthogonal_box(Box)`: Get orthogonal Box dimensions from triclinic parameters
 - `replicate_system(atoms, Box, replicate=[1, 1, 1])`: Create supercells by replicating in a, b, c directions
 
