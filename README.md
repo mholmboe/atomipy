@@ -152,17 +152,13 @@ If you're new to Python, follow these simple steps to get started with atomipy:
 
 ### Step 3: Verify Installation
 
-To verify that atomipy is installed correctly, run this simple test:
+To verify that atomipy is installed correctly, run this one-liner:
 
-```python
-# Create a file named test_atomipy.py with these contents:
-import atomipy as ap
-print("atomipy installed successfully!")
-```
-
-Then run it with:
 ```bash
-python test_atomipy.py
+python - <<'PY'
+import atomipy as ap
+print("atomipy imported successfully, version:", ap.__version__)
+PY
 ```
 
 ## Getting Started for Python Beginners
@@ -184,7 +180,7 @@ atoms = ap.element(atoms)
 
 # Step 3: Calculate bonds and angles
 print("Calculating bonds and angles...")
-atoms = ap.bond_angle(atoms, Box=Box_dim)
+atoms, bonds, angles = ap.bond_angle(atoms, Box=Box_dim)
 
 # Step 4: Save as a new file
 print("Saving processed structure...")
@@ -218,7 +214,7 @@ else:
     Box = box_like
 
 # Process with forcefield (optional)
-atoms, _ = ap.minff(atoms, Box)
+atoms = ap.minff(atoms, Box)
 
 # Generate n2t file (Box argument now precedes the optional output path)
 n2t_path = ap.write_n2t(atoms, Box=Box, n2t_file="minff_atomtypes.n2t")
@@ -346,7 +342,7 @@ fig.show()
 
 - `write_itp(atoms, Box, file_path)`: Write a Gromacs topology file
 - `write_psf(atoms, Box, file_path)`: Write a NAMD topology file
-- `write_data(atoms, Box, file_path)`: Write a LAMMPS topology file
+- `write_lmp(atoms, Box, file_path)`: Write a LAMMPS topology file
 
 ### Atom Properties
 
@@ -448,15 +444,15 @@ Example usage with the different formats:
 ```python
 # Using orthogonal Box format
 Box_ortho = [30.0, 30.0, 30.0]  # lx, ly, lz in Angstroms
-atoms = ap.bond_angle(atoms, Box=Box_ortho)
+atoms, bonds, angles = ap.bond_angle(atoms, Box=Box_ortho)
 
 # Using Cell parameters format
 Box_cell = [30.0, 30.0, 30.0, 90.0, 90.0, 90.0]  # a, b, c, alpha, beta, gamma
-atoms = ap.bond_angle(atoms, Box=Box_cell)
+atoms, bonds, angles = ap.bond_angle(atoms, Box=Box_cell)
 
 # Using triclinic Box format
 Box_triclinic = [30.0, 30.0, 30.0, 0.0, 0.0, 5.0, 0.0, 5.0, 2.0]  # GROMACS format
-atoms = ap.bond_angle(atoms, Box=Box_triclinic)
+atoms, bonds, angles = ap.bond_angle(atoms, Box=Box_triclinic)
 ```
 
 ### Basic Structure Processing
