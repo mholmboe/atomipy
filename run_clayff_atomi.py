@@ -26,8 +26,6 @@ def main():
     # ------------------------------------------
     import os
     gro_file = "Kaolinite_GII_0.0487.gro"
-    # Use absolute path to ensure file is found regardless of working directory
-    gro_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), gro_file)
     
     print(f"Loading GRO structure from: {gro_file}")
     # Read the GRO file - returns atoms and Box dimensions
