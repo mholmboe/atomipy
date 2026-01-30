@@ -50,11 +50,6 @@ def assign_formal_charges(atoms):
             other_charge += atom['charge']
     
     total_charge = ion_charge + water_charge + other_charge
-    print("Total formal charge summary:")
-    print(f"  Ions: {ion_charge:.4f}")
-    print(f"  Water: {water_charge:.4f}")
-    print(f"  Others: {other_charge:.4f}")
-    print(f"  Total: {total_charge:.4f}")
     return atoms
 
 def get_ion_charge(atom_type):

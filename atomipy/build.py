@@ -200,14 +200,18 @@ def substitute(atoms, Box, num_oct_subst, o1_type, o2_type, min_o2o2_dist,
     if num_oct_subst > 0:
         print(f"\n=== Performing octahedral substitution: {o1_type} -> {o2_type} ===")
         
+        # Determine element for o2_type to ensure consistent updates
+        from .element import element
+        dummy_atom = {'type': o2_type}
+        element([dummy_atom])
+        o2_element = dummy_atom.get('element', '')
+
         # Find all O1 and O2 atoms
         ind_o1 = [i for i, atom in enumerate(atoms) if atom['type'] == o1_type or atom['type'] == o2_type]
         
         # If no atoms found by type, try to look by element
         if not ind_o1:
             print(f"No atoms with type '{o1_type}' found. Trying to match by element instead...")
-            from .element import element
-            
             # Ensure element field is populated for all atoms
             atoms = element(atoms)
             
@@ -228,6 +232,9 @@ def substitute(atoms, Box, num_oct_subst, o1_type, o2_type, min_o2o2_dist,
         # Create random permutation for O1 atoms
         rand_o1_index = np.random.permutation(len(o1_atoms))
         
+        # Select indices for substitution
+        oct_subst_index = []
+        
         # Calculate distance matrix for O1 atoms
         print(f"Calculating distance matrix for {len(o1_atoms)} octahedral sites...")
         o1_dist_matrix, _, _, _ = dist_matrix(o1_atoms, Box)
@@ -237,7 +244,6 @@ def substitute(atoms, Box, num_oct_subst, o1_type, o2_type, min_o2o2_dist,
         n_oct_lo = 0
         n_oct_hi = 0
         n_oct_mid = 0
-        oct_subst_index = []
         
         while (n_oct_lo + n_oct_hi + n_oct_mid) < num_oct_subst and i < len(o1_atoms):
             # Find existing O2 atoms
@@ -257,20 +263,25 @@ def substitute(atoms, Box, num_oct_subst, o1_type, o2_type, min_o2o2_dist,
                     oct_subst_index.append(rand_o1_index[i])
                     n_oct_lo += 1
                     o1_atoms[rand_o1_index[i]]['type'] = o2_type
+                    o1_atoms[rand_o1_index[i]]['element'] = o2_element
                 elif n_oct_hi < num_oct_subst / 2 and current_pos > ave_oct_z:
                     oct_subst_index.append(rand_o1_index[i])
                     n_oct_hi += 1
                     o1_atoms[rand_o1_index[i]]['type'] = o2_type
+                    o1_atoms[rand_o1_index[i]]['element'] = o2_element
                 elif (n_oct_lo + n_oct_hi + n_oct_mid) < num_oct_subst and current_pos == ave_oct_z:
                     oct_subst_index.append(rand_o1_index[i])
                     n_oct_mid += 1
                     o1_atoms[rand_o1_index[i]]['type'] = o2_type
+                    o1_atoms[rand_o1_index[i]]['element'] = o2_element
             
             i += 1
         
         # Update main atoms list with octahedral substitutions
         for idx, global_idx in enumerate(ind_o1):
             atoms[global_idx]['type'] = o1_atoms[idx]['type']
+            if 'element' in o1_atoms[idx]:
+                atoms[global_idx]['element'] = o1_atoms[idx]['element']
         
         # Store O2 atoms for later use
         o2_indices = [ind_o1[idx] for idx in oct_subst_index]
@@ -557,6 +568,57 @@ def _print_composition(atoms):
         print(f"  {atom_type}: {count} ({percentage:.1f}%)")
 
 
+def molecule(atoms, molid=1, resname=None):
+    """
+    Assign molecule ID (and optionally residue name) to atoms.
+
+    This function assigns the same molid to all atoms in the list, treating
+    them as a single molecule. Similar to MATLAB's molecule_atom function.
+
+    Parameters
+    ----------
+    atoms : list of dict
+        List of atom dictionaries.
+    molid : int, optional
+        Molecule ID to assign to all atoms (default: 1).
+    resname : str, optional
+        Residue name to assign to all atoms. If None, existing resnames 
+        are preserved (default: None).
+
+    Returns
+    -------
+    list of dict
+        Updated atoms with molid (and optionally resname) assigned.
+
+    Notes
+    -----
+    - This function modifies atoms in-place and also returns the modified list.
+    - Use this to group atoms as a single molecular unit before topology generation.
+
+    Examples
+    --------
+    # Assign all mineral atoms to molecule 1 with resname 'MIN':
+    MIN = ap.molecule(MIN, molid=1, resname='MIN')
+    
+    # Assign ions to molecule 2:
+    IONS = ap.molecule(IONS, molid=2)
+    """
+    atoms = copy.deepcopy(atoms)
+    
+    for atom in atoms:
+        atom['molid'] = molid
+        if resname is not None:
+            atom['resname'] = resname
+    
+    n_atoms = len(atoms)
+    if resname:
+        print(f"Assigned molid={molid} and resname='{resname}' to {n_atoms} atoms")
+    else:
+        print(f"Assigned molid={molid} to {n_atoms} atoms")
+    
+    return atoms
+
+
 def slice(atoms, limits, remove_partial_molecules=True):
     """
     Extract atoms within a region defined by limits.
@@ -616,262 +678,6 @@ def slice(atoms, limits, remove_partial_molecules=True):
         selected_atoms = [copy.deepcopy(atoms[i]) for i in in_region]
     
     return selected_atoms
-
-
-def solvate(limits, density=1000.0, min_distance=2.0, max_solvent='max', 
-           solute_atoms=None, solvent_type='spce', custom_solvent=None, custom_box=None,
-           include_solute=False):
-    """
-    Solvate a structure or region with water or other solvent molecules.
-    
-    Parameters
-    ----------
-    limits : list of float
-        Region limits [xlo, ylo, zlo, xhi, yhi, zhi] or [xhi, yhi, zhi] 
-        (the latter assumes xlo=ylo=zlo=0)
-    density : float, optional
-        Solvent density in kg/m³, default is 1000.0 (water)
-    min_distance : float or list of float, optional
-        Minimum distance between solute and solvent atoms. 
-        Can be a single value or [larger, smaller]
-        where smaller applies to hydrogens and larger to other atoms.
-        Default is 2.0 Å.
-    max_solvent : int or str, optional
-        Maximum number of solvent molecules, or 'max' for all possible,
-        or 'shell' for a shell around solute. If 'shell', can be one of
-        'shell10', 'shell15', 'shell20', 'shell25', or 'shell30' for different
-        shell thicknesses in Å. Default is 'max'.
-    solute_atoms : list of dict, optional
-        Solute atoms to be solvated. Default is None.
-    solvent_type : str, optional
-        Type of solvent ('spce', 'tip3p', etc.). Default is 'spce'.
-    custom_solvent : list of dict, optional
-        Custom solvent atoms structure. Default is None.
-    custom_box : list of float, optional
-        Box dimensions for the custom solvent. Default is None.
-    include_solute : bool, optional
-        If True, return solute + solvent; if False (default), return solvent only.
-        
-    Returns
-    -------
-    list of dict
-        Solvated structure (solvent only or solute + solvent)
-        
-    Notes
-    -----
-    - If solute_atoms is provided, atoms from the solvent that overlap with 
-      the solute will be removed.
-    - The 'shell' option creates a solvent shell of specified thickness around the solute.
-    - Atom types in water molecules are typically 'OW', 'HW1', and 'HW2'.
-    """
-    # Standardize limits to [xlo, ylo, zlo, xhi, yhi, zhi] format
-    if len(limits) == 3:
-        xlo, ylo, zlo = 0, 0, 0
-        xhi, yhi, zhi = limits
-    elif len(limits) == 6:
-        xlo, ylo, zlo, xhi, yhi, zhi = limits
-    else:
-        raise ValueError("Limits must be a list of length 3 [xhi, yhi, zhi] "
-                         "or 6 [xlo, ylo, zlo, xhi, yhi, zhi]")
-    
-    # Calculate Box dimensions
-    box_dim = [xhi - xlo, yhi - ylo, zhi - zlo]
-    
-    # Parse shell thickness if provided
-    shell_thickness = None
-    if isinstance(max_solvent, str) and max_solvent.startswith('shell'):
-        if max_solvent == 'shell10':
-            shell_thickness = 10.0
-        elif max_solvent == 'shell15':
-            shell_thickness = 15.0
-        elif max_solvent == 'shell20':
-            shell_thickness = 20.0
-        elif max_solvent == 'shell25':
-            shell_thickness = 25.0
-        elif max_solvent == 'shell30':
-            shell_thickness = 30.0
-        elif max_solvent == 'shell':
-            shell_thickness = 10.0  # Default
-        else:
-            try:
-                # Try to extract thickness from string like 'shell12.5'
-                shell_thickness = float(max_solvent[5:])
-            except ValueError:
-                shell_thickness = 10.0  # Default if parsing fails
-    
-    # Load solvent structure
-    if custom_solvent is not None and custom_box is not None:
-        solvent_atoms = copy.deepcopy(custom_solvent)
-        solvent_box = custom_box
-    else:
-        # Load standard solvent
-        solvent_atoms, solvent_box = _load_solvent(solvent_type)
-    
-    # Find how many atoms per solvent molecule (e.g., 3 for SPC water)
-    unique_molids = set(atom['molid'] for atom in solvent_atoms)
-    atoms_per_molecule = len(solvent_atoms) / len(unique_molids)
-    
-    # Calculate how many solvent molecules are needed to fill the Box
-    # For water, 1000 kg/m³ is about 33.3 molecules per nm³
-    volume_nm3 = (box_dim[0] / 10) * (box_dim[1] / 10) * (box_dim[2] / 10)
-    molecules_per_nm3 = density / 30  # Approximate for water
-    n_molecules_needed = int(volume_nm3 * molecules_per_nm3)
-    
-    if isinstance(max_solvent, int):
-        n_molecules_needed = min(n_molecules_needed, max_solvent)
-    
-    # Calculate how many times to replicate the solvent Box
-    nx = int(np.ceil((xhi - xlo) / solvent_box[0]))
-    ny = int(np.ceil((yhi - ylo) / solvent_box[1]))
-    nz = int(np.ceil((zhi - zlo) / solvent_box[2]))
-    
-    # Create the full solvent Box by replication
-    full_solvent = []
-    for ix in range(nx):
-        for iy in range(ny):
-            for iz in range(nz):
-                for atom in solvent_atoms:
-                    new_atom = atom.copy()
-                    new_atom['x'] = atom['x'] + ix * solvent_box[0] + xlo
-                    new_atom['y'] = atom['y'] + iy * solvent_box[1] + ylo
-                    new_atom['z'] = atom['z'] + iz * solvent_box[2] + zlo
-                    # Adjust molid to keep track of different molecules
-                    new_atom['molid'] = atom['molid'] + (ix * ny * nz + iy * nz + iz) * len(unique_molids)
-                    full_solvent.append(new_atom)
-    
-    # Slice to get only atoms within the target region
-    sliced_solvent = slice(full_solvent, [xlo, ylo, zlo, xhi, yhi, zhi])
-    
-    # Randomize the order of molecules for unbiased selection
-    unique_molids = set(atom['molid'] for atom in sliced_solvent)
-    molid_list = list(unique_molids)
-    random.shuffle(molid_list)
-    
-    if shell_thickness is None and solute_atoms is None:
-        # Just fill the Box
-        if n_molecules_needed < len(molid_list):
-            # Take only the required number of molecules
-            selected_molids = set(molid_list[:n_molecules_needed])
-            solvent_result = [atom for atom in sliced_solvent 
-                             if atom['molid'] in selected_molids]
-        else:
-            solvent_result = sliced_solvent
-    elif shell_thickness is not None and solute_atoms is not None:
-        # Create a shell of solvent around the solute
-        # First, merge solvent with solute, removing overlaps
-        non_overlapping = merge(solute_atoms, sliced_solvent, box_dim, 
-                               atom_label=['HW1', 'HW2'], 
-                               min_distance=[min_distance, min_distance/2])
-        
-        # Now create a shell by keeping only molecules within the shell distance
-        # but not closer than min_distance
-        combined = solute_atoms + non_overlapping
-        distances = dist_matrix(combined, box_dim)[0]
-        
-        # Extract solute-solvent distances
-        solute_solvent_dist = distances[:len(solute_atoms), len(solute_atoms):]
-        
-        # Identify molecules in the shell
-        shell_molids = set()
-        for i, atom in enumerate(non_overlapping):
-            dist_idx = i + len(solute_atoms)  # Index in the combined distance matrix
-            min_dist = min(distances[:len(solute_atoms), dist_idx])
-            if min_dist <= shell_thickness:
-                shell_molids.add(atom['molid'])
-        
-        # Keep only molecules in the shell
-        solvent_result = [atom for atom in non_overlapping 
-                         if atom['molid'] in shell_molids]
-        
-        # If max_solvent is a number, limit the molecules
-        if isinstance(max_solvent, int):
-            unique_shell_molids = list(shell_molids)
-            random.shuffle(unique_shell_molids)
-            if max_solvent < len(unique_shell_molids):
-                selected_molids = set(unique_shell_molids[:max_solvent])
-                solvent_result = [atom for atom in solvent_result 
-                                 if atom['molid'] in selected_molids]
-    else:
-        # Just remove overlapping solvent molecules
-        solvent_result = merge(solute_atoms, sliced_solvent, box_dim,
-                              atom_label=['HW1', 'HW2'],
-                              min_distance=[min_distance, min_distance/2])
-        
-        # If max_solvent is a number, limit the molecules
-        if isinstance(max_solvent, int):
-            unique_molids = set(atom['molid'] for atom in solvent_result)
-            molid_list = list(unique_molids)
-            random.shuffle(molid_list)
-            if max_solvent < len(molid_list):
-                selected_molids = set(molid_list[:max_solvent])
-                solvent_result = [atom for atom in solvent_result 
-                                 if atom['molid'] in selected_molids]
-    
-    # Calculate statistics for output
-    n_solvent_molecules = len(set(atom['molid'] for atom in solvent_result))
-    n_solvent_atoms = len(solvent_result)
-    
-    # Calculate subvolume
-    volume_angstrom3 = box_dim[0] * box_dim[1] * box_dim[2]
-    
-    # Print the solvation statistics
-    print(f"  Subvolume: {box_dim[0]:.2f} x {box_dim[1]:.2f} x {box_dim[2]:.2f} Å³ = {volume_angstrom3:.2f} Ų")
-    print(f"  Added {n_solvent_molecules} water molecules ({n_solvent_atoms} atoms)")
-    
-    # Combine solute and solvent if solute is provided
-    if solute_atoms is not None:
-        # Update molids to avoid conflicts
-        max_solute_molid = max(atom['molid'] for atom in solute_atoms) if solute_atoms else 0
-        for atom in solvent_result:
-            atom['molid'] += max_solute_molid + 1
-        
-        # Combine
-        result = solute_atoms + solvent_result if include_solute else solvent_result
-    else:
-        result = solvent_result
-    
-    return result
-
-
-def _load_solvent(solvent_type='spce'):
-    """
-    Load a pre-equilibrated solvent Box.
-    
-    Parameters
-    ----------
-    solvent_type : str, optional
-        Type of solvent ('spce', 'tip3p', etc.)
-        
-    Returns
-    -------
-    tuple
-        (solvent_atoms, solvent_box)
-    """
-    from . import import_pdb
-    
-    # Define path to solvent structures
-    base_path = os.path.dirname(os.path.abspath(__file__))
-    structures_path = os.path.join(base_path, 'structures', 'water')
-    
-    # Map solvent type to filename
-    solvent_files = {
-        'spce': '864_spce.pdb',
-        'spc': '864_spce.pdb',  # Alias
-        'tip3p': '864_tip3p.pdb',
-        'tip4p': '864_tip4p.pdb',
-    }
-    
-    # Get the appropriate solvent file
-    if solvent_type.lower() in solvent_files:
-        solvent_file = os.path.join(structures_path, solvent_files[solvent_type.lower()])
-    else:
-        raise ValueError(f"Unsupported solvent type: {solvent_type}")
-    
-    # Import the solvent structure
-    atoms, Cell = import_pdb(solvent_file)
-    box_dim = Cell2Box_dim(Cell)
-    
-    return atoms, box_dim
 
 
 def _get_surface_atoms(atoms, distance_threshold=2.5):
@@ -1240,3 +1046,384 @@ def insert(molecule_atoms, limits, rotate='random', min_distance=2.0,
         print(f"Warning: Could only insert {molecule_counter} out of {num_molecules} requested molecules")
     
     return inserted_atoms
+
+
+# =====================================================
+# Hydrogen Manipulation Functions
+# =====================================================
+
+def add_H_atom(atoms, Box, target_type, h_type='H', bond_length=0.96, coordination=1, max_h_per_atom=1):
+    """
+    Add hydrogen atoms to under-coordinated atoms of a specific type.
+    
+    This is commonly used to protonate edge oxygen atoms or other sites.
+    
+    Parameters
+    ----------
+    atoms : list of dict
+        List of atom dictionaries.
+    Box : list
+        Box dimensions [lx, ly, lz, ...].
+    target_type : str
+        Atom type to check for protonation (e.g., 'Oh', 'Ob').
+    h_type : str, optional
+        Atom type for the new hydrogen atoms. Default is 'H'.
+    bond_length : float, optional
+        Distance for the new O-H bond. Default is 0.96 A.
+    coordination : int, optional
+        Target coordination number. If current CN < coordination, H is added. Default is 1.
+        NOTE: This checks ALL neighbors. For specificity (e.g. only metal neighbors), simpler logic 
+        is usually sufficient: if an atom has fewer than X total neighbors, add H.
+    max_h_per_atom : int, optional
+        Maximum number of H atoms to add per target atom. Default is 1.
+        
+    Returns
+    -------
+    list of dict
+        Updated atoms list with new hydrogens.
+    """
+    print(f"Adding H atoms to '{target_type}' (target CN={coordination})...")
+    
+    # Needs neighbor list
+    if not atoms or 'neigh' not in atoms[0]:
+        print("  Calculating neighbor list...")
+        from .bond_angle import bond_angle
+        atoms, _, _ = bond_angle(atoms, Box, rmaxM=2.45, rmaxH=1.2, same_molecule_only=False) # Use typical metal-oxygen cutoff
+        
+    new_atoms = []
+    count_added = 0
+    
+    # Iterate through existing atoms containing neighbors
+    n_original = len(atoms)
+    
+    for i in range(n_original):
+        atom = atoms[i]
+        
+        # Check if this is a target atom
+        if atom.get('type') != target_type:
+            continue
+            
+        neighbors = atom.get('neigh', [])
+        current_cn = len(neighbors)
+        
+        # Check if under-coordinated
+        if current_cn < coordination:
+            n_needed = min(coordination - current_cn, max_h_per_atom)
+            
+            if n_needed <= 0:
+                continue
+                
+            origin = np.array([atom['x'], atom['y'], atom['z']])
+            
+            # Get vectors to existing neighbors
+            neighbor_vectors = []
+            for n_idx in neighbors:
+                n_atom = atoms[n_idx]
+                n_pos = np.array([n_atom['x'], n_atom['y'], n_atom['z']])
+                vec = n_pos - origin
+                # Minimal simple PBC check assuming orthogonal Box for vector calculation
+                if Box is not None and len(Box) >= 3:
+                     for d in range(3):
+                         L = Box[d]
+                         if vec[d] > L/2: vec[d] -= L
+                         elif vec[d] < -L/2: vec[d] += L
+                neighbor_vectors.append(vec / np.linalg.norm(vec))
+            
+            # Add H atoms
+            for _ in range(n_needed):
+                # Generate random unit vector
+                for attempt in range(20):
+                    # Random point on sphere
+                    costheta = random.uniform(-1, 1)
+                    phi = random.uniform(0, 2*np.pi)
+                    theta = np.arccos(costheta)
+                    
+                    hx = np.sin(theta) * np.cos(phi)
+                    hy = np.sin(theta) * np.sin(phi)
+                    hz = np.cos(theta)
+                    h_vec = np.array([hx, hy, hz])
+                    
+                    # Check angle with existing neighbors (avoid overlap)
+                    too_close = False
+                    for n_vec in neighbor_vectors:
+                        dot = np.dot(h_vec, n_vec)
+                        if dot > 0.9: # Very close overlap (~25 deg)
+                            too_close = True
+                            break
+                    
+                    if not too_close or attempt == 19:
+                        # Accept position
+                        h_pos = origin + h_vec * bond_length
+                        
+                        # Create new atom
+                        new_h = {
+                            'type': h_type,
+                            'element': 'H',
+                            'resname': atom.get('resname', 'MIN'),
+                            'molid': atom.get('molid', 1),
+                            'x': h_pos[0],
+                            'y': h_pos[1],
+                            'z': h_pos[2],
+                            'charge': 0.4, # Default placeholder
+                            'mass': 1.008
+                        }
+                        new_atoms.append(new_h)
+                        
+                        # Treat this new H as a neighbor for subsequent H additions to same atom
+                        neighbor_vectors.append(h_vec)
+                        break
+            
+            count_added += len(new_atoms) - count_added # Track added count
+
+    print(f"  Added {len(new_atoms)} new '{h_type}' atoms.")
+    
+    # Combine lists
+    full_list = atoms + new_atoms
+    
+    # Re-index
+    for i, atom in enumerate(full_list):
+        atom['index'] = i + 1
+        # Clear neighbor lists as they are now stale/incomplete
+        if 'neigh' in atom:
+            del atom['neigh']
+        
+    return full_list
+
+
+def adjust_H_atom(atoms, Box, h_type='H', neighbor_type='O', distance=0.96):
+    """
+    Adjust bond lengths of hydrogen atoms involved in specified bonds.
+    
+    Parameters
+    ----------
+    atoms : list of dict
+        List of atom dictionaries.
+    Box : list
+        Box dimensions.
+    h_type : str
+        Type of hydrogen atom to adjust.
+    neighbor_type : str
+        Type of atom the hydrogen is bonded to.
+    distance : float
+        Target bond length.
+        
+    Returns
+    -------
+    list of dict
+        Updated atoms list.
+    """
+    print(f"Adjusting '{h_type}'-'{neighbor_type}' bonds to {distance} A...")
+    
+    # Needs neighbor list
+    if not atoms or 'neigh' not in atoms[0]:
+        from .bond_angle import bond_angle
+        atoms, _, _ = bond_angle(atoms, Box, rmaxH=2.0, rmaxM=2.5, same_molecule_only=False) # Larger cutoff for potentially distorted bonds
+    
+    adj_count = 0
+    xyz_box = Box[:3] if Box else [1000, 1000, 1000]
+    
+    for i, atom in enumerate(atoms):
+        if atom.get('type') != h_type:
+            continue
+            
+        neighbors = atom.get('neigh', [])
+        
+        # Find the bonded neighbor of correct type
+        bonded_idx = -1
+        for n_idx in neighbors:
+            if atoms[n_idx].get('type') == neighbor_type:
+                bonded_idx = n_idx
+                break
+        
+        if bonded_idx != -1:
+            neighbor = atoms[bonded_idx]
+            
+            # Vector neighbor -> H
+            dx = atom['x'] - neighbor['x']
+            dy = atom['y'] - neighbor['y']
+            dz = atom['z'] - neighbor['z']
+            
+            # MIC
+            if dx > xyz_box[0]/2: dx -= xyz_box[0]
+            elif dx < -xyz_box[0]/2: dx += xyz_box[0]
+            if dy > xyz_box[1]/2: dy -= xyz_box[1]
+            elif dy < -xyz_box[1]/2: dy += xyz_box[1]
+            if dz > xyz_box[2]/2: dz -= xyz_box[2]
+            elif dz < -xyz_box[2]/2: dz += xyz_box[2]
+            
+            current_dist = np.sqrt(dx*dx + dy*dy + dz*dz)
+            
+            if current_dist > 0.01: # Avoid division by zero
+                scale = distance / current_dist
+                
+                # Update H position relative to neighbor
+                atom['x'] = neighbor['x'] + dx * scale
+                atom['y'] = neighbor['y'] + dy * scale
+                atom['z'] = neighbor['z'] + dz * scale
+                
+                adj_count += 1
+                
+    print(f"  Adjusted {adj_count} bonds.")
+    return atoms
+
+
+def adjust_Hw_atom(atoms, Box, water_resname='SOL', water_model='OPC3'):
+    """
+    Repair water molecules: add missing hydrogens and fix geometry.
+    
+    Parameters
+    ----------
+    atoms : list of dict
+        List of atom dictionaries.
+    Box : list
+        Box dimensions.
+    water_resname : str
+        Residue name for water (e.g. 'SOL', 'WAT').
+    water_model : str
+        Water model to determine ideal geometry ('SPC', 'TIP3P', 'OPC3', etc.).
+        Default 'OPC3': r(OH)=0.9572, angle=104.52
+        
+    Returns
+    -------
+    list of dict
+        Updated atoms list.
+    """
+    print(f"Adjusting water molecules ('{water_resname}', model={water_model})...")
+    
+    # Model parameters
+    if 'SPC' in water_model.upper():
+        r_oh = 1.0
+        angle_hoh_deg = 109.47
+        qh = 0.41 if 'E' not in water_model else 0.4238
+    else: # Default/OPC3/TIP3P
+        r_oh = 0.9572
+        angle_hoh_deg = 104.52
+        qh = 0.447585 if 'OPC' in water_model else 0.417
+        
+    angle_rad = np.deg2rad(angle_hoh_deg)
+    
+    # Find water atoms
+    water_indices = [i for i, a in enumerate(atoms) if a.get('resname', '') == water_resname]
+    if not water_indices:
+        print("  No water atoms found.")
+        return atoms
+        
+    # Organize by molid (or residue number if molid missing)
+    molecules = {}
+    for idx in water_indices:
+        atom = atoms[idx]
+        mol_id = atom.get('molid', atom.get('resnr', -1))
+        if mol_id not in molecules:
+            molecules[mol_id] = []
+        molecules[mol_id].append(idx)
+        
+    new_atoms = []
+    
+    for mol_id, indices in molecules.items():
+        oxy_indices = [i for i in indices if atoms[i]['type'].upper().startswith('O')]
+        hyd_indices = [i for i in indices if atoms[i]['type'].upper().startswith('H')]
+        
+        if not oxy_indices:
+            continue
+            
+        oxy_idx = oxy_indices[0] # Assume 1 oxygen per water
+        oxy = atoms[oxy_idx]
+        ox_pos = np.array([oxy['x'], oxy['y'], oxy['z']])
+        
+        current_h_count = len(hyd_indices)
+        
+        if current_h_count < 2:
+            # Generate vectors
+            costheta = random.uniform(-1, 1)
+            phi = random.uniform(0, 2*np.pi)
+            theta = np.arccos(costheta)
+            h1_vec = np.array([
+                np.sin(theta) * np.cos(phi),
+                np.sin(theta) * np.sin(phi),
+                np.cos(theta)
+            ])
+            
+            # Orthogonal vector for rotation axis
+            tmp_vec = np.array([1, 0, 0])
+            if abs(np.dot(h1_vec, tmp_vec)) > 0.9: tmp_vec = np.array([0, 1, 0])
+            axis = np.cross(h1_vec, tmp_vec)
+            axis /= np.linalg.norm(axis)
+            
+            # H2 vector rotated by angle
+            h2_vec = h1_vec * np.cos(angle_rad) + np.cross(axis, h1_vec) * np.sin(angle_rad)
+            
+            # ... Logic for partial existence (1 H) skipped for brevity of initial impl, 
+            # assume simplest case of adding missing ones from scratch relative to O or random
+            # Just create new Hs
+            
+            h_positions_to_add = []
+            if current_h_count == 0:
+                h_positions_to_add = [ox_pos + h1_vec * r_oh, ox_pos + h2_vec * r_oh]
+            elif current_h_count == 1:
+                # Keep H1, add H2 relative to O-H1
+                h_idx = hyd_indices[0]
+                h1_vec_exist = np.array([atoms[h_idx]['x'], atoms[h_idx]['y'], atoms[h_idx]['z']]) - ox_pos
+                h1_vec_exist /= np.linalg.norm(h1_vec_exist)
+                
+                # New axis perpendicular to existing bond
+                tmp_vec = np.array([1, 0, 0])
+                if abs(np.dot(h1_vec_exist, tmp_vec)) > 0.9: tmp_vec = np.array([0, 1, 0])
+                axis = np.cross(h1_vec_exist, tmp_vec)
+                axis /= np.linalg.norm(axis)
+                
+                h2_vec_new = h1_vec_exist * np.cos(angle_rad) + np.cross(axis, h1_vec_exist) * np.sin(angle_rad)
+                h_positions_to_add = [ox_pos + h2_vec_new * r_oh]
+                
+            for h_pos in h_positions_to_add:
+                new_h = {
+                    'type': 'HW',
+                    'element': 'H',
+                    'resname': oxy['resname'],
+                    'molid': oxy['molid'],
+                    'x': h_pos[0],
+                    'y': h_pos[1],
+                    'z': h_pos[2],
+                    'charge': qh,
+                    'mass': 1.008
+                }
+                new_atoms.append(new_h)
+                    
+        elif current_h_count == 2:
+            # Fix geometry of existing 2 H
+            h1_idx, h2_idx = hyd_indices[0], hyd_indices[1]
+            h1, h2 = atoms[h1_idx], atoms[h2_idx]
+            
+            v1 = np.array([h1['x'], h1['y'], h1['z']]) - ox_pos
+            v2 = np.array([h2['x'], h2['y'], h2['z']]) - ox_pos
+            
+            # Bisector
+            bisector = v1 + v2
+            if np.linalg.norm(bisector) < 0.1: bisector = np.array([1, 0, 0])
+            bisector /= np.linalg.norm(bisector)
+            
+            # Plane normal
+            normal = np.cross(v1, v2)
+            if np.linalg.norm(normal) < 0.1: normal = np.array([0, 0, 1])
+            normal /= np.linalg.norm(normal)
+            
+            # New vectors
+            half_angle = angle_rad / 2
+            v1_new = bisector * np.cos(half_angle) + np.cross(normal, bisector) * np.sin(half_angle)
+            v2_new = bisector * np.cos(-half_angle) + np.cross(normal, bisector) * np.sin(-half_angle)
+            
+            p1 = ox_pos + v1_new * r_oh
+            p2 = ox_pos + v2_new * r_oh
+            
+            atoms[h1_idx].update({'x': p1[0], 'y': p1[1], 'z': p1[2]})
+            atoms[h2_idx].update({'x': p2[0], 'y': p2[1], 'z': p2[2]})
+
+    print(f"  Added {len(new_atoms)} missing water hydrogens.")
+    
+    full_list = atoms + new_atoms
+    for i, atom in enumerate(full_list):
+        atom['index'] = i + 1
+        # Clear neighbor lists as they are now stale/incomplete
+        if 'neigh' in atom:
+            del atom['neigh']
+            
+    return full_list

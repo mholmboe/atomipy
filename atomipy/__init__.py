@@ -98,15 +98,30 @@ scale = general.scale
 # ===== Build functions =====
 from . import build
 substitute = build.substitute
+molecule = build.molecule
 merge = build.merge
 slice = build.slice
-solvate = build.solvate
 ionize = build.ionize
 insert = build.insert
+add_H_atom = build.add_H_atom
+adjust_H_atom = build.adjust_H_atom
+adjust_Hw_atom = build.adjust_Hw_atom
+
+# ===== Resname functions =====
+from .resname import assign_resname
+
+# ===== Solvent functions =====
+from .solvent import find_H2O, solvate
 
 # ===== Force field functions =====
 try:
-    from .forcefield import minff, clayff, write_n2t
+    from .forcefield import minff, clayff, write_n2t, get_structure_stats
+except ImportError:
+    pass
+
+# ===== Forcefield parameters loading =====
+try:
+    from .ffparams import load_forcefield, list_blocks as list_ff_blocks, get_ffparams_dir
 except ImportError:
     pass
 
@@ -145,14 +160,17 @@ __all__ = [
     'write_pdb', 'write_gro', 'write_xyz', 'write_auto',
     'write_itp', 'write_psf', 'write_lmp', 'import_itp_topology',
     'element', 'radius', 'mass', 'set_atomic_masses', 'com',
-    'dist_matrix', 'cell_list_dist_matrix', 'bond_angle', 'bond_angle_dihedral',
+    'dist_matrix', 'cell_list_dist_matrix', 'bond_angle', 'bond_angle_dihedral', 'find_H2O',
     'normalize_box','Box_dim2Cell', 'Cell2Box_dim',
     'cartesian_to_fractional', 'fractional_to_cartesian', 'wrap', 'wrap_coordinates',
     'triclinic_to_orthogonal', 'orthogonal_to_triclinic', 'get_orthogonal_box', 'get_cell_vectors',
     'direct_cartesian_to_fractional', 'direct_fractional_to_cartesian',
     'replicate_system', 'translate', 'rotate', 'place', 'center', 'update', 'scale',
-    'substitute', 'merge', 'slice', 'solvate', 'ionize', 'insert',
+    'substitute', 'molecule', 'merge', 'slice', 'solvate', 'ionize', 'insert',
+    'add_H_atom', 'adjust_H_atom', 'adjust_Hw_atom',
+    'assign_resname',
     'minff', 'clayff', 'write_n2t',
+    'load_forcefield', 'list_ff_blocks',
     'charge_minff', 'charge_clayff', 'balance_charges', 'assign_formal_charges',
     'compute_bvs', 'global_instability_index', 'load_bv_params', 'load_shannon_radii', 'bond_valence', 'summarize_bvs',
     'analyze_bvs', 'conf2bvs',

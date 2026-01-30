@@ -17,9 +17,8 @@ from .charge import charge_minff, charge_clayff, assign_formal_charges
 from .element import element  # Correct function name is 'element' not 'set_element'
 from .mass import set_atomic_masses
 
-def get_structure_stats(atoms, total_charge, ffname, Box=None, log_file=None):
+def get_structure_stats(atoms, Box=None, total_charge=0, log_file='output.log', ffname='minff'):
     """Generate statistics about atom types, coordination, and charges in the structure.
-    
     
     This function analyzes atom types, their coordination environment, charges,
     coordination numbers, bond distances, and angles, and outputs a formatted report.
@@ -27,16 +26,18 @@ def get_structure_stats(atoms, total_charge, ffname, Box=None, log_file=None):
     
     Args:
         atoms: List of atom dictionaries containing 'type', 'neigh', 'charge', etc. keys.
-        total_charge: The total charge of the system.
-        ffname: The name of the forcefield used (e.g., 'minff', 'clayff').
         Box: Optional simulation cell dimensions. Accepts 1x3 (orthogonal),
              1x6 (Cell parameters), or 1x9 (triclinic GROMACS-style) arrays.
-        log_file: Optional path to a log file. If provided, statistics will be
-                 written to this file.
+        total_charge: Total charge of the system (default: 0). If 0, it will be calculated.
+        log_file: Path to the output log file (default: 'output.log').
+        ffname: The name of the forcefield used, e.g., 'minff' or 'clayff' (default: 'minff').
     
     Returns:
         A string containing the structure statistics.
     """
+    if total_charge == 0:
+        total_charge = sum(float(a.get('charge', 0) or 0) for a in atoms)
+    
     import numpy as np
     from collections import defaultdict
     import math
@@ -143,7 +144,7 @@ def get_structure_stats(atoms, total_charge, ffname, Box=None, log_file=None):
     output = []
     
     # Calculate total mass for density calculation
-    total_mass = sum(atom.get('mass', 0.0) for atom in atoms)
+    total_mass = sum(atom.get('mass', 0.0) or 0.0 for atom in atoms)
     
     # Add Box dimensions, volume, and density information
     if Box_dim is not None or Cell is not None:
@@ -230,10 +231,10 @@ def get_structure_stats(atoms, total_charge, ffname, Box=None, log_file=None):
         
         # If there's only one unique charge, display it as before
         if len(unique_charges) == 1:
-            charge_str = f"{unique_charges[0]:.5f}"
+            charge_str = f"{unique_charges[0]:.6f}"
         else:
             # Otherwise, display all unique charges separated by commas
-            charge_str = ', '.join([f"{c:.5f}" for c in sorted(unique_charges)])
+            charge_str = ', '.join([f"{c:.6f}" for c in sorted(unique_charges)])
         
         output.append(f"{atom_type:<10} {count:<6} {neighbor_pattern:<20} {charge_str:>15}")
     
@@ -330,6 +331,9 @@ def minff(atoms, Box, ffname='minff', rmaxlong=2.45, rmaxH=1.2, log=False, log_f
     using a two-pass approach to first determine coordination numbers and then assign types based on
     structural environment.
     
+    Water molecules (residue 'SOL') and Ions (residue 'ION') are treated specially: their atom types
+    are standardized (e.g., 'Ow', 'Hw', 'Na') and preserved, skipping the structural type assignment.
+    
     For details, see the MINFF forcefield documentation at github.com/mholmboe/minff.
     
     Args:
@@ -396,7 +400,19 @@ def minff(atoms, Box, ffname='minff', rmaxlong=2.45, rmaxH=1.2, log=False, log_f
             atom_type_lower = atom_type.lower()
             
             # Map atom types to elements based on first 1-3 characters
-            if atom_type_lower.startswith('si'):  
+            if atom.get('resname') == 'SOL':
+                if atom_type_lower.startswith('o'):
+                    atom['element'] = 'Ow'
+                elif atom_type_lower.startswith('h'):
+                    atom['element'] = 'Hw'
+            elif atom.get('resname') == 'ION':
+                if atom_type_lower.startswith('sod') or atom_type_lower.startswith('na'):
+                    atom['element'] = 'Na'
+                elif atom_type_lower.startswith('cla') or atom_type_lower.startswith('cl'):
+                    atom['element'] = 'Cl'
+                elif atom_type_lower.startswith('pot') or atom_type_lower.startswith('k'):
+                    atom['element'] = 'K'
+            elif atom_type_lower.startswith('si'):  
                 atom['element'] = 'Si'
             elif atom_type_lower.startswith('sc'):  
                 atom['element'] = 'Si'
@@ -810,11 +826,11 @@ def minff(atoms, Box, ffname='minff', rmaxlong=2.45, rmaxH=1.2, log=False, log_f
     
     # Apply charges based on the MINFF forcefield after atom typing is complete
     atom_labels = ['Alo', 'Alt', 'Ale', 'Tio', 'Feo3', 'Fet3', 'Fee3', 'Feo2', 'Fet2', 'Fee2', 'Fs',
-                  'Na', 'K', 'Cs', 'Mgo', 'Mgh', 'Mge', 'Cao', 'Cah', 'Sit', 
-                  'Sio', 'Site', 'Lio', 'H']
+                  'Na', 'K', 'Cs', 'Mgo', 'Mgh', 'Mge', 'Cao', 'Cah', 'Ca', 'Sit', 
+                  'Sio', 'Site', 'Lio', 'H', 'Cl']
     charges = [1.782, 1.782, 1.985, 2.48, 1.5, 1.5, 1.75, 1.184, 1.184, 1.32, -0.76,
-               1.0, 1.0, 1.0, 1.562, 1.74, 1.635, 1.66, 1.52, 1.884, 
-               1.884, 2.413, 0.86, 0.4]
+               1.0, 1.0, 1.0, 1.562, 1.74, 1.635, 1.66, 1.52, 2.0, 1.884, 
+               1.884, 2.413, 0.86, 0.4, -1.0]
     # By default, apply charges to all atoms (set resname=None)
     # To limit charge assignment to specific residues, provide a resname (e.g., 'MIN')
     atoms = charge_minff(atoms, Box, atom_labels, charges, resname=None)
@@ -922,7 +938,7 @@ def minff(atoms, Box, ffname='minff', rmaxlong=2.45, rmaxH=1.2, log=False, log_f
         atom_type, neighbor_pattern = key
         count = unique_patterns[key]['count']
         charges = unique_patterns[key]['charges']
-        charge_str = ', '.join([f"{c:.5f}" if isinstance(c, float) else str(c) for c in charges])
+        charge_str = ', '.join([f"{c:.6f}" if isinstance(c, float) else str(c) for c in charges])
         print(f"{atom_type:<10} {count:<6} {neighbor_pattern:<25} {charge_str:>15}")
     print("-" * 70)
     
@@ -934,7 +950,7 @@ def minff(atoms, Box, ffname='minff', rmaxlong=2.45, rmaxH=1.2, log=False, log_f
         # Use provided log_file path or generate default name if not provided
         log_path = log_file if log_file is not None else f"{ffname}_structure_stats.log"
         # Cell is already available from earlier in the function
-        stats = get_structure_stats(atoms, total_charge, ffname, Box=Box, log_file=log_path)
+        stats = get_structure_stats(atoms, Box=Box, total_charge=total_charge, log_file=log_path, ffname=ffname)
         print(f"Structure statistics written to {log_path}")
     
     return atoms # , all_neighbors
@@ -947,6 +963,9 @@ def clayff(atoms, Box, ffname='clayff', rmaxlong=2.45, rmaxH=1.2, log=False, log
     This function updates the 'fftype' field based on the atom's element and its bonding environment,
     using a two-pass approach to first determine coordination numbers and then assign types based on
     structural environment.
+    
+    Water molecules (residue 'SOL') and Ions (residue 'ION') are treated specially: their atom types
+    are standardized (e.g., 'Ow', 'Hw', 'Na') and preserved, skipping the structural type assignment.
     
     For details, see the CLAYFF forcefield documentation at github.com/mholmboe/clayff.
     
@@ -1011,7 +1030,19 @@ def clayff(atoms, Box, ffname='clayff', rmaxlong=2.45, rmaxH=1.2, log=False, log
             atom_type_lower = atom_type.lower()
             
             # Map atom types to elements based on first 1-3 characters
-            if atom_type_lower.startswith('si'):  
+            if atom.get('resname') == 'SOL':
+                if atom_type_lower.startswith('o'):
+                    atom['element'] = 'Ow'
+                elif atom_type_lower.startswith('h'):
+                    atom['element'] = 'Hw'
+            elif atom.get('resname') == 'ION':
+                if atom_type_lower.startswith('sod') or atom_type_lower.startswith('na'):
+                    atom['element'] = 'Na'
+                elif atom_type_lower.startswith('cla') or atom_type_lower.startswith('cl'):
+                    atom['element'] = 'Cl'
+                elif atom_type_lower.startswith('pot') or atom_type_lower.startswith('k'):
+                    atom['element'] = 'K'
+            elif atom_type_lower.startswith('si'):  
                 atom['element'] = 'Si'
             elif atom_type_lower.startswith('sc'):  
                 atom['element'] = 'Si'
@@ -1381,8 +1412,8 @@ def clayff(atoms, Box, ffname='clayff', rmaxlong=2.45, rmaxH=1.2, log=False, log
             atom['type'] = atom['fftype']
     
     # Apply charges based on the clayff forcefield after atom typing is complete
-    atom_labels = ['Alo', 'Alt', 'Ale', 'Fe3o', 'Fe3t', 'Fe2o', 'Mgo', 'Mgh', 'Cao', 'Cah', 'Sit', 'Lio', 'H', 'Na', 'K', 'Cs', 'Ca']  
-    charges = [1.575, 1.575, 1.8125, 1.575, 1.575, 1.36, 1.36, 1.05, 1.36, 1.05, 2.1, 0.86, 0.425, 1.0, 1.0, 1.0, 2.0]
+    atom_labels = ['Alo', 'Alt', 'Ale', 'Fe3o', 'Fe3t', 'Fe2o', 'Mgo', 'Mgh', 'Cao', 'Cah', 'Sit', 'Lio', 'H', 'Na', 'K', 'Cs', 'Ca', 'Cl']  
+    charges = [1.575, 1.575, 1.8125, 1.575, 1.575, 1.36, 1.36, 1.05, 1.36, 1.05, 2.1, 0.86, 0.425, 1.0, 1.0, 1.0, 2.0, -1.0]
     # By default, apply charges to all atoms (set resname=None)
     # To limit charge assignment to specific residues, provide a resname (e.g., 'MIN')
     atoms = charge_clayff(atoms, Box, atom_labels, charges, resname=None)
@@ -1490,7 +1521,7 @@ def clayff(atoms, Box, ffname='clayff', rmaxlong=2.45, rmaxH=1.2, log=False, log
         atom_type, neighbor_pattern = key
         count = unique_patterns[key]['count']
         charges = unique_patterns[key]['charges']
-        charge_str = ', '.join([f"{c:.5f}" if isinstance(c, float) else str(c) for c in charges])
+        charge_str = ', '.join([f"{c:.6f}" if isinstance(c, float) else str(c) for c in charges])
         print(f"{atom_type:<10} {count:<6} {neighbor_pattern:<25} {charge_str:>15}")
     print("-" * 70)
     
@@ -1502,7 +1533,7 @@ def clayff(atoms, Box, ffname='clayff', rmaxlong=2.45, rmaxH=1.2, log=False, log
         # Use provided log_file path or generate default name if not provided
         log_path = log_file if log_file is not None else f"{ffname}_structure_stats.log"
         # Cell is already available from earlier in the function
-        stats = get_structure_stats(atoms, total_charge, ffname, Box=Box, log_file=log_path)
+        stats = get_structure_stats(atoms, Box=Box, total_charge=total_charge, log_file=log_path, ffname=ffname)
         print(f"Structure statistics written to {log_path}")
     
     return atoms #, all_neighbors

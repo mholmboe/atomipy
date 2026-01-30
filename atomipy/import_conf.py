@@ -47,34 +47,30 @@ def pdb(file_path):
                 # Charge:      79-80
 
                 try:
-                    index = int(line[6:11].strip())          # Cols 7-11
-                    atom_name = line[12:16].strip()        # Cols 13-16
+                    index = int(line[6:11])        # Cols 7-11
+                    atname = line[12:16].strip()           # Cols 13-16
                     resname = line[17:20].strip()          # Cols 18-20
                     
                     try:
-                        molid = int(line[22:26].strip())     # Cols 23-26 (Residue sequence number as molid)
+                        molid = int(line[22:26])     # Cols 23-26 (Residue sequence number as molid)
                     except (ValueError, IndexError):
                         molid = 1 # Default if not present or invalid
 
-                    x = float(line[30:38].strip())           # Cols 31-38
-                    y = float(line[38:46].strip())           # Cols 39-46
-                    z = float(line[46:54].strip())           # Cols 47-54
+                    x = float(line[30:38])           # Cols 31-38
+                    y = float(line[38:46])           # Cols 39-46
+                    z = float(line[46:54])           # Cols 47-54
 
                     occupancy = 1.0 # Default occupancy
                     if len(line) >= 60:                      # Check if line is long enough for occupancy
                         try:
-                            occupancy_str = line[54:60].strip() # Cols 55-60
-                            if occupancy_str: # Ensure not empty before float conversion
-                                occupancy = float(occupancy_str)
+                            occupancy = float(line[54:60]) # Cols 55-60
                         except ValueError:
                             pass # Keep default if parsing fails
 
                     temp_factor = 0.0 # Default temperature factor
                     if len(line) >= 66:                      # Check if line is long enough for temp_factor
                         try:
-                            temp_factor_str = line[60:66].strip() # Cols 61-66
-                            if temp_factor_str:
-                                temp_factor = float(temp_factor_str)
+                            temp_factor = float(line[60:66]) # Cols 61-66
                         except ValueError:
                             pass # Keep default
 
@@ -97,19 +93,29 @@ def pdb(file_path):
                         "temp_factor": temp_factor,
                         "element": element_symbol, # Explicitly from PDB cols 77-78
                         "charge": charge_str,
-                        "type": atom_name,   # Original atom name from PDB, often used as type
+                        "type": atname,   # Original atom name from PDB, often used as type
                         "neigh": [],
                         "bonds": [],
                         "angles": [],
-                        "fftype": None 
+                        "fftype": atname   # Original atom name from PDB, often used as type 
                     }
                     atoms.append(atom)
                 except Exception as e:
                     # print(f"Warning: Could not parse ATOM/HETATM line: {line.strip()} - Error: {e}")
                     continue # Skip malformed ATOM/HETATM lines
     
+    # Save original atom types before element() overwrites them
+    original_types = [atom.get('type') for atom in atoms]
+
     # Now use the element.py function to properly determine elements
+    # logic: element() populates the 'element' field but currently overwrites 'type'
     element_module.element(atoms)
+    
+    # Restore original atom types so that 'type' reflects 'atname' (e.g. 'Alo')
+    # while 'element' reflects the chemical element (e.g. 'Al')
+    for atom, orig_type in zip(atoms, original_types):
+        if orig_type:
+            atom['type'] = orig_type
     
     return atoms, Cell
 
@@ -187,7 +193,7 @@ def gro(file_path):
             "angles": [],
             "element": None,
             "type": atname,  # Store atom name in type field
-            "fftype": None,
+            "fftype": atname,  # Store atom name in type field
             "is_nm": False  # Mark that coordinates are now in Angstroms
         }
         atoms.append(atom)
@@ -261,7 +267,7 @@ def xyz(file_path):
         if len(parts) < 4:
             continue  # Skip invalid lines
         
-        element = parts[0].strip()
+        atname = parts[0].strip()
         try:
             x = float(parts[1])
             y = float(parts[2])
@@ -279,9 +285,9 @@ def xyz(file_path):
             "neigh": [],
             "bonds": [],
             "angles": [],
-            "element": element,  # Set element directly from XYZ
-            "type": element,     # Use element as type by default
-            "fftype": None
+            "element": None,    # Set element directly from XYZ
+            "type": atname,     # Use element as type by default
+            "fftype": atname    # Use element as fftype by default
         }
         atoms.append(atom)
     
