@@ -289,6 +289,33 @@ Convenient helpers:
 - `run_create_itp_example.py` shows a minimal end-to-end MINFF + ITP + typed PDB workflow.
 - `run_minff2n2t.py` generates a MINFF-typed `.n2t` mapping for gmx x2top.
 
+### Force Field Parameters (JSON)
+
+For greater flexibility and consistency (especially with LAMMPS), we now provide JSON parameter files for GMINFF and TMINFF in the `atomipy/ffparams` directory. You can load these using `ap.load_forcefield`:
+
+```python
+import atomipy as ap
+
+# Load simulation box and atoms
+atoms, Box = ap.import_gro("system.gro")
+
+# Load force field parameters (sigma, epsilon) from JSON
+# This automatically handles unit conversion (Gromacs -> LAMMPS real by default)
+ff = ap.load_forcefield(
+    'GMINFF/gminff_all.json', 
+    blocks=['GMINFF_k500', 'OPC3', 'OPC3_HFE_LM']
+)
+
+# Write LAMMPS data file with Pair Coeffs included
+ap.write_lmp(atoms, Box, "system.data", forcefield=ff)
+```
+
+Available JSON files in `ffparams`:
+- **GMINFF**: `GMINFF/gminff_all.json` (General MINFF)
+- **TMINFF**: `TMINFF/tminff_k*.json` (Tailored MINFF for specific minerals)
+
+See `atomipy/ffparams/README.md` for a full list of available blocks (minerals, ions, water models).
+
 ### XRD pattern simulation
 
 atomipy includes a fast X-ray diffraction module (`atomipy.diffraction.xrd`) that can turn a PDB/GRO/XYZ structure plus its box/cell into a calculated powder pattern with optional plotting and data export.
@@ -336,6 +363,7 @@ fig.show()
 
 - `minff(atoms, Box, ffname='minff', rmaxlong=2.45, rmaxH=1.2)`: Assign MINFF forcefield specific atom types to each atom
 - `clayff(atoms, Box, ffname='clayff', rmaxlong=2.45, rmaxH=1.2)`: Assign CLAYFF forcefield specific atom types to each atom
+- `load_forcefield(json_file, blocks=None, units='lammps')`: Load non-bonded parameters from a JSON file in `ffparams`. Returns a dictionary suitable for `write_lmp`.
 - `write_n2t(atoms, Box=None, n2t_file=None, verbose=True)`: Generate a GROMACS n2t (atom name to type) file based on structural analysis, honouring periodic boundary conditions when a 1×3 Box, 1×6 Cell, or 1×9 ``Box_dim`` array is supplied and merging nearly identical environments
 
 ### Molecular Topology
