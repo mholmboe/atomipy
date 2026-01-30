@@ -30,20 +30,26 @@ def assign_resname(atoms, default_resname='MIN'):
     atoms = assign_resname(atoms, default_resname='CLAY')
     """
     # Define atom type patterns for water and ions
-    water_types = ['Hw', 'Ow', 'OW', 'HW']
+    water_types = ['Hw', 'Ow', 'OW', 'HW','OH2']
     
     ion_types = [
-        # Monovalent cations
-        'Li', 'Li+', 'LI+', 'Na', 'NA', 'Na+', 'NA+', 'K', 'K+', 
-        'Rb', 'RB', 'Rb+', 'RB+', 'Cs', 'CS', 'Cs+', 'CS+',
+        # Charged ion type names (explicit charge notation)
+        'Li+', 'LI+', 'Na+', 'NA+', 'K+', 
+        'Rb+', 'RB+', 'Cs+', 'CS+',
+        'Ca2+', 'CA2+', 'Cu2+', 'CU2+',
+        'Ni2+', 'NI2+', 'Zn2+', 'ZN2+',
+        'Sr2+', 'SR2+', 'Ba2+', 'BA2+',
+        'Mg2+', 'MG2+',
+        'F-', 'Cl-', 'CL-', 'Br-', 'BR-', 'I-',
         
-        # Divalent cations
-        'Ca', 'CA', 'Ca2+', 'CA2+', 'Cu', 'CU', 'Cu2+', 'CU2+',
-        'Ni', 'NI', 'Ni2+', 'NI2+', 'Zn', 'ZN', 'Zn2+', 'ZN2+',
-        'Sr', 'SR', 'Sr2+', 'SR2+', 'Ba', 'BA', 'Ba2+', 'BA2+',
-        
-        # Anions
-        'F-', 'Cl', 'CL', 'Cl-', 'CL-', 'Br', 'BR', 'Br-', 'BR-', 'I', 'I-'
+        # GROMACS/CHARMM ion type names (unambiguous)
+        'SOD', 'POT', 'CLA', 'CAL'
+    ]
+    
+    # Ion residue names (common naming conventions)
+    ion_resnames = [
+        'SOD', 'POT', 'CLA', 'CAL', 'MG', 'NA', 'K', 'CL', 'CA', 'ION',
+        'LI', 'RB', 'CS', 'CU', 'NI', 'ZN', 'SR', 'BA', 'BR', 'F'
     ]
     
     # Create list of atom indices for each category
@@ -53,12 +59,15 @@ def assign_resname(atoms, default_resname='MIN'):
     # Process each atom to identify water and ions
     for i, atom in enumerate(atoms):
         atom_type = atom.get('type', '')
+        atom_resname = atom.get('resname', '').upper()
         
         # Check for water atoms (case-insensitive prefix match)
         is_water = any(atom_type.lower().startswith(water_type.lower()) for water_type in water_types)
         
-        # Check for ion atoms (case-insensitive exact match)
-        is_ion = atom_type in ion_types or atom_type.upper() in ion_types
+        # Check for ion atoms by type OR by resname
+        is_ion = (atom_type in ion_types or 
+                  atom_type.upper() in ion_types or
+                  atom_resname in ion_resnames)
         
         if is_water:
             sol_indices.append(i)
@@ -77,12 +86,10 @@ def assign_resname(atoms, default_resname='MIN'):
     for i in ion_indices:
         atoms[i]['resname'] = 'ION'
     
-    # Assign default resname to remaining atoms
+    # Assign default resname to remaining atoms (always assign, overwriting existing)
     other_indices = [i for i in range(len(atoms)) if i not in sol_indices and i not in ion_indices]
     for i in other_indices:
-        # Only assign if resname is not already set
-        if 'resname' not in atoms[i] or not atoms[i]['resname']:
-            atoms[i]['resname'] = default_resname
+        atoms[i]['resname'] = default_resname
     
     # Print summary
     print(f"Assigned resnames: {len(sol_indices)} water (SOL), {len(ion_indices)} ions (ION), "

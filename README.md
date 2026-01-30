@@ -357,7 +357,8 @@ fig.show()
 - `bond_angle(atoms, Box, rmaxH=1.2, rmaxM=2.45)`: Compute bonds and angles for a given atomic structure
 - `dist_matrix(atoms, Box)`: Calculate a full distance matrix between all atoms with PBC
 - `cell_list_dist_matrix(atoms, Box)`: Calculate a sparse distance matrix between all atoms with PBC
-
+- `find_H2O(atoms, rmaxH=1.2)`: Find water molecules in a system based on O-H bonding patterns. Returns water atoms, their 0-based indices, and unique molecule IDs. Requires `bond_angle` to be run first for accurate detection.
+- `get_structure_stats(atoms, Box=None, total_charge=0, log_file='output.log', ffname='minff')`: Generate and log statistics about atom types, coordination environments, charges, bond distances, and angles. Returns a formatted report string and optionally writes to a log file. Works with both 'minff' and 'clayff' forcefields.
 
 ### Coordinate Transformations
 
@@ -385,6 +386,11 @@ fig.show()
   - Even distribution of substitutions across the structure
   - Support for both octahedral and tetrahedral substitutions with minimum distance constraints
   - Optional spatial limits for targeting substitutions to specific regions
+- `molecule(atoms, molid=1, resname=None)`: Assign molecule ID and optionally residue name to all atoms in a list. Useful for grouping atoms as a single molecular unit before topology generation.
+- `assign_resname(atoms, default_resname='MIN')`: Assign residue names to atoms based on their types. Assigns 'SOL' to water atoms, 'ION' to ions, and the specified default name to other atoms.
+- `add_H_atom(atoms, Box, target_type, h_type='H', bond_length=0.96, coordination=1)`: Add hydrogen atoms to under-coordinated atoms (e.g. protonating edge sites).
+- `adjust_H_atom(atoms, Box, h_type='H', neighbor_type='O', distance=0.96)`: Adjust bond lengths of hydrogen atoms, useful for fixing distorted bonds.
+- `adjust_Hw_atom(atoms, Box, water_resname='SOL', water_model='OPC3')`: Repair water molecules by adding missing hydrogens and fixing geometry (OH distance and HOH angle) for models like OPC3/SPC/TIP3P.
 - `is_centrosymmetric_along_z(atoms, tolerance=0.1)`: Check if a structure is approximately centrosymmetric along the z-axis by analyzing the distribution of z-coordinates
 
 ### Cell Utilities
