@@ -6,6 +6,7 @@ The package now supports generating GROMACS n2t (atom name to type) files for bo
 
 ## Contents
 - [Overview](#overview)
+- [Project Structure](#project-structure)
 - [Common Variables](#common-variables)
   - [Structure Containers](#structure-containers)
   - [Atom dictionary fields](#atom-dictionary-fields)
@@ -24,6 +25,27 @@ This toolbox is designed to import, export, and analyze molecular structures wit
 Built-in atom typing for MINFF and CLAYFF is a core feature: you can assign atom types, charges, and generate ITP/PSF/LAMMPS topologies directly from structures. For quick runs without local setup, use the web server at [www.atomipy.io](https://www.atomipy.io).
 
 The molecular structure information is stored in dictionaries where each atom has fields for coordinates, neighbors, bonds, angles, element type, and more.
+
+## Project Structure
+
+```text
+atominpython/                # Repository root
+├── atomipy/                 # Core package files
+│   ├── data/                # Reference data (Shannon radii, BV params)
+│   ├── ffparams/            # Force field parameters (GMINFF/TMINFF JSONs & ITPs)
+│   ├── structures/          # Bundled library of mineral structures
+│   ├── bond_angle.py        # Topology analysis (bonds, angles, dihedrals)
+│   ├── build.py             # Structure manipulation & substitutions
+│   ├── charge.py            # Charge assignment logic
+│   ├── diffraction.py       # High-performance XRD simulation
+│   ├── forcefield.py        # MINFF/CLAYFF force field logic
+│   ├── import_conf.py       # File importers (PDB, GRO, XYZ)
+│   ├── write_conf.py        # File exporters (PDB, GRO, XYZ)
+│   └── write_top.py         # Topology exporters (ITP, PSF, LMP)
+├── run_*.py                 # Example workflow scripts (e.g., run_minff_atomi.py)
+├── setup.py                 # Installation script
+└── README.md                # This documentation
+```
 
 ## Common Variables
 
