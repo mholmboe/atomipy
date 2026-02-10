@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-run_sys2clayff.py - Convert an interface structure to CLAYFF for GROMACS.
+run_sys2clayff.py - Convert an interface structure to CLAYFF for GROMACS. 
 
 Processes a molecular system containing minerals, ions, and water,
 assigns CLAYFF atom types, and generates GROMACS-compatible output files.

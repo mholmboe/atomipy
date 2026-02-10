@@ -1,5 +1,5 @@
 """
-Run Bond Valence Sum (BVS) and Shannon radii analysis on a structure file.
+Run Bond Valence Sum (BVS) and Shannon radii analysis on a structure file. 
 
 
 Usage:

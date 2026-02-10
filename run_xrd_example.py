@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Quick XRD runner using atomipy.diffraction.xrd.
+"""Quick XRD runner using atomipy.diffraction.xrd. 
 
 
 This test script loads a structure (PDB/GRO/XYZ), prepares it for diffraction,

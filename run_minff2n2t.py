@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""MINFF-typed n2t generator for gmx x2top.
+"""MINFF-typed n2t generator for gmx x2top. 
 
 
 This CLI imports a structure, runs MINFF typing, and writes an n2t mapping that
