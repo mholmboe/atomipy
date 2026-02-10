@@ -9,6 +9,7 @@ def mass():
     masses = {
         # Alkali metals
         'H': 1.00784,
+        'Hw': 1.00784,
         'Li': 6.941,
         'Na': 22.9898,
         'K': 39.102,
@@ -77,6 +78,7 @@ def mass():
         'C': 12.0107,
         'N': 14.0067,
         'O': 15.9994,
+        'Ow': 15.9994,
         'F': 18.9984,
         'P': 30.9738,
         'S': 32.065,
@@ -134,6 +136,10 @@ def set_atomic_masses(atoms):
         # Assign mass if element is known
         if element in masses_dict:
             atom['mass'] = masses_dict[element]
+        elif len(element) > 1 and element[0].upper() in masses_dict:
+            # Fallback: try first character only (e.g. 'Hw' -> 'H', 'Ow' -> 'O')
+            fallback = element[0].upper()
+            atom['mass'] = masses_dict[fallback]
         else:
             print(f"Warning: Unknown element '{element}' for atom {atom.get('index', '?')}. Using default mass 1.0.")
             atom['mass'] = 1.0

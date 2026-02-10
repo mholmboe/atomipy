@@ -184,6 +184,6 @@ else:
 # LAMMPS data file
 if len(full_box) > 6:
     cell = ap.Box_dim2Cell(full_box)
-    ap.write_lmp(minff_atoms, Box=cell, file_path=f"{output_name}.data")
+    ap.write_lmp(minff_atoms, Box=cell, file_path=f"{output_name}.data", detect_bimodal=True)
 else:
-    ap.write_lmp(minff_atoms, Box=full_box, file_path=f"{output_name}.data")
+    ap.write_lmp(minff_atoms, Box=full_box, file_path=f"{output_name}.data", detect_bimodal=True)

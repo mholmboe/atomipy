@@ -106,6 +106,7 @@ insert = build.insert
 add_H_atom = build.add_H_atom
 adjust_H_atom = build.adjust_H_atom
 adjust_Hw_atom = build.adjust_Hw_atom
+is_centrosymmetric_along_z = build.is_centrosymmetric_along_z
 
 # ===== Resname functions =====
 from .resname import assign_resname
@@ -168,9 +169,10 @@ __all__ = [
     'replicate_system', 'translate', 'rotate', 'place', 'center', 'update', 'scale',
     'substitute', 'molecule', 'merge', 'slice', 'solvate', 'ionize', 'insert',
     'add_H_atom', 'adjust_H_atom', 'adjust_Hw_atom',
+    'is_centrosymmetric_along_z',
     'assign_resname',
-    'minff', 'clayff', 'write_n2t',
-    'load_forcefield', 'list_ff_blocks',
+    'minff', 'clayff', 'write_n2t', 'get_structure_stats',
+    'load_forcefield', 'list_ff_blocks', 'get_ffparams_dir',
     'charge_minff', 'charge_clayff', 'balance_charges', 'assign_formal_charges',
     'compute_bvs', 'global_instability_index', 'load_bv_params', 'load_shannon_radii', 'bond_valence', 'summarize_bvs',
     'analyze_bvs', 'conf2bvs',
