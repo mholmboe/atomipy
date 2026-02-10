@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Structure → n2t generator for gmx x2top workflows.
+"""Structure → n2t generator for gmx x2top workflows. 
 
 This CLI loads a structure (PDB/GRO/XYZ), preserves the box/cell, and writes
 an atom-name-to-type table via `atomipy.write_n2t`. Environments are merged so

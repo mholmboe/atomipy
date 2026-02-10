@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-run_sys2minff.py - Convert an interface structure to MINFF for GROMACS.
+run_sys2minff.py - Convert an interface structure to MINFF for GROMACS. 
 
 Processes a molecular system containing minerals, ions, and water,
 assigns MINFF atom types, and generates GROMACS-compatible output files.

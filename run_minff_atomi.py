@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-run_minff_atomi.py - A beginner-friendly script to demonstrate atomipy functionality
+run_minff_atomi.py - A beginner-friendly script to demonstrate atomipy functionality 
 
 This simple script shows the basic workflow for processing clay mineral structures
 using the atomipy package. It demonstrates how to:

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Build a montmorillonite bilayer system with counter-ions and water.
+Build a montmorillonite bilayer system with counter-ions and water. 
 
 This script creates a montmorillonite bilayer by:
 1. Replicating a pyrophyllite unit cell
