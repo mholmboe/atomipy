@@ -40,8 +40,8 @@ MIN = [a for a in System if a.get('resname') == 'MIN']
 
 # Write ITP and PSF files for MIN part only
 ap.write_itp(MIN, Box=Box_dim, file_path='clayff.itp')
-ap.write_psf(MIN, Box=Box_dim, file_path='clayff.psf')
-ap.write_lmp(System, Box=Box_dim, file_path='clayff.data')
+ap.write_psf(MIN, Box=Box_dim, file_path='clayff.psf', detect_bimodal=True, max_angle=150)
+ap.write_lmp(System, Box=Box_dim, file_path='clayff.data', detect_bimodal=True)
 
 # Write full system GRO
 ap.write_gro(System, Box=Box_dim, file_path='preem.gro')

@@ -7532,7 +7532,138 @@
       "k": 441050.0
     }
   ],
-  "angletypes": [],
+  "angletypes": [
+    {
+      "atoms": [
+        "H",
+        "Oh",
+        "Alo"
+      ],
+      "func": 1,
+      "theta0": 110.0,
+      "k": 125.52
+    },
+    {
+      "atoms": [
+        "H",
+        "Oh",
+        "Mgh"
+      ],
+      "func": 1,
+      "theta0": 110.0,
+      "k": 125.52
+    },
+    {
+      "atoms": [
+        "H",
+        "Oh",
+        "Mgo"
+      ],
+      "func": 1,
+      "theta0": 110.0,
+      "k": 125.52
+    },
+    {
+      "atoms": [
+        "H",
+        "Oh",
+        "Feo2"
+      ],
+      "func": 1,
+      "theta0": 110.0,
+      "k": 125.52
+    },
+    {
+      "atoms": [
+        "H",
+        "Oh",
+        "Feo3"
+      ],
+      "func": 1,
+      "theta0": 110.0,
+      "k": 125.52
+    },
+    {
+      "atoms": [
+        "H",
+        "Oh",
+        "Cah"
+      ],
+      "func": 1,
+      "theta0": 110.0,
+      "k": 125.52
+    },
+    {
+      "atoms": [
+        "H",
+        "Ohmg",
+        "Mgh"
+      ],
+      "func": 1,
+      "theta0": 110.0,
+      "k": 125.52
+    },
+    {
+      "atoms": [
+        "H",
+        "Ohmg",
+        "Mgo"
+      ],
+      "func": 1,
+      "theta0": 110.0,
+      "k": 125.52
+    },
+    {
+      "atoms": [
+        "H",
+        "Ohmg",
+        "Alo"
+      ],
+      "func": 1,
+      "theta0": 110.0,
+      "k": 125.52
+    },
+    {
+      "atoms": [
+        "H",
+        "Oalh",
+        "Alo"
+      ],
+      "func": 1,
+      "theta0": 110.0,
+      "k": 125.52
+    },
+    {
+      "atoms": [
+        "H",
+        "Oalhh",
+        "Alo"
+      ],
+      "func": 1,
+      "theta0": 110.0,
+      "k": 125.52
+    },
+    {
+      "atoms": [
+        "H",
+        "Osih",
+        "Sit"
+      ],
+      "func": 1,
+      "theta0": 110.0,
+      "k": 125.52
+    },
+    {
+      "atoms": [
+        "Hw",
+        "Ow",
+        "Hw"
+      ],
+      "func": 1,
+      "theta0": 109.47,
+      "k": 383.0
+    }
+  ],
   "metadata": {
     "variant": null,
     "source": "MINFF",

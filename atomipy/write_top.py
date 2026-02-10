@@ -6,7 +6,8 @@ from .bond_angle import bond_angle
 
 
 def itp(atoms, Box=None, file_path=None, molecule_name=None, nrexcl=1, comment=None, 
-          rmaxH=1.2, rmaxM=2.45, explicit_bonds=0, explicit_angles=1, KANGLE=500):
+          rmaxH=1.2, rmaxM=2.45, explicit_bonds=0, explicit_angles=1, KANGLE=500,
+          detect_bimodal=False, bimodal_threshold=30.0, max_angle=None):
     """
     Write atoms to a Gromacs molecular topology (.itp) file.
     
@@ -26,6 +27,10 @@ def itp(atoms, Box=None, file_path=None, molecule_name=None, nrexcl=1, comment=N
         explicit_bonds: If 1, include bond parameters in the file (default: 0).
         explicit_angles: If 1, include angle parameters in the file (default: 1).
         KANGLE: Force constant for generic angles in kJ/(mol·rad²) (default: 500).
+        detect_bimodal: If True, detect bimodal angle distributions and warn.
+        bimodal_threshold: Threshold for bimodal detection in degrees (default: 30.0).
+        max_angle: Optional maximum angle threshold in degrees (default: None = include all).
+                   Angles above this value will be excluded.
         
     Returns:
         None
@@ -141,6 +146,55 @@ def itp(atoms, Box=None, file_path=None, molecule_name=None, nrexcl=1, comment=N
         total_bonds = len(Bond_index)
         Bond_index = [bond for bond in Bond_index if int(bond[0]) in ind_H or int(bond[1]) in ind_H]
         print(f"write_itp: Filtered to {len(Bond_index)} hydrogen bonds (from {total_bonds} total bonds)")
+    
+    # Filter Angle_index by max_angle if specified
+    if max_angle is not None and Angle_index is not None and len(Angle_index) > 0:
+        total_angles = len(Angle_index)
+        filtered_angles = []
+        for angle in Angle_index:
+            if len(angle) > 3:
+                angle_val = float(angle[3])
+                if angle_val <= max_angle:
+                    filtered_angles.append(angle)
+            else:
+                filtered_angles.append(angle)
+        Angle_index = filtered_angles
+        skipped = total_angles - len(Angle_index)
+        print(f"write_itp: Filtered to {len(Angle_index)} angles (skipped {skipped} angles > {max_angle}°)")
+    
+    # Detect bimodal angle distributions if requested
+    bimodal_info = []
+    if detect_bimodal and Angle_index is not None and len(Angle_index) > 0:
+        from collections import defaultdict
+        angle_by_type = defaultdict(list)
+        for angle in Angle_index:
+            if len(angle) > 3:
+                a1, a2, a3 = int(angle[0]), int(angle[1]), int(angle[2])
+                type1 = atoms[a1-1].get('type', 'X')
+                type2 = atoms[a2-1].get('type', 'X')
+                type3 = atoms[a3-1].get('type', 'X')
+                if type1 > type3:
+                    type1, type3 = type3, type1
+                triplet = f"{type1}-{type2}-{type3}"
+                angle_by_type[triplet].append(float(angle[3]))
+        
+        for triplet, values in angle_by_type.items():
+            if len(values) >= 4:
+                sorted_vals = sorted(values)
+                spread = sorted_vals[-1] - sorted_vals[0]
+                if spread > bimodal_threshold:
+                    max_gap = max(sorted_vals[i+1] - sorted_vals[i] for i in range(len(sorted_vals)-1))
+                    if max_gap > bimodal_threshold / 2:
+                        low_vals = [v for v in sorted_vals if v < sorted_vals[-1] - spread/2]
+                        high_vals = [v for v in sorted_vals if v >= sorted_vals[-1] - spread/2]
+                        avg_low = sum(low_vals) / len(low_vals) if low_vals else 0
+                        avg_high = sum(high_vals) / len(high_vals) if high_vals else 0
+                        bimodal_info.append((triplet, avg_low, avg_high, len(values)))
+        
+        if bimodal_info:
+            print(f"write_itp: WARNING - Detected {len(bimodal_info)} bimodal angle distributions!")
+            for triplet, avg_low, avg_high, count in bimodal_info:
+                print(f"  {triplet}: ~{avg_low:.0f}° (cis) and ~{avg_high:.0f}° (trans), n={count}")
     
     # Calculate total charge
     total_charge = sum(atom.get('charge', 0.0) for atom in atoms)
@@ -315,7 +369,8 @@ def itp(atoms, Box=None, file_path=None, molecule_name=None, nrexcl=1, comment=N
         # Getting angles from the Angle_index is more reliable and consistent
 
 
-def psf(atoms, Box=None, file_path=None, segid=None, rmaxH=1.2, rmaxM=2.45, comment=None):
+def psf(atoms, Box=None, file_path=None, segid=None, rmaxH=1.2, rmaxM=2.45, 
+        comment=None, max_angle=None, detect_bimodal=False, bimodal_threshold=30.0):
     """
     Write atoms to a NAMD/CHARMM PSF topology file.
     
@@ -331,6 +386,11 @@ def psf(atoms, Box=None, file_path=None, segid=None, rmaxH=1.2, rmaxM=2.45, comm
         rmaxH: Maximum bond distance for hydrogen bonds (default: 1.2 Å).
         rmaxM: Maximum bond distance for non-hydrogen bonds (default: 2.45 Å).
         comment: Optional comment to include in the header.
+        max_angle: Optional maximum angle threshold in degrees (default: None = include all).
+                   Angles above this value will be excluded. Useful for NAMD when
+                   bimodal distributions exist (e.g., set to 150 to skip trans angles).
+        detect_bimodal: If True, detect bimodal angle distributions and warn in header.
+        bimodal_threshold: Threshold for bimodal detection in degrees (default: 30.0).
         
     Returns:
         None
@@ -339,6 +399,12 @@ def psf(atoms, Box=None, file_path=None, segid=None, rmaxH=1.2, rmaxM=2.45, comm
     --------
     psf(atoms, Box=[50, 50, 50], file_path="molecule.psf", segid="CLAY")
     psf(atoms, Box=Cell2Box_dim([50, 50, 50, 90, 90, 90]), file_path="system.psf")
+    
+    # Skip trans angles (>150°) for NAMD compatibility
+    psf(atoms, Box=[50, 50, 50], file_path="molecule.psf", max_angle=150)
+    
+    # Detect bimodal and auto-filter trans angles
+    psf(atoms, Box=[50, 50, 50], file_path="molecule.psf", detect_bimodal=True, max_angle=150)
     """
     if Box is None:
         raise ValueError("Box parameter must be provided")
@@ -406,6 +472,64 @@ def psf(atoms, Box=None, file_path=None, segid=None, rmaxH=1.2, rmaxM=2.45, comm
         Bond_index = [bond for bond in Bond_index if int(bond[0]) in ind_H or int(bond[1]) in ind_H]
         print(f"write_psf: Filtered to {len(Bond_index)} hydrogen bonds (from {total_bonds} total bonds)")
     
+    # Filter Angle_index by max_angle if specified
+    if max_angle is not None and Angle_index is not None and len(Angle_index) > 0:
+        total_angles = len(Angle_index)
+        # Angle_index[i][3] contains the angle value in degrees
+        filtered_angles = []
+        for angle in Angle_index:
+            if len(angle) > 3:
+                angle_val = float(angle[3])
+                if angle_val <= max_angle:
+                    filtered_angles.append(angle)
+            else:
+                # No angle value stored, keep it
+                filtered_angles.append(angle)
+        Angle_index = filtered_angles
+        skipped = total_angles - len(Angle_index)
+        print(f"write_psf: Filtered to {len(Angle_index)} angles (skipped {skipped} angles > {max_angle}°)")
+    
+    # Detect bimodal angle distributions if requested
+    bimodal_info = []  # Store info about bimodal types for header
+    if detect_bimodal and Angle_index is not None and len(Angle_index) > 0:
+        # Group angles by type triplet
+        from collections import defaultdict
+        angle_by_type = defaultdict(list)
+        for angle in Angle_index:
+            if len(angle) > 3:
+                a1, a2, a3 = int(angle[0]), int(angle[1]), int(angle[2])
+                type1 = atoms[a1].get('type', 'X')
+                type2 = atoms[a2].get('type', 'X')
+                type3 = atoms[a3].get('type', 'X')
+                if type1 > type3:
+                    type1, type3 = type3, type1
+                triplet = f"{type1}-{type2}-{type3}"
+                angle_by_type[triplet].append(float(angle[3]))
+        
+        # Check each type for bimodal distribution
+        for triplet, values in angle_by_type.items():
+            if len(values) >= 4:
+                sorted_vals = sorted(values)
+                spread = sorted_vals[-1] - sorted_vals[0]
+                if spread > bimodal_threshold:
+                    # Find gap
+                    max_gap = 0
+                    for i in range(len(sorted_vals) - 1):
+                        gap = sorted_vals[i+1] - sorted_vals[i]
+                        if gap > max_gap:
+                            max_gap = gap
+                    if max_gap > bimodal_threshold / 2:
+                        avg_low = sum(v for v in sorted_vals if v < sorted_vals[-1] - spread/2) / len([v for v in sorted_vals if v < sorted_vals[-1] - spread/2]) if [v for v in sorted_vals if v < sorted_vals[-1] - spread/2] else 0
+                        avg_high = sum(v for v in sorted_vals if v >= sorted_vals[-1] - spread/2) / len([v for v in sorted_vals if v >= sorted_vals[-1] - spread/2]) if [v for v in sorted_vals if v >= sorted_vals[-1] - spread/2] else 0
+                        bimodal_info.append((triplet, avg_low, avg_high, len(values)))
+        
+        if bimodal_info:
+            print(f"write_psf: WARNING - Detected {len(bimodal_info)} bimodal angle distributions!")
+            for triplet, avg_low, avg_high, count in bimodal_info:
+                print(f"  {triplet}: ~{avg_low:.0f}° (cis) and ~{avg_high:.0f}° (trans), n={count}")
+            if max_angle is None:
+                print(f"  Consider using max_angle=150 to filter trans angles for NAMD")
+    
     # Calculate total charge
     total_charge = sum(atom.get('charge', 0.0) for atom in atoms)
     total_charge = round(total_charge, 6)
@@ -418,6 +542,14 @@ def psf(atoms, Box=None, file_path=None, segid=None, rmaxH=1.2, rmaxM=2.45, comm
         header_comment = f"REMARKS Generated by atomipy on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
         f.write(f" {header_comment}\n")
         f.write(f" REMARKS Total charge of the system is {total_charge:.6f}\n")
+        if bimodal_info:
+            f.write(f" REMARKS WARNING: {len(bimodal_info)} bimodal angle distributions detected!\n")
+            for triplet, avg_low, avg_high, count in bimodal_info:
+                f.write(f" REMARKS   {triplet}: ~{avg_low:.0f} (cis) and ~{avg_high:.0f} (trans)\n")
+            if max_angle is not None:
+                f.write(f" REMARKS   Angles >{max_angle} excluded (trans filtered)\n")
+            else:
+                f.write(f" REMARKS   Consider using max_angle=150 to filter trans angles\n")
         if comment:
             f.write(f" REMARKS {comment}\n")
         f.write("\n")
@@ -530,7 +662,53 @@ def psf(atoms, Box=None, file_path=None, segid=None, rmaxH=1.2, rmaxM=2.45, comm
     return file_path
 
 
-def lmp(atoms, Box=None, file_path=None, forcefield=None, rmaxH=1.2, rmaxM=2.45, comment=None):
+def cluster_angles(values, threshold=30.0):
+    """
+    Cluster angle values into groups based on threshold separation.
+    
+    If max-min > threshold, attempts to split into clusters using gap-based method.
+    
+    Args:
+        values: List of angle values
+        threshold: Minimum spread to consider bimodal (degrees)
+        
+    Returns:
+        List of (avg, values_list) tuples for each cluster
+    """
+    if not values:
+        return []
+    
+    sorted_vals = sorted(values)
+    spread = sorted_vals[-1] - sorted_vals[0]
+    
+    if spread <= threshold or len(values) < 4:
+        # Not bimodal, return single cluster
+        return [(sum(values) / len(values), values)]
+    
+    # Find largest gap in sorted values
+    max_gap = 0
+    split_idx = 0
+    for i in range(len(sorted_vals) - 1):
+        gap = sorted_vals[i + 1] - sorted_vals[i]
+        if gap > max_gap:
+            max_gap = gap
+            split_idx = i + 1
+    
+    # Only split if gap is significant (> threshold/2)
+    if max_gap > threshold / 2:
+        cluster1 = sorted_vals[:split_idx]
+        cluster2 = sorted_vals[split_idx:]
+        return [
+            (sum(cluster1) / len(cluster1), cluster1),
+            (sum(cluster2) / len(cluster2), cluster2)
+        ]
+    else:
+        return [(sum(values) / len(values), values)]
+
+
+def lmp(atoms, Box=None, file_path=None, forcefield=None, rmaxH=1.2, rmaxM=2.45, 
+        comment=None, detect_bimodal=False, bimodal_threshold=30.0, max_angle=None,
+        KANGLE=500):
     """
     Write a LAMMPS data file (.data) from the atom data.
     
@@ -548,6 +726,12 @@ def lmp(atoms, Box=None, file_path=None, forcefield=None, rmaxH=1.2, rmaxM=2.45,
         rmaxH: Maximum bond distance for hydrogen bonds (default: 1.2 Å).
         rmaxM: Maximum bond distance for non-hydrogen bonds (default: 2.45 Å).
         comment: Optional comment to include in the header.
+        detect_bimodal: If True, detect and split bimodal angle distributions (e.g., cis/trans).
+        bimodal_threshold: Threshold for bimodal detection in degrees (default: 30.0).
+        max_angle: Optional maximum angle threshold in degrees (default: None = include all).
+                   Angles above this value will be excluded before processing.
+        KANGLE: Force constant for generic angles in kJ/(mol·rad²) (default: 500).
+                Converted internally to LAMMPS real units (kcal/mol/rad²).
         
     Returns:
         The file path to which the data was written.
@@ -574,9 +758,9 @@ def lmp(atoms, Box=None, file_path=None, forcefield=None, rmaxH=1.2, rmaxM=2.45,
     # Convert Gromacs units [kJ/mol] to LAMMPS real units [kcal/mol]
     kbH = 441050 / (2 * 4.184 * 10**2)  # For H bonds
     kbM = 0 / (2 * 4.184 * 10**2)       # For other bonds
-    KANGLE_H = 125.52 / (2 * 4.184)      # For angles with H
-    KANGLE_M = 500.00 / (2 * 4.184)       # For other angles
-    ANGLE_H = 110                        # Angle value for H-containing angles
+    KANGLE_H = 125.52 / (2 * 4.184)     # For angles with H
+    KANGLE_M = KANGLE / (2 * 4.184)     # For other angles (from KANGLE parameter)
+    ANGLE_H = 110                       # Angle value for H-containing angles
 
     # Use bond_angle function to calculate bonds and angles
     if Box is None:
@@ -652,12 +836,34 @@ def lmp(atoms, Box=None, file_path=None, forcefield=None, rmaxH=1.2, rmaxM=2.45,
         Bond_index = [bond for bond in Bond_index if int(bond[0]) in ind_H or int(bond[1]) in ind_H]
         print(f"write_lmp: Filtered to {len(Bond_index)} hydrogen bonds (from {total_bonds} total bonds)")
     
+    # Filter Angle_index by max_angle if specified
+    if max_angle is not None and Angle_index is not None and len(Angle_index) > 0:
+        total_angles = len(Angle_index)
+        filtered_angles = []
+        for angle in Angle_index:
+            if len(angle) > 3:
+                angle_val = float(angle[3])
+                if angle_val <= max_angle:
+                    filtered_angles.append(angle)
+            else:
+                filtered_angles.append(angle)
+        Angle_index = filtered_angles
+        skipped = total_angles - len(Angle_index)
+        print(f"write_lmp: Filtered to {len(Angle_index)} angles (skipped {skipped} angles > {max_angle}°)")
+    
     # Sort bonds by first atom index
     if Bond_index is not None and len(Bond_index) > 0:
         Bond_index = sorted(Bond_index, key=lambda x: x[0])
-        
+    
+    # Helper to safely get numeric charge (handles empty strings, None, etc.)
+    def safe_charge(atom):
+        charge = atom.get('charge', 0.0)
+        if charge is None or charge == '' or not isinstance(charge, (int, float)):
+            return 0.0
+        return float(charge)
+    
     # Calculate total charge
-    total_charge = sum(atom.get('charge', 0.0) for atom in atoms)
+    total_charge = sum(safe_charge(atom) for atom in atoms)
     total_charge = round(total_charge, 6)
     print(f"write_lmp: Total charge: {total_charge}")
     
@@ -742,6 +948,8 @@ def lmp(atoms, Box=None, file_path=None, forcefield=None, rmaxH=1.2, rmaxM=2.45,
     angle_types = []
     unique_angle_info = []
     angle_values = {}  # Store angle values for each angle type
+    angle_params = []  # Parameters for Angle Coeffs section
+    
     if Angle_index is not None and len(Angle_index) > 0:
         # Create string representation of each angle type (only atom types, not angles)
         angle_info = []
@@ -776,56 +984,130 @@ def lmp(atoms, Box=None, file_path=None, forcefield=None, rmaxH=1.2, rmaxM=2.45,
         for type_triplet, angle_val in angle_data:
             angle_values[type_triplet].append(angle_val)
         
-        # Map each angle to its type
-        angle_type_map = {info: i+1 for i, info in enumerate(unique_angle_info)}
-        for i, angle in enumerate(Angle_index):
-            a1, a2, a3 = int(angle[0]), int(angle[1]), int(angle[2])
-            type1 = atoms[a1-1].get('type', '')
-            type2 = atoms[a2-1].get('type', '')
-            type3 = atoms[a3-1].get('type', '')
-            if type1 > type3:
-                type1, type3 = type3, type1
-            type_triplet = f"{type1} {type2} {type3}"
-            angle_types.append(angle_type_map[type_triplet])
-    
-    # Calculate angle parameters
-    angle_params = []
-    for i, type_triplet in enumerate(unique_angle_info):
-        type1, type2, type3 = type_triplet.split()
-        # Check if any of the atoms is hydrogen
-        has_h = 'H' in type1 or 'H' in type2 or 'H' in type3
+        # If bimodal detection enabled, create expanded angle type mapping
+        if detect_bimodal:
+            # Build expanded map: triplet -> list of (cluster_avg, cluster_values)
+            expanded_angle_types = {}  # original_triplet -> [(avg, values), ...]
+            for type_triplet in unique_angle_info:
+                valid_angles = [v for v in angle_values[type_triplet] if v > 0]
+                if valid_angles:
+                    clusters = cluster_angles(valid_angles, bimodal_threshold)
+                    expanded_angle_types[type_triplet] = clusters
+                else:
+                    expanded_angle_types[type_triplet] = [(109.5, [])]
+            
+            # Build final angle type list with bimodal splits
+            final_angle_info = []  # (triplet, cluster_avg, cluster_idx)
+            for type_triplet in unique_angle_info:
+                clusters = expanded_angle_types[type_triplet]
+                for cluster_idx, (avg, vals) in enumerate(clusters):
+                    final_angle_info.append((type_triplet, avg, cluster_idx, len(clusters) > 1))
+            
+            # Create angle type map: (triplet, cluster_idx) -> type_id
+            angle_type_map = {}
+            for type_id, (triplet, avg, cluster_idx, is_bimodal) in enumerate(final_angle_info, 1):
+                angle_type_map[(triplet, cluster_idx)] = type_id
+            
+            # Assign each angle to its type based on which cluster it belongs to
+            for i, angle in enumerate(Angle_index):
+                a1, a2, a3 = int(angle[0]), int(angle[1]), int(angle[2])
+                type1 = atoms[a1-1].get('type', '')
+                type2 = atoms[a2-1].get('type', '')
+                type3 = atoms[a3-1].get('type', '')
+                if type1 > type3:
+                    type1, type3 = type3, type1
+                type_triplet = f"{type1} {type2} {type3}"
+                angle_val = float(angle[3]) if len(angle) > 3 else 0.0
+                
+                # Find which cluster this angle belongs to
+                clusters = expanded_angle_types[type_triplet]
+                if len(clusters) == 1:
+                    cluster_idx = 0
+                else:
+                    # Find closest cluster
+                    min_dist = float('inf')
+                    cluster_idx = 0
+                    for ci, (avg, vals) in enumerate(clusters):
+                        dist = abs(angle_val - avg)
+                        if dist < min_dist:
+                            min_dist = dist
+                            cluster_idx = ci
+                
+                angle_types.append(angle_type_map[(type_triplet, cluster_idx)])
+            
+            # Calculate angle parameters with bimodal info
+            for type_id, (triplet, avg, cluster_idx, is_bimodal) in enumerate(final_angle_info, 1):
+                type1, type2, type3 = triplet.split()
+                has_h = 'H' in type1 or 'H' in type2 or 'H' in type3
+                
+                type1_lower = type1.lower()
+                type2_lower = type2.lower()
+                type3_lower = type3.lower()
+                
+                is_water_angle = (type2_lower.startswith('ow') and 
+                                 (type1_lower.startswith('hw') or type3_lower.startswith('hw')))
+                
+                if is_water_angle:
+                    k = KANGLE_WAT
+                    theta0 = ANGLE_WAT
+                elif has_h:
+                    k = KANGLE_H
+                    theta0 = ANGLE_H
+                else:
+                    k = KANGLE_M
+                    theta0 = avg
+                
+                # Add label for bimodal types
+                if is_bimodal:
+                    label = "cis" if avg < 120 else "trans"
+                    comment = f"{type1}-{type2}-{type3} [{label}]"
+                else:
+                    comment = f"{type1}-{type2}-{type3}"
+                
+                angle_params.append((type_id, k, theta0, comment))
         
-        # Calculate average angle for this angle type if we have values
-        if angle_values[type_triplet] and any(val > 0 for val in angle_values[type_triplet]):
-            # Filter out zero values which might indicate missing angle data
-            valid_angles = [val for val in angle_values[type_triplet] if val > 0]
-            avg_angle = sum(valid_angles) / len(valid_angles) if valid_angles else 109.5
         else:
-            avg_angle = 109.5  # Default value if no valid angles are found
-        
-        # Assign angle constants
-        # Check if this is a water angle (atom types start with 'ow' and 'hw')
-        type1_lower = type1.lower()
-        type2_lower = type2.lower()
-        type3_lower = type3.lower()
-        
-        is_water_angle = (type2_lower.startswith('ow') and 
-                         (type1_lower.startswith('hw') or type3_lower.startswith('hw')))
-        
-        if is_water_angle:
-            # Special parameters for water angles
-            k = KANGLE_WAT
-            theta0 = ANGLE_WAT
-        elif has_h:
-            # Parameters for hydrogen-containing angles
-            k = KANGLE_H
-            theta0 = ANGLE_H
-        else:
-            # Parameters for other angles
-            k = KANGLE_M
-            theta0 = avg_angle  # Use calculated average
-        
-        angle_params.append((i+1, k, theta0, f"{type1}-{type2}-{type3}"))
+            # Original behavior: group by triplet only
+            angle_type_map = {info: i+1 for i, info in enumerate(unique_angle_info)}
+            for i, angle in enumerate(Angle_index):
+                a1, a2, a3 = int(angle[0]), int(angle[1]), int(angle[2])
+                type1 = atoms[a1-1].get('type', '')
+                type2 = atoms[a2-1].get('type', '')
+                type3 = atoms[a3-1].get('type', '')
+                if type1 > type3:
+                    type1, type3 = type3, type1
+                type_triplet = f"{type1} {type2} {type3}"
+                angle_types.append(angle_type_map[type_triplet])
+            
+            # Calculate angle parameters (original behavior)
+            for i, type_triplet in enumerate(unique_angle_info):
+                type1, type2, type3 = type_triplet.split()
+                has_h = 'H' in type1 or 'H' in type2 or 'H' in type3
+                
+                if angle_values[type_triplet] and any(val > 0 for val in angle_values[type_triplet]):
+                    valid_angles = [val for val in angle_values[type_triplet] if val > 0]
+                    avg_angle = sum(valid_angles) / len(valid_angles) if valid_angles else 109.5
+                else:
+                    avg_angle = 109.5
+                
+                type1_lower = type1.lower()
+                type2_lower = type2.lower()
+                type3_lower = type3.lower()
+                
+                is_water_angle = (type2_lower.startswith('ow') and 
+                                 (type1_lower.startswith('hw') or type3_lower.startswith('hw')))
+                
+                if is_water_angle:
+                    k = KANGLE_WAT
+                    theta0 = ANGLE_WAT
+                elif has_h:
+                    k = KANGLE_H
+                    theta0 = ANGLE_H
+                else:
+                    k = KANGLE_M
+                    theta0 = avg_angle
+                
+                angle_params.append((i+1, k, theta0, f"{type1}-{type2}-{type3}"))
     
     # Open the file for writing
     with open(file_path, 'w') as f:
@@ -933,7 +1215,7 @@ def lmp(atoms, Box=None, file_path=None, forcefield=None, rmaxH=1.2, rmaxM=2.45,
         for i, atom in enumerate(atoms, 1):
             atom_type = atom_type_map[atom.get('type', '')]
             molid = atom.get('molid', atom.get('resid', 1))
-            charge = atom.get('charge', 0.0)
+            charge = safe_charge(atom)
             x, y, z = atom.get('x', 0.0), atom.get('y', 0.0), atom.get('z', 0.0)
             f.write(f"{i:<8}{molid:<8}{atom_type:<8}{charge:<12.6f}{x:<12.5f}{y:<12.5f}{z:<12.5f}  # {atom.get('type', '')}\n")
         f.write("\n")

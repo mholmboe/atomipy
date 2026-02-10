@@ -40,11 +40,11 @@ MIN = [a for a in System if a.get('resname') == 'MIN']
 
 # Write ITP and PSF files for MIN part only
 ap.write_itp(MIN, Box=Box_dim, file_path='minff.itp')
-ap.write_psf(MIN, Box=Box_dim, file_path='minff.psf')
+ap.write_psf(MIN, Box=Box_dim, file_path='minff.psf', detect_bimodal=True, max_angle=150)
 
 # Load GMINFF forcefield parameters for LAMMPS Pair Coeffs
 ff_params = ap.load_forcefield('GMINFF/gminff_all.json', blocks=['GMINFF_k500', 'OPC3_HFE_LM', 'OPC3'])
-ap.write_lmp(System, Box=Box_dim, file_path='minff.data', forcefield=ff_params)
+ap.write_lmp(System, Box=Box_dim, file_path='minff.data', forcefield=ff_params,detect_bimodal=True)
 
 # Write full system GRO and LAMMPS data file
 ap.write_gro(System, Box=Box_dim, file_path='preem.gro')

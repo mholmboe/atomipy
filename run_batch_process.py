@@ -141,6 +141,19 @@ def main():
             print(f"Generating molecular topology file {output_itp}...")
             ap.write_itp(atoms, Box=Box_dim, file_path=output_itp)
             
+            # Check if any angles exceed 150° and write a filtered .itp if so
+            has_large_angles = False
+            if len(Angle_index) > 0:
+                for angle in Angle_index:
+                    if len(angle) > 3 and float(angle[3]) > 150.0:
+                        has_large_angles = True
+                        break
+            
+            if has_large_angles:
+                output_itp_filtered = f"output/pymin{i}_no150angles.itp"
+                print(f"Angles > 150° detected! Writing filtered topology to {output_itp_filtered}...")
+                ap.write_itp(atoms, Box=Box_dim, file_path=output_itp_filtered, max_angle=150)
+            
             print(f"Completed processing {input_file}")
     
     print("\nAll processing complete!")

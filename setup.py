@@ -25,6 +25,6 @@ setup(
         "Topic :: Scientific/Engineering :: Bio-Informatics",
         "Topic :: Scientific/Engineering :: Visualization", 
     ],
-    python_requires=">=3.6",
+    python_requires=">=3.7",
     keywords="molecular dynamics, periodic boundary conditions, minerals, chemistry, physics, triclinic, distance calculations, bond detection",
 )

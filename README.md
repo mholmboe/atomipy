@@ -573,7 +573,7 @@ ap.minff(atoms, Box=Box)
 ap.write_itp(atoms, Box=Box, file_path="topology.itp")
 
 # For LAMMPS:
-ap.write_lmp(atoms, Box=Box, file_path="topology.lmp") 
+ap.write_lmp(atoms, Box=Box, file_path="topology.data") 
 
 # For NAMD:
 ap.write_psf(atoms, Box=Box, file_path="topology.psf")
@@ -654,7 +654,7 @@ is_symmetric = ap.is_centrosymmetric_along_z(atoms)
 print(f"Is the structure centrosymmetric along z? {is_symmetric}")
 
 # Save the substituted structure
-ap.write_pdb(atoms, Cell=Box_dim, file_path="substituted_clay.pdb")
+ap.write_pdb(atoms, Box=Box_dim, file_path="substituted_clay.pdb")
 ```
 
 ## Example Scripts

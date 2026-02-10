@@ -144,7 +144,9 @@ def main():
     ap.write_psf(
         clayff_atoms,
         Box=Box_dim,
-        file_path="clayff_topology.psf"
+        file_path="clayff_topology.psf",
+        detect_bimodal=True,
+        max_angle=150
     )
     
     # Also generate a LAMMPS topology file for use with other clayff dynamics packages
@@ -152,7 +154,8 @@ def main():
     ap.write_lmp(
         clayff_atoms,
         Box=Box_dim,
-        file_path="clayff_topology.data"
+        file_path="clayff_topology.data",
+        detect_bimodal=True
     )
     
     # Step 8: Write final GRO file

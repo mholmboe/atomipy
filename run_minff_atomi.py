@@ -146,7 +146,9 @@ def main():
     ap.write_psf(
         minff_atoms,
         Box=Box_dim,
-        file_path="minff_topology.psf"
+        file_path="minff_topology.psf",
+        detect_bimodal=True,
+        max_angle=150
     )
     
     # Also generate a LAMMPS topology file for use with other minff dynamics packages
@@ -154,7 +156,8 @@ def main():
     ap.write_lmp(
         minff_atoms,
         Box=Box_dim,
-        file_path="minff_topology.data"
+        file_path="minff_topology.data",
+        detect_bimodal=True
     )
     
     # Generate a GROMACS n2t atom name to type file for use with gmx x2top
