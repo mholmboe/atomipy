@@ -38,13 +38,16 @@ System = ap.minff(System, Box_dim)
 # Extract MIN atoms from System for ITP (based on resname)
 MIN = [a for a in System if a.get('resname') == 'MIN']
 
-# Write ITP and PSF files for MIN part only
+# Write ITP files for MIN part only
 ap.write_itp(MIN, Box=Box_dim, file_path='minff.itp')
-ap.write_psf(MIN, Box=Box_dim, file_path='minff.psf', detect_bimodal=True, max_angle=150)
 
-# Load GMINFF forcefield parameters for LAMMPS Pair Coeffs
+# Write PSF file for the entire system (MIN + ION/Na + SOL/Ow,Hw), with bimodal detection and angle filtering
+ap.write_psf(System, Box=Box_dim, file_path='minff.psf', detect_bimodal=True, max_angle=150)
+
+# Load GMINFF forcefield parameters for LAMMPS Pair Coeffs, with and without bimodal detection of atomtype triplet angle terms
 ff_params = ap.load_forcefield('GMINFF/gminff_all.json', blocks=['GMINFF_k500', 'OPC3_HFE_LM', 'OPC3'])
 ap.write_lmp(System, Box=Box_dim, file_path='minff.data', forcefield=ff_params,detect_bimodal=True)
+ap.write_lmp(System, Box=Box_dim, file_path='minff_no150angles.data', forcefield=ff_params, detect_bimodal=True, max_angle=150)
 
 # Write full system GRO and LAMMPS data file
 ap.write_gro(System, Box=Box_dim, file_path='preem.gro')
@@ -53,4 +56,4 @@ ap.write_pdb(System, Box=Box_dim, file_path='preem.pdb')
 # Write structure statistics log
 ap.get_structure_stats(System, Box=Box_dim)
 
-print("Written: minff.itp, minff.psf, minff.data, preem.gro, preem.pdb, output.log")
+print("Written: minff.itp, minff.psf, minff.data, minff_no150angles.data, preem.gro, preem.pdb, output.log")

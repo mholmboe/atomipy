@@ -79,11 +79,19 @@ two_theta, intensity, fig = xrd(
 """
 
 import numpy as np
-import matplotlib.pyplot as plt
-from scipy.signal import find_peaks
 from atomipy.transform import direct_cartesian_to_fractional, direct_fractional_to_cartesian
 from atomipy.dist_matrix import dist_matrix
 from atomipy.cell_utils import Box_dim2Cell, Cell2Box_dim, normalize_box
+
+try:
+    import matplotlib.pyplot as plt
+except ImportError:
+    plt = None
+
+try:
+    from scipy.signal import find_peaks
+except ImportError:
+    find_peaks = None
 
 # Waasmaier-Kirfel coefficients table for atomic scattering factors
 WAASMAIER_KIRFEL_DATA = [ # Plain Python list for mixed types
@@ -672,6 +680,11 @@ def xrd(atoms, Box, wavelength=1.54187, angle_step=0.02,
     )
     """
     print("Starting XRD calculation...")
+
+    if plot and plt is None:
+        raise ImportError("matplotlib is required for XRD plotting. Install atomipy[xrd] or matplotlib.")
+    if plot and find_peaks is None:
+        raise ImportError("scipy is required for XRD peak picking in plot mode. Install atomipy[xrd] or scipy.")
     
     Box_dim, Cell = normalize_box(Box)
     
@@ -785,10 +798,21 @@ def xrd(atoms, Box, wavelength=1.54187, angle_step=0.02,
     
     # Calculate d-spacings and two-theta angles
     d_hkl = 1.0 / one_over_dhkl
-    two_theta_disc = 2 * np.degrees(np.arcsin(one_over_dhkl * wavelength / 2))
-    
+    sin_theta_arg = one_over_dhkl * wavelength / 2
+    finite_mask = np.isfinite(sin_theta_arg)
+    physical_mask = finite_mask & (np.abs(sin_theta_arg) <= 1.0)
+
+    two_theta_disc = np.full_like(sin_theta_arg, np.nan, dtype=float)
+    if np.any(physical_mask):
+        clipped_arg = np.clip(sin_theta_arg[physical_mask], -1.0, 1.0)
+        two_theta_disc[physical_mask] = 2 * np.degrees(np.arcsin(clipped_arg))
+
     # Filter out reflections beyond the measurement range
-    valid_indices = (two_theta_disc >= two_theta_range[0]) & (two_theta_disc <= two_theta_range[1])
+    valid_indices = (
+        physical_mask
+        & (two_theta_disc >= two_theta_range[0])
+        & (two_theta_disc <= two_theta_range[1])
+    )
     hkl = hkl[valid_indices]
     h = h[valid_indices]
     k = k[valid_indices]
@@ -1036,7 +1060,12 @@ def xrd(atoms, Box, wavelength=1.54187, angle_step=0.02,
                 f.write("-" * 30 + "\n")
         
         # Save as .mat file
-        import scipy.io as sio
+        try:
+            import scipy.io as sio
+        except ImportError as exc:
+            raise ImportError(
+                "scipy is required for save_output=True because xrd_results.mat is written."
+            ) from exc
         
         # Prepare atomic scattering data for MATLAB format
         matlab_scattering_data = {}

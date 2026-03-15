@@ -8,7 +8,7 @@ import copy
 import numpy as np
 
 
-def update(*atoms_list, molid=None, use_resname=True):
+def update(*atoms_list, molid=None, use_resname=True, force=False):
     """
     Update atom indices and optionally combine multiple atom structures.
     
@@ -28,6 +28,9 @@ def update(*atoms_list, molid=None, use_resname=True):
     use_resname : bool, optional
         If True, molecule boundaries are also determined by changes in residue name.
         Default is True.
+    force : bool, optional
+        If True, forces re-enumeration of molecule IDs even if they already exist.
+        Default is False.
         
     Returns
     -------
@@ -48,6 +51,9 @@ def update(*atoms_list, molid=None, use_resname=True):
     
     # Update structure without using residue names for molecule boundaries:
     new_atoms = ap.update(atoms, use_resname=False)
+
+    # Force re-enumeration of molids:
+    new_atoms = ap.update(atoms, force=True)
     """
     # Make deep copies to avoid modifying originals
     atoms_copies = [copy.deepcopy(atoms) for atoms in atoms_list if atoms]
@@ -70,7 +76,7 @@ def update(*atoms_list, molid=None, use_resname=True):
     
     # If only one structure, just update indices/molids as requested
     if len(atoms_copies) == 1:
-        return _update_single_structure(atoms_copies[0], molid, use_resname)
+        return _update_single_structure(atoms_copies[0], molid, use_resname, force)
 
     result_atoms = []
     current_molid = 1
@@ -79,32 +85,14 @@ def update(*atoms_list, molid=None, use_resname=True):
         if not atoms:
             continue
 
-        # If all atoms already have molids, preserve them and just adjust to avoid clashes
-        if all('molid' in a for a in atoms):
-            # Deep copy already done; adjust offset if needed
-            unique_molids = set(a['molid'] for a in atoms)
-            min_molid = min(unique_molids)
-            # If this is the first appended chunk, keep molids; otherwise, offset to continue sequence
-            if result_atoms:
-                offset = current_molid - min_molid
-                for a in atoms:
-                    a['molid'] = a['molid'] + offset
-            result_atoms.extend(atoms)
-            current_molid = max(a['molid'] for a in result_atoms) + 1
-            continue
+        # For appended structures, always re-enumerate molids by appearance order
+        # so mixed or non-sequential source molids become a clean continuous series.
+        updated_atoms = _update_single_structure(atoms, None, use_resname, force=True)
 
-        # Otherwise, compute molids based on boundaries
-        updated_atoms = _update_single_structure(atoms, None, use_resname)
-
-        unique_molids = set(atom['molid'] for atom in updated_atoms)
-        if len(unique_molids) == 1:
-            for atom in updated_atoms:
-                atom['molid'] = current_molid
-        else:
-            min_molid = min(unique_molids)
-            offset = current_molid - min_molid
-            for atom in updated_atoms:
-                atom['molid'] += offset
+        min_molid = min(atom['molid'] for atom in updated_atoms)
+        offset = current_molid - min_molid
+        for atom in updated_atoms:
+            atom['molid'] += offset
 
         result_atoms.extend(updated_atoms)
         current_molid = max(atom['molid'] for atom in result_atoms) + 1
@@ -122,7 +110,7 @@ def update(*atoms_list, molid=None, use_resname=True):
     return result_atoms
 
 
-def _update_single_structure(atoms, molid=None, use_resname=True):
+def _update_single_structure(atoms, molid=None, use_resname=True, force=False):
     """
     Helper function to update a single atom structure.
     
@@ -134,6 +122,9 @@ def _update_single_structure(atoms, molid=None, use_resname=True):
         If provided, sets all molecule IDs to this value
     use_resname : bool, optional
         If True, molecule boundaries are also determined by changes in residue name
+    force : bool, optional
+        If True, forces re-enumeration of molecule IDs even if they already exist.
+        Default is False.
         
     Returns
     -------
@@ -156,8 +147,8 @@ def _update_single_structure(atoms, molid=None, use_resname=True):
             atom['molid'] = molid
         return atoms
 
-    # If all atoms already have a molid, preserve them as-is (no regrouping)
-    if all('molid' in atom for atom in atoms):
+    # If all atoms already have a molid and not forcing, preserve them as-is (no regrouping)
+    if not force and all('molid' in atom for atom in atoms):
         return atoms
 
     # Make sure all atoms have a molid

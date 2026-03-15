@@ -10,6 +10,12 @@ setup(
         "tqdm>=4.45.0",
         "numba>=0.50.0;python_version>='3.6'",  # Optional but recommended for performance
     ],
+    extras_require={
+        "xrd": [
+            "matplotlib>=3.3.0",
+            "scipy>=1.5.0",
+        ],
+    },
     author="Michael Holmboe",
     author_email="michael.holmboe@umu.se",
     description="A Python toolbox for molecular structure analysis and simulation with support for both orthogonal and triclinic periodic boundary conditions",

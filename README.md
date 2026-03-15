@@ -135,6 +135,7 @@ Understanding the core containers and fields used in atomipy makes it easier to 
 - NumPy (>=1.18.0)
 - tqdm (>=4.45.0) - for progress bars
 - Numba (>=0.50.0, optional) - for performance optimization via JIT compilation
+- Matplotlib + SciPy (optional, required for XRD plotting and `.mat` export)
 
 ## Installation
 
@@ -156,6 +157,8 @@ If you're new to Python, follow these simple steps to get started with atomipy:
    git clone https://github.com/mholmboe/atomipy.git
    cd atomipy
    pip install -e .
+   # Optional XRD extras:
+   pip install -e ".[xrd]"
    ```
 
 #### Method 2: Manual Installation
@@ -170,6 +173,8 @@ If you're new to Python, follow these simple steps to get started with atomipy:
 5. Install the package and its dependencies:
    ```bash
    pip install -e .
+   # Optional XRD extras:
+   pip install -e ".[xrd]"
    ```
 
 ### Step 3: Verify Installation
@@ -669,18 +674,19 @@ These scripts demonstrate workflows for using MINFF and CLAYFF forcefields respe
 
 #### What the script does:
 
-1. **Imports a GRO structure file** (Kaolinite_GII_0.0487.gro) containing mineral coordinates and Box dimensions
+1. **Imports a structure file** (`run_minff_atomi.py` uses `Kaolinite_GII_0.0487.pdb`, `run_clayff_atomi.py` uses `Kaolinite_GII_0.0487.gro`)
 2. **Assigns chemical elements** to each atom using chemical knowledge-based rules
-3. **Creates a supercell** by replicating the unit Cell to reach a target size (40 Å in each dimension)
+3. **Creates a supercell** by replicating the unit cell to a target size (about 30 Å in each dimension)
 4. **Saves the replicated structure** in both GRO and PDB formats
 5. **Calculates bonds and angles** based on distance criteria with periodic boundary awareness
-6. **Assigns specialized MINFF atom types** based on their chemical environment and coordination
+6. **Assigns specialized MINFF/CLAYFF atom types** based on their chemical environment and coordination
 7. **Generates a molecular topology file** (ITP) for use in molecular dynamics simulations
 8. **Writes the final structure** with all assigned properties to output files
 
 #### Running the scripts:
 
-Simply execute `python run_minff_atomi.py` or `python run_clayff_atomi.py` from the command line. The scripts require a GRO file named "Kaolinite_GII_0.0487.gro" in the same directory.
+Simply execute `python run_minff_atomi.py` or `python run_clayff_atomi.py` from the command line.
+The first expects `Kaolinite_GII_0.0487.pdb`; the second expects `Kaolinite_GII_0.0487.gro` in the working directory.
 
 #### Output files:
 
