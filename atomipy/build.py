@@ -490,7 +490,7 @@ def merge(atoms1, atoms2, Box, type_mode='molid', atom_label=None, min_distance=
     if len(atoms1) + len(atoms2) > 20000:
         # For large systems, use cell list method
         combined = atoms1 + atoms2
-        dist_matrix_result = cell_list_dist_matrix(combined, box)
+        dist_matrix_result = cell_list_dist_matrix(combined, Box)
         # Extract only the atoms1-atoms2 part
         dist_matrix_result = dist_matrix_result[:len(atoms1), len(atoms1):]
         if isinstance(dist_matrix_result, tuple):
@@ -509,7 +509,7 @@ def merge(atoms1, atoms2, Box, type_mode='molid', atom_label=None, min_distance=
         coords2 = np.column_stack((xs2, ys2, zs2))
         
         # Calculate distances
-        dist_matrix_result = dist_matrix(atoms1 + atoms2, box)
+        dist_matrix_result = dist_matrix(atoms1 + atoms2, Box)
         if isinstance(dist_matrix_result, tuple):
             # If dist_matrix returns a tuple, use the first element (the actual distance matrix)
             dist_matrix_result = dist_matrix_result[0][:len(atoms1), len(atoms1):]
