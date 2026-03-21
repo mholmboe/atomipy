@@ -363,7 +363,7 @@ def minff(atoms, Box, ffname='minff', rmaxlong=2.45, rmaxH=1.2, log=False, log_f
     # Set the atoms chemical element names
     atoms = element(atoms)  # Use correct function name 'element'
 
-   # First assign formal charges to all atoms (especially for ions and water)
+    # First assign formal charges to all atoms (especially for ions and water)
     # This sets appropriate charges based on atom types and residue names
     atoms = assign_formal_charges(atoms)
 

@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="atomipy",
-    version="0.92",
+    version="0.93",
     packages=find_packages(),
     install_requires=[
         "numpy>=1.18.0",

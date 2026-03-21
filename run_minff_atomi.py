@@ -114,8 +114,7 @@ def main():
     # MINFF classifies atoms based on their chemical environment
     # For example, oxygen atoms can be: Oh (hydroxyl), Op (bridging), Ow (water)
     # Generate detailed structure statistics and save to a log file
-    ap.minff(replicated_atoms, Box=replicated_Box_dim, log=True, log_file="minff_structure_stats.log")  
-    minff_atoms = replicated_atoms
+    minff_atoms = ap.minff(replicated_atoms, Box=replicated_Box_dim, log=True, log_file="minff_structure_stats.log")
     Box_dim = replicated_Box_dim
     
     # Count the different atom types

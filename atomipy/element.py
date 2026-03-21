@@ -67,8 +67,6 @@ def element(atoms):
             atom['element'] = 'Al'
         elif atomtype_lower.startswith('al'):
             atom['element'] = 'Al'
-        elif atomtype_lower.startswith('al'):
-            atom['element'] = 'Al'
         elif atomtype_lower.startswith('mg'):
             atom['element'] = 'Mg'
         elif atomtype_lower.startswith('ca'):
