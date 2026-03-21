@@ -34,12 +34,30 @@ atominpython/                # Repository root
 │   ├── data/                # Reference data (Shannon radii, BV params)
 │   ├── ffparams/            # Force field parameters (GMINFF/TMINFF JSONs & ITPs)
 │   ├── structures/          # Bundled library of mineral structures
+│   ├── __init__.py          # Package init, public API exports
+│   ├── add.py               # Atom property update utilities
 │   ├── bond_angle.py        # Topology analysis (bonds, angles, dihedrals)
+│   ├── bond_valence.py      # Bond valence sum analysis (BVS, GII)
 │   ├── build.py             # Structure manipulation & substitutions
+│   ├── cell_list_dist_matrix.py  # Cell-list based sparse distance matrix
+│   ├── cell_utils.py        # Box_dim ↔ Cell conversion utilities
 │   ├── charge.py            # Charge assignment logic
 │   ├── diffraction.py       # High-performance XRD simulation
+│   ├── dist_matrix.py       # Full pairwise distance matrix with PBC
+│   ├── element.py           # Chemical element assignment
+│   ├── ffparams.py          # Force field parameter file loader
 │   ├── forcefield.py        # MINFF/CLAYFF force field logic
+│   ├── general.py           # General utilities (e.g., scale)
 │   ├── import_conf.py       # File importers (PDB, GRO, XYZ)
+│   ├── import_top.py        # Topology file importer (ITP)
+│   ├── mass.py              # Atomic masses and center of mass
+│   ├── move.py              # Translate, rotate, place, center
+│   ├── radius.py            # Van der Waals and ionic radii
+│   ├── replicate.py         # Supercell replication
+│   ├── resname.py           # Residue name assignment
+│   ├── size.py              # Shannon radii, bond distance estimates
+│   ├── solvent.py           # Solvation & water molecule detection
+│   ├── transform.py         # Coordinate transformations (frac/cart/wrap)
 │   ├── write_conf.py        # File exporters (PDB, GRO, XYZ)
 │   └── write_top.py         # Topology exporters (ITP, PSF, LMP)
 ├── run_*.py                 # Example workflow scripts (e.g., run_minff_atomi.py)
@@ -388,9 +406,9 @@ fig.show()
 
 ### Force Field
 
-- `minff(atoms, Box, ffname='minff', rmaxlong=2.45, rmaxH=1.2)`: Assign MINFF forcefield specific atom types to each atom
-- `clayff(atoms, Box, ffname='clayff', rmaxlong=2.45, rmaxH=1.2)`: Assign CLAYFF forcefield specific atom types to each atom
-- `load_forcefield(json_file, blocks=None, units='lammps')`: Load non-bonded parameters from a JSON file in `ffparams`. Returns a dictionary suitable for `write_lmp`.
+- `minff(atoms, Box, ffname='minff', rmaxlong=2.45, rmaxH=1.2, log=False, log_file=None)`: Assign MINFF forcefield specific atom types to each atom. Set `log=True` to generate structure statistics; optionally specify `log_file` for the output path.
+- `clayff(atoms, Box, ffname='clayff', rmaxlong=2.45, rmaxH=1.2, log=False, log_file=None)`: Assign CLAYFF forcefield specific atom types to each atom. Set `log=True` to generate structure statistics.
+- `load_forcefield(json_path, blocks=None, units='lammps')`: Load non-bonded parameters from a JSON file in `ffparams`. Returns a dictionary suitable for `write_lmp`.
 - `write_n2t(atoms, Box=None, n2t_file=None, verbose=True)`: Generate a GROMACS n2t (atom name to type) file based on structural analysis, honouring periodic boundary conditions when a 1×3 Box, 1×6 Cell, or 1×9 ``Box_dim`` array is supplied and merging nearly identical environments
 
 ### Molecular Topology
@@ -412,7 +430,7 @@ fig.show()
 - `bond_angle(atoms, Box, rmaxH=1.2, rmaxM=2.45)`: Compute bonds and angles for a given atomic structure
 - `dist_matrix(atoms, Box)`: Calculate a full distance matrix between all atoms with PBC
 - `cell_list_dist_matrix(atoms, Box)`: Calculate a sparse distance matrix between all atoms with PBC
-- `find_H2O(atoms, rmaxH=1.2)`: Find water molecules in a system based on O-H bonding patterns. Returns water atoms, their 0-based indices, and unique molecule IDs. Requires `bond_angle` to be run first for accurate detection.
+- `find_H2O(atoms, Box_dim=None, rmin=1.25)`: Find water molecules in a system based on O-H bonding patterns. Returns water atoms, their 0-based indices, and unique molecule IDs.
 - `get_structure_stats(atoms, Box=None, total_charge=0, log_file='output.log', ffname='minff')`: Generate and log statistics about atom types, coordination environments, charges, bond distances, and angles. Returns a formatted report string and optionally writes to a log file. Works with both 'minff' and 'clayff' forcefields.
 
 ### Coordinate Transformations
@@ -435,15 +453,20 @@ fig.show()
 
 ### Structure Building
 
-- `substitute(atoms, box, num_oct_subst, o1_type, o2_type, min_o2o2_dist, ...)`: Perform isomorphous substitution by replacing atom types (e.g., Al→Mg in octahedral sites). Advanced features include:
+- `substitute(atoms, Box, num_oct_subst, o1_type, o2_type, min_o2o2_dist, ...)`: Perform isomorphous substitution by replacing atom types (e.g., Al→Mg in octahedral sites). Returns `(atoms, Box, None)`. Advanced features include:
   - Automatic detection of centrosymmetric structures for proper centering during substitution
   - Fallback to element-based matching when atom type names aren't found (using the element module)
   - Even distribution of substitutions across the structure
   - Support for both octahedral and tetrahedral substitutions with minimum distance constraints
   - Optional spatial limits for targeting substitutions to specific regions
 - `molecule(atoms, molid=1, resname=None)`: Assign molecule ID and optionally residue name to all atoms in a list. Useful for grouping atoms as a single molecular unit before topology generation.
+- `merge(atoms1, atoms2, Box, type_mode='molid', atom_label=None, min_distance=None)`: Merge two atom lists by removing atoms from atoms2 that are too close to atoms1. Supports molecule-aware removal via `type_mode='molid'`.
+- `solvate(limits, density=1000.0, min_distance=2.0, ...)`: Generate a solvation box. Supports custom solvent molecules and density control.
+- `ionize(ion_type, resname, limits, num_ions, ...)`: Add ions to a system within specified region limits.
+- `insert(molecule_atoms, limits, ...)`: Insert molecules into a system within specified region limits.
+- `slice(atoms, limits, remove_partial_molecules=True)`: Extract atoms within a region defined by limits.
 - `assign_resname(atoms, default_resname='MIN')`: Assign residue names to atoms based on their types. Assigns 'SOL' to water atoms, 'ION' to ions, and the specified default name to other atoms.
-- `add_H_atom(atoms, Box, target_type, h_type='H', bond_length=0.96, coordination=1)`: Add hydrogen atoms to under-coordinated atoms (e.g. protonating edge sites).
+- `add_H_atom(atoms, Box, target_type, h_type='H', bond_length=0.96, coordination=1, max_h_per_atom=1)`: Add hydrogen atoms to under-coordinated atoms (e.g. protonating edge sites).
 - `adjust_H_atom(atoms, Box, h_type='H', neighbor_type='O', distance=0.96)`: Adjust bond lengths of hydrogen atoms, useful for fixing distorted bonds.
 - `adjust_Hw_atom(atoms, Box, water_resname='SOL', water_model='OPC3')`: Repair water molecules by adding missing hydrogens and fixing geometry (OH distance and HOH angle) for models like OPC3/SPC/TIP3P.
 - `is_centrosymmetric_along_z(atoms, tolerance=0.1)`: Check if a structure is approximately centrosymmetric along the z-axis by analyzing the distribution of z-coordinates
@@ -615,7 +638,7 @@ atoms, Cell = ap.import_pdb("Pyrophyllite_GII_0.071.pdb")
 
 # Perform octahedral substitution: Replace 16 Al atoms with Mg atoms
 # Using the mineral-specific atom types (will automatically look up by element if type not found)
-atoms = ap.substitute(
+atoms, Cell, _ = ap.substitute(
     atoms, 
     Cell, 
     num_oct_subst=16, 
@@ -627,7 +650,7 @@ atoms = ap.substitute(
 # Perform both octahedral and tetrahedral substitutions
 # Replace 4 Al with Mg (octahedral) and 8 Si with Al (tetrahedral)
 # If atom types aren't found, it will try to match by element instead
-atoms = ap.substitute(
+atoms, Cell, _ = ap.substitute(
     atoms, 
     Cell, 
     num_oct_subst=4, 
@@ -642,7 +665,7 @@ atoms = ap.substitute(
 
 # Limit substitutions to specific region (e.g., only z > 10 Å)
 # The function ensures even distribution between upper and lower parts
-atoms = ap.substitute(
+atoms, Box, _ = ap.substitute(
     atoms, 
     Box, 
     num_oct_subst=4, 
@@ -651,7 +674,7 @@ atoms = ap.substitute(
     min_o2o2_dist=5.5,
     lo_limit=10.0,
     hi_limit=50.0,
-    dimension=2  # 0=x, 1=y, 2=z (Python-style indexing)
+    dimension=3  # 1=x, 2=y, 3=z (MATLAB-style indexing)
 )
 
 # Check if a structure is centrosymmetric along z (can be used independently)
