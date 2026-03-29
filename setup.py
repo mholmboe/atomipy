@@ -15,6 +15,9 @@ setup(
             "matplotlib>=3.3.0",
             "scipy>=1.5.0",
         ],
+        "cif": [
+            "gemmi>=0.7.0",
+        ],
     },
     author="Michael Holmboe",
     author_email="michael.holmboe@umu.se",

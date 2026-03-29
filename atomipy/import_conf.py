@@ -302,6 +302,263 @@ def xyz(file_path):
     return atoms, Cell
 
 
+def cif(file_path, expand_symmetry=True):
+    """Import atoms from a CIF or mmCIF file using GEMMI.
+
+    Handles both small-molecule CIF (minerals, crystals from e.g. COD/ICSD)
+    and macromolecular mmCIF. Fractional coordinates are converted to
+    Cartesian (Angstroms). By default, symmetry operations are applied to
+    generate the full unit cell from the asymmetric unit.
+
+    Parameters
+    ----------
+    file_path : str
+        Path to the .cif or .mmcif file.
+    expand_symmetry : bool, optional
+        If True (default), apply space-group symmetry operations to expand
+        the asymmetric unit into the full unit cell.  Set to False if the
+        CIF already contains all atoms in the unit cell.
+
+    Returns
+    -------
+    atoms : list of dict
+        Standard atomipy atom list with keys: molid, index, resname,
+        x, y, z, element, type, fftype, neigh, bonds, angles, xfrac,
+        yfrac, zfrac, occupancy.
+    Cell : list
+        [a, b, c, alpha, beta, gamma] in Angstroms / degrees.
+
+    Raises
+    ------
+    ImportError
+        If GEMMI is not installed (``pip install gemmi``).
+
+    Notes
+    -----
+    - Uncertainty values in parentheses (e.g. ``5.1793(4)``) are
+      automatically stripped.
+    - For small-molecule CIF the space group is read from
+      ``_symmetry_space_group_name_H-M`` or
+      ``_space_group_name_H-M_alt``.  If neither is found, ``P 1``
+      is assumed (no expansion).
+    - For macromolecular mmCIF, GEMMI's ``read_structure`` is used
+      which already provides Cartesian coordinates.
+
+    Examples
+    --------
+    atoms, Cell = cif("Kaolinite.cif")
+    atoms, Cell = cif("quartz.cif", expand_symmetry=False)
+    """
+    try:
+        import gemmi
+    except ImportError:
+        raise ImportError(
+            "GEMMI is required for CIF import.  Install it with: "
+            "pip install gemmi"
+        )
+
+    from .transform import fractional_to_cartesian
+
+    # Helper: strip CIF uncertainty parentheses, e.g. '5.1793(4)' -> 5.1793
+    def _cifval(s):
+        if s is None or s == '?' or s == '.':
+            return None
+        s = str(s).split('(')[0].strip()
+        return float(s)
+
+    ext = os.path.splitext(file_path)[1].lower()
+
+    # ------------------------------------------------------------------
+    # Try macromolecular mmCIF first (GEMMI auto-detects the format)
+    # ------------------------------------------------------------------
+    try:
+        st = gemmi.read_structure(file_path)
+        if st and len(st) > 0 and len(st[0]) > 0:
+            # Successfully parsed as a macromolecular structure
+            model = st[0]
+
+            Cell = [
+                st.cell.a, st.cell.b, st.cell.c,
+                st.cell.alpha, st.cell.beta, st.cell.gamma
+            ]
+
+            atoms = []
+            idx = 1
+            for chain in model:
+                for residue in chain:
+                    for ga in residue:
+                        atom = {
+                            'index':   idx,
+                            'molid':   int(residue.seqid.num) if residue.seqid.num else 1,
+                            'resname': residue.name.strip(),
+                            'type':    ga.name.strip(),
+                            'fftype':  ga.name.strip(),
+                            'element': ga.element.name if ga.element else '',
+                            'x':       ga.pos.x,
+                            'y':       ga.pos.y,
+                            'z':       ga.pos.z,
+                            'occupancy': ga.occ,
+                            'neigh': [], 'bonds': [], 'angles': [],
+                        }
+                        atoms.append(atom)
+                        idx += 1
+
+            # Fill in element field if missing
+            element_module.element(atoms)
+            return atoms, Cell
+    except Exception:
+        pass  # Not a macromolecular format — fall through to small-molecule
+
+    # ------------------------------------------------------------------
+    # Small-molecule / mineral CIF
+    # ------------------------------------------------------------------
+    doc = gemmi.cif.read_file(file_path)
+    block = doc.sole_block()
+
+    # ---- Cell parameters ----
+    a     = _cifval(block.find_value('_cell_length_a'))
+    b     = _cifval(block.find_value('_cell_length_b'))
+    c     = _cifval(block.find_value('_cell_length_c'))
+    alpha = _cifval(block.find_value('_cell_angle_alpha'))
+    beta  = _cifval(block.find_value('_cell_angle_beta'))
+    gamma = _cifval(block.find_value('_cell_angle_gamma'))
+
+    if any(v is None for v in [a, b, c, alpha, beta, gamma]):
+        raise ValueError(
+            f"CIF file {file_path} is missing one or more _cell_* fields"
+        )
+    Cell = [a, b, c, alpha, beta, gamma]
+
+    # ---- Atom sites (fractional coordinates) ----
+    # Try the standard CIF tags; fall back to alternatives
+    label_tag   = '_atom_site_label'
+    symbol_tag  = '_atom_site_type_symbol'
+    fx_tag      = '_atom_site_fract_x'
+    fy_tag      = '_atom_site_fract_y'
+    fz_tag      = '_atom_site_fract_z'
+    occ_tag     = '_atom_site_occupancy'
+
+    # Build a Table from the block for the tags we need
+    tags_wanted = [label_tag, symbol_tag, fx_tag, fy_tag, fz_tag, occ_tag]
+    # Not all CIF files have all fields; figure out which exist
+    tags_present = [t for t in tags_wanted if block.find_value(t) is not None
+                    or block.find([t]) is not None]
+
+    # Use GEMMI's loop search
+    loop = block.find(tags_wanted[:5])  # At least label + coords
+
+    raw_atoms = []
+    for row in loop:
+        label  = str(row[0]).strip() if row[0] else 'X'
+        symbol = str(row[1]).strip() if len(row) > 1 and row[1] else label
+        # Strip charge suffixes like '2+', '3-', digits from symbol
+        clean_symbol = ''.join(c for c in symbol if c.isalpha())
+        if not clean_symbol:
+            clean_symbol = ''.join(c for c in label if c.isalpha())
+
+        fx = _cifval(row[2]) if len(row) > 2 else 0.0
+        fy = _cifval(row[3]) if len(row) > 3 else 0.0
+        fz = _cifval(row[4]) if len(row) > 4 else 0.0
+
+        # Try to get occupancy from the loop or as a separate column
+        occ = 1.0
+        if loop.width() > 5:
+            occ_val = _cifval(row[5])
+            if occ_val is not None:
+                occ = occ_val
+
+        raw_atoms.append({
+            'label':   label,
+            'element': clean_symbol,
+            'xfrac':   fx,
+            'yfrac':   fy,
+            'zfrac':   fz,
+            'occupancy': occ,
+        })
+
+    n_asym = len(raw_atoms)
+
+    # ---- Symmetry expansion (asymmetric unit -> full unit cell) ----
+    if expand_symmetry:
+        # Find space group
+        sg_str = (block.find_value('_symmetry_space_group_name_H-M')
+                  or block.find_value('_space_group_name_H-M_alt')
+                  or block.find_value('_symmetry_space_group_name_Hall'))
+
+        if sg_str and sg_str not in ('?', '.'):
+            sg_str = sg_str.strip("'\" ")
+            try:
+                sg = gemmi.SpaceGroup(sg_str)
+            except ValueError:
+                print(f"Warning: Could not recognise space group '{sg_str}', "
+                      f"assuming P 1 (no symmetry expansion)")
+                sg = gemmi.SpaceGroup('P 1')
+        else:
+            sg = gemmi.SpaceGroup('P 1')
+
+        ops = sg.operations()
+        expanded = []
+        seen = set()
+        for atom in raw_atoms:
+            for op in ops:
+                fxyz = op.apply_to_xyz(
+                    [atom['xfrac'], atom['yfrac'], atom['zfrac']]
+                )
+                # Wrap into [0, 1)
+                fxyz = [f % 1.0 for f in fxyz]
+                # De-duplicate within tolerance
+                key = (
+                    atom['element'],
+                    round(fxyz[0], 4),
+                    round(fxyz[1], 4),
+                    round(fxyz[2], 4),
+                )
+                if key not in seen:
+                    seen.add(key)
+                    new = dict(atom)
+                    new['xfrac'], new['yfrac'], new['zfrac'] = fxyz
+                    expanded.append(new)
+        raw_atoms = expanded
+
+    # ---- Build atomipy atom list ----
+    atoms = []
+    for i, ra in enumerate(raw_atoms, 1):
+        atom = {
+            'index':     i,
+            'molid':     1,
+            'resname':   'MIN',
+            'type':      ra['label'],
+            'fftype':    ra['label'],
+            'element':   ra['element'],
+            'xfrac':     ra['xfrac'],
+            'yfrac':     ra['yfrac'],
+            'zfrac':     ra['zfrac'],
+            'x':         0.0,
+            'y':         0.0,
+            'z':         0.0,
+            'occupancy': ra.get('occupancy', 1.0),
+            'neigh': [], 'bonds': [], 'angles': [],
+        }
+        atoms.append(atom)
+
+    # Convert fractional -> Cartesian using existing transform module
+    fractional_to_cartesian(atoms=atoms, Box=Cell, add_to_atoms=True)
+
+    # Ensure element field is properly set
+    original_types = [atom.get('type') for atom in atoms]
+    element_module.element(atoms)
+    for atom, orig_type in zip(atoms, original_types):
+        if orig_type:
+            atom['type'] = orig_type
+
+    print(f"Imported {len(atoms)} atoms from CIF "
+          f"(asymmetric unit: {n_asym}, expand_symmetry={expand_symmetry}, "
+          f"Cell: {a:.3f} {b:.3f} {c:.3f} "
+          f"{alpha:.1f} {beta:.1f} {gamma:.1f})")
+
+    return atoms, Cell
+
+
 def auto(file_path):
     """Automatically detect file format and import atoms.
     
@@ -325,6 +582,8 @@ def auto(file_path):
         return gro(file_path)
     elif ext == '.xyz':
         return xyz(file_path)
+    elif ext in ('.cif', '.mmcif', '.mcif'):
+        return cif(file_path)
     else:
         # Try to detect the format by checking file contents
         with open(file_path, 'r') as f:

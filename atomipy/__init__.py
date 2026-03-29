@@ -8,7 +8,7 @@ calculations, bond/angle detection, structure manipulation, and X-ray diffractio
 simulation functions.
 
 Key features:
-- Import/export of common molecular file formats (PDB, GRO, XYZ)
+- Import/export of common molecular file formats (PDB, GRO, XYZ, CIF/mmCIF)
 - Topology file generation for molecular dynamics simulations (GROMACS, NAMD, LAMMPS)
 - GROMACS n2t file generation for atom name to type conversions (gmx x2top)
   with periodic minimum-image distances and environment deduplication
@@ -29,12 +29,15 @@ from . import import_conf
 import_pdb = import_conf.pdb
 import_gro = import_conf.gro
 import_xyz = import_conf.xyz
+import_cif = import_conf.cif
+import_mmcif = import_conf.cif  # alias — cif() handles both CIF and mmCIF
 import_auto = import_conf.auto
 
 from . import write_conf
 write_pdb = write_conf.pdb
 write_gro = write_conf.gro
 write_xyz = write_conf.xyz
+write_cif = write_conf.cif
 write_auto = write_conf.auto
 
 # Topology file generation
@@ -101,6 +104,7 @@ substitute = build.substitute
 molecule = build.molecule
 merge = build.merge
 slice = build.slice
+fuse_atoms = build.fuse_atoms
 ionize = build.ionize
 insert = build.insert
 add_H_atom = build.add_H_atom
@@ -157,8 +161,8 @@ __version__ = "0.93"
 
 # Expose key functions at the package level
 __all__ = [
-    'import_pdb', 'import_gro', 'import_xyz', 'import_auto',
-    'write_pdb', 'write_gro', 'write_xyz', 'write_auto',
+    'import_pdb', 'import_gro', 'import_xyz', 'import_cif', 'import_mmcif', 'import_auto',
+    'write_pdb', 'write_gro', 'write_xyz', 'write_cif', 'write_auto',
     'write_itp', 'write_psf', 'write_lmp', 'import_itp_topology',
     'element', 'radius', 'mass', 'set_atomic_masses', 'com',
     'dist_matrix', 'cell_list_dist_matrix', 'bond_angle', 'bond_angle_dihedral', 'find_H2O',
@@ -167,7 +171,7 @@ __all__ = [
     'triclinic_to_orthogonal', 'orthogonal_to_triclinic', 'get_orthogonal_box', 'get_cell_vectors',
     'direct_cartesian_to_fractional', 'direct_fractional_to_cartesian',
     'replicate_system', 'translate', 'rotate', 'place', 'center', 'update', 'scale',
-    'substitute', 'molecule', 'merge', 'slice', 'solvate', 'ionize', 'insert',
+    'substitute', 'molecule', 'merge', 'slice', 'fuse_atoms', 'solvate', 'ionize', 'insert',
     'add_H_atom', 'adjust_H_atom', 'adjust_Hw_atom',
     'is_centrosymmetric_along_z',
     'assign_resname',
