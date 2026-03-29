@@ -15,7 +15,7 @@ import atomipy as ap
 
 # ===== USER-DEFINED PARAMETERS =====
 # Input structure
-input_pdb = "Pyrophyllite_GII_0.071.pdb"
+input_conf = "Pyrophyllite_GII_0.071.pdb"
 output_name = "MMT_bilayer"
 
 # Replication factors (x, y, z)
@@ -32,7 +32,7 @@ basal_spacing = 22
 nWaters = 360
 
 # Step 1: Load and replicate the pyrophyllite unit cell
-atoms, cell = ap.import_pdb(input_pdb)
+atoms, cell = ap.import_auto(input_conf)
 box_dim = ap.Cell2Box_dim(cell)
 box = box_dim  # Using cell parameters format for this script
 

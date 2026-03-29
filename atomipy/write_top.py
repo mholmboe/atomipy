@@ -587,7 +587,7 @@ def psf(atoms, Box=None, file_path=None, segid=None, rmaxH=1.2, rmaxM=2.45,
         # Write bonds section
         if Bond_index is not None:
             nbonds = len(Bond_index)
-            f.write(f"\n{nbonds:8d} !NBOND: bonds\n")
+            f.write(f"\n{nbonds:8d} !NBOND\n")
             
             # PSF format - 8 columns per line, each with 8 characters
             # Bond indices are 1-based in the output file
@@ -607,12 +607,12 @@ def psf(atoms, Box=None, file_path=None, segid=None, rmaxH=1.2, rmaxM=2.45,
             if line_items > 0:
                 f.write("\n")
         else:
-            f.write("\n0 !NBOND: bonds\n")
+            f.write("\n       0 !NBOND\n")
         
         # Write angles section
         if Angle_index is not None:
             nangles = len(Angle_index)
-            f.write(f"\n{nangles:8d} !NTHETA: angles\n")
+            f.write(f"\n{nangles:8d} !NTHETA\n")
             
             # PSF format - 9 columns per line, each with 8 characters
             # Angle indices are 1-based in the output file
@@ -631,32 +631,29 @@ def psf(atoms, Box=None, file_path=None, segid=None, rmaxH=1.2, rmaxM=2.45,
             if line_items > 0:
                 f.write("\n")
         else:
-            f.write("\n0 !NTHETA: angles\n")
+            f.write("\n       0 !NTHETA\n")
         
         # Write dihedrals section (empty as we don't calculate them)
-        f.write("\n0 !NPHI: dihedrals\n")
+        f.write("\n       0 !NPHI\n")
         
         # Write impropers section (empty as we don't calculate them)
-        f.write("\n0 !NIMPHI: impropers\n")
+        f.write("\n       0 !NIMPHI\n")
         
         # Write donors section (empty)
-        f.write("\n0 !NDON: donors\n")
+        f.write("\n       0 !NDON\n")
         
         # Write acceptors section (empty)
-        f.write("\n0 !NACC: acceptors\n")
+        f.write("\n       0 !NACC\n")
         
         # Write non-bonded exclusion section (empty)
-        f.write("\n0 !NNB\n\n")
-        
-        # Write zeros for the excluded atoms list (required by PSF format)
-        f.write(" ".join("0" for _ in range(min(10, nAtoms))) + "\n\n")
-        
-        # Write zeros for the 1-4 interaction list (required by PSF format)
-        f.write(" ".join("0" for _ in range(min(10, nAtoms))) + "\n\n")
+        f.write("\n       0 !NNB\n\n")
+        # Standard CHARMM PSF would write nAtoms pointers here, but for NNB=0, 
+        # OpenMM and NAMD are fine with an empty data block (blank line).
         
         # Write group section (empty)
-        f.write("0 !NGRP\n")
-        f.write("0 0 0\n\n")
+        f.write("\n       0       0 !NGRP NST2\n")
+        f.write("\n       0       0 !NUMLP NUMLPH\n")
+        f.write("\n       0 !NCRTERM\n")
         
     print(f"write_psf: Wrote {nAtoms} atoms, {0 if Bond_index is None else len(Bond_index)} bonds, {0 if Angle_index is None else len(Angle_index)} angles to {file_path}")
     return file_path

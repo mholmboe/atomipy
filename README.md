@@ -15,6 +15,7 @@ The package now supports generating GROMACS n2t (atom name to type) files for bo
 - [Installation](#installation)
 - [MINFF atom typing & topology generation](#minff-atom-typing--topology-generation)
 - [XRD pattern simulation](#xrd-pattern-simulation)
+- [CIF to PDB helper script](#cif-to-pdb-helper-script)
 - [Bond valence analysis](#bond-valence-analysis)
 - [Ionic/crystal radii and bond estimates (Shannon radii)](#ioniccrystal-radii-and-bond-estimates-shannon-radii)
 
@@ -48,7 +49,7 @@ atominpython/                # Repository root
 │   ├── ffparams.py          # Force field parameter file loader
 │   ├── forcefield.py        # MINFF/CLAYFF force field logic
 │   ├── general.py           # General utilities (e.g., scale)
-│   ├── import_conf.py       # File importers (PDB, GRO, XYZ)
+│   ├── import_conf.py       # File importers (PDB, GRO, XYZ, CIF/mmCIF)
 │   ├── import_top.py        # Topology file importer (ITP)
 │   ├── mass.py              # Atomic masses and center of mass
 │   ├── move.py              # Translate, rotate, place, center
@@ -116,7 +117,8 @@ Understanding the core containers and fields used in atomipy makes it easier to 
 ## Key Features
 
 - Support for multiple forcefields: MINFF and CLAYFF atom typing and parameter assignment
-- Import/export PDB, Gromacs GRO, and XYZ files
+- Import/export PDB, Gromacs GRO, XYZ, and CIF/mmCIF files
+- CIF/mmCIF to PDB conversion helper (`run_cif2pdb.py`) with symmetry expansion, optional layered z-unfold, overlap fusion, optional BVS protonation diagnostics, and optional MINFF typing
 - Generation of GROMACS n2t (atom name to type) files for use with gmx x2top
   - Neighbour distances honour periodic boundary conditions when the Box is provided
   - Nearly identical environments are merged to avoid duplicate entries caused by floating-point noise
@@ -124,7 +126,7 @@ Understanding the core containers and fields used in atomipy makes it easier to 
   - For .pdb files, system dimensions should be in the CRYST1 record
   - For .gro files, Box dimensions should be in the last line
   - For .xyz files, system dimensions should be on the second line after a # character
-- Generating topology files for MINFF and CLAYFF forcefields, for Gromacs (.itp), NAMD (.psf) and LAMMPS (.data)
+- Generating topology files for MINFF and CLAYFF forcefields, for Gromacs (.itp), NAMD (.psf, compatible with OpenMM) and LAMMPS (.data)
 - High-performance X-ray diffraction pattern simulation and plotting via `diffraction.xrd`, with optional CLI helper `run_xrd_example.py`
 - Handle both orthogonal and triclinic simulation cells with periodic boundary conditions
 - Calculate bond distances, angles, dihedrals, and 1–4 pairs (`bond_angle_dihedral`)
@@ -154,6 +156,7 @@ Understanding the core containers and fields used in atomipy makes it easier to 
 - tqdm (>=4.45.0) - for progress bars
 - Numba (>=0.50.0, optional) - for performance optimization via JIT compilation
 - Matplotlib + SciPy (optional, required for XRD plotting and `.mat` export)
+- GEMMI (optional, required for CIF/mmCIF import/export and `run_cif2pdb.py`)
 
 ## Installation
 
@@ -175,8 +178,12 @@ If you're new to Python, follow these simple steps to get started with atomipy:
    git clone https://github.com/mholmboe/atomipy.git
    cd atomipy
    pip install -e .
+   # Optional CIF/mmCIF extras:
+   pip install -e ".[cif]"
    # Optional XRD extras:
    pip install -e ".[xrd]"
+   # Optional CIF + XRD extras together:
+   pip install -e ".[cif,xrd]"
    ```
 
 #### Method 2: Manual Installation
@@ -191,8 +198,12 @@ If you're new to Python, follow these simple steps to get started with atomipy:
 5. Install the package and its dependencies:
    ```bash
    pip install -e .
+   # Optional CIF/mmCIF extras:
+   pip install -e ".[cif]"
    # Optional XRD extras:
    pip install -e ".[xrd]"
+   # Optional CIF + XRD extras together:
+   pip install -e ".[cif,xrd]"
    ```
 
 ### Step 3: Verify Installation
@@ -386,6 +397,31 @@ two_theta, intensity, fig = xrd(
 fig.show()
 ```
 
+### CIF to PDB helper script
+
+Use `run_cif2pdb.py` to prepare CIF/mmCIF structures for downstream MD workflows.
+
+Typical usage:
+```bash
+# Keep CIF atom names, auto-expand symmetry, fuse overlaps, write PDB
+python run_cif2pdb.py input.cif
+
+# Add BVS protonation diagnostics
+python run_cif2pdb.py input.cif --check-protonation
+
+# Assign MINFF atom types/charges before writing PDB
+python run_cif2pdb.py input.cif --assign-minff
+```
+
+What it supports:
+- Symmetry expansion to full unit cell (default, opt-out with `--no-expand-symmetry`)
+- Layered structure z-unfolding in fractional coordinates:
+  - automatic detection (default, opt-out with `--no-auto-layer-z-unfold`)
+  - manual override with `--layer-z-unfold --z-split <value>`
+- Overlap fusion with `--fuse-rmax` and `--fuse-criteria`
+- Optional BVS-based protonation-need check (`--check-protonation`)
+- Optional MINFF typing (`--assign-minff`) while keeping original CIF atom names when disabled
+
 ### Common Issues for Beginners
 
 - **ModuleNotFoundError**: Make sure you've installed all required packages.
@@ -399,10 +435,12 @@ fig.show()
 - `import_pdb(file_path)`: Import a PDB file, returning `(atoms, Cell)` - a list of atom dictionaries and Cell parameters
 - `import_gro(file_path)`: Import a Gromacs GRO file, returning `(atoms, Box_dim)` (1x3 orthogonal or 1x9 triclinic), including velocities if present
 - `import_xyz(file_path)`: Import an XYZ file, returning `(atoms, Cell)`
-- `import_auto(file_path)`: Auto-detect format and import, returning `(atoms, Cell)` for PDB/XYZ or `(atoms, Box_dim)` for GRO
+- `import_cif(file_path, expand_symmetry=True)`: Import a CIF/mmCIF file, returning `(atoms, Cell)`. Handles fractional coordinates and expands symmetry-equivalent sites by default (`expand_symmetry=False` keeps the asymmetric-unit listing). *Requires the optional `gemmi` dependency (`pip install "atomipy[cif]"`).*
+- `import_auto(file_path)`: Auto-detect format and import, returning `(atoms, Cell)` or `(atoms, Box_dim)` depending on the file type.
 - `write_pdb(atoms, Box, file_path)`: Write atoms to a PDB file
 - `write_gro(atoms, Box, file_path)`: Write atoms to a Gromacs GRO file, including velocities if present
 - `write_xyz(atoms, Box, file_path)`: Write atoms to an XYZ file
+- `write_cif(atoms, Box, file_path)`: Write atoms to a CIF file. Outputs both Cartesian coordinates and converted fractional geometries. *Requires `gemmi`.*
 
 ### Force Field
 
@@ -460,6 +498,7 @@ fig.show()
   - Support for both octahedral and tetrahedral substitutions with minimum distance constraints
   - Optional spatial limits for targeting substitutions to specific regions
 - `molecule(atoms, molid=1, resname=None)`: Assign molecule ID and optionally residue name to all atoms in a list. Useful for grouping atoms as a single molecular unit before topology generation.
+- `fuse_atoms(atoms, Box, rmax=0.5, criteria='average')`: Removes overlapping atoms within a cluster. Designed for cleaning up disordered CIFs by keeping the atom with highest `occupancy`, preserving `order`, or computing an `average` geometric center (matching the MATLAB library behavior).
 - `merge(atoms1, atoms2, Box, type_mode='molid', atom_label=None, min_distance=None)`: Merge two atom lists by removing atoms from atoms2 that are too close to atoms1. Supports molecule-aware removal via `type_mode='molid'`.
 - `solvate(limits, density=1000.0, min_distance=2.0, ...)`: Generate a solvation box. Supports custom solvent molecules and density control.
 - `ionize(ion_type, resname, limits, num_ions, ...)`: Add ions to a system within specified region limits.

@@ -731,8 +731,147 @@ def _get_surface_atoms(atoms, distance_threshold=2.5):
         return surface_atoms
 
 
-def ionize(ion_type, resname, limits, num_ions, min_distance=None, solute_atoms=None, 
-           placement='random', direction=None, direction_value=None):
+def fuse_atoms(atoms, Box, rmax=0.5, criteria='average'):
+    """
+    Fuse overlapping atoms within a certain radius.
+
+    This function identifies atoms that are closer than `rmax` to each other
+    and fuses them into a single site. It is extremely useful for cleaning
+    up CIF files that have split atomic sites due to fractional occupancies
+    or atomic disorder.
+
+    Parameters
+    ----------
+    atoms : list of dict
+        List of atom dictionaries.
+    Box : list
+        Simulation cell dimensions (1x3, 1x6, or 1x9).
+    rmax : float, optional
+        Maximum distance threshold (in Angstroms) beneath which atoms are 
+        considered overlapping. Default is 0.5 A.
+    criteria : str, optional
+        Determines how properties of the fused atom are set:
+        - 'average': Moves the surviving atom to the geometric center of the
+                     overlapping cluster (Matches MATLAB fuse_atom behavior).
+        - 'occupancy': Keeps the coordinates and properties of the atom with 
+                       the highest CIF 'occupancy' field.
+        - 'order': Keeps the coordinates of the first atom in the list.
+
+    Returns
+    -------
+    list of dict
+        A new list of atoms with overlapping sites removed and indices reset.
+
+    Examples
+    --------
+    import atomipy as ap
+    atoms, Box = ap.import_cif('disordered_mineral.cif')
+    # Merge split sites closer than 0.85 Angstroms
+    clean_atoms = ap.build.fuse_atoms(atoms, Box, rmax=0.85)
+
+    See Also
+    --------
+    merge : Merges two different atom lists (e.g., solute and solvent)
+    """
+    print(f"Fusing atoms closer than {rmax} Å (criteria='{criteria}')...")
+    
+    from .dist_matrix import dist_matrix
+    from .cell_utils import normalize_box
+    
+    n_original = len(atoms)
+    if n_original <= 1:
+        return [dict(a) for a in atoms]
+
+    # Normalize Box for safe processing
+    Box_dim, _ = normalize_box(Box)
+    
+    # Calculate O(N^2) distance matrix for the whole system
+    dist_mat, dx, dy, dz = dist_matrix(atoms, Box_dim)
+    
+    import numpy as np
+    
+    # We will process atoms and collect a set of indices to remove
+    to_remove = set()
+    
+    # We create a deep copy of atoms since we may modify coordinates
+    import copy
+    fused_atoms = copy.deepcopy(atoms)
+    
+    # To mimic MATLAB's backward loop exactly while being safe with Python sets,
+    # we iterate backwards. i goes from n_original-1 down to 0
+    for i in range(n_original - 1, -1, -1):
+        if i in to_remove:
+            continue
+            
+        # Find all atoms within rmax of atom i (including i itself)
+        # We look at column i of the distance matrix
+        dists = dist_mat[:, i]
+        overlap_indices = np.where(dists < rmax)[0]
+        
+        # Filter out atoms already marked for removal
+        active_overlaps = [idx for idx in overlap_indices if idx not in to_remove]
+        
+        if len(active_overlaps) > 1:
+            # We have a cluster of overlapping atoms!
+            
+            if criteria == 'occupancy':
+                # Find the atom with the highest occupancy
+                best_idx = max(active_overlaps, key=lambda idx: fused_atoms[idx].get('occupancy', 1.0))
+                survivor = best_idx
+                # Mark everyone else for removal
+            elif criteria == 'order':
+                # Keep the one that came first in the file (lowest index)
+                best_idx = min(active_overlaps)
+                survivor = best_idx
+            else:
+                # 'average' (MATLAB behavior default)
+                # The survivor is 'i'. We average the relative distances coordinates
+                survivor = i
+                mean_dx = np.mean(dx[active_overlaps, i])
+                mean_dy = np.mean(dy[active_overlaps, i])
+                mean_dz = np.mean(dz[active_overlaps, i])
+                
+                # Shift survivor by the mean differential
+                fused_atoms[survivor]['x'] -= float(mean_dx)
+                fused_atoms[survivor]['y'] -= float(mean_dy)
+                fused_atoms[survivor]['z'] -= float(mean_dz)
+                
+                # Ensure it remains wrapped (optional depending on use case, but safe)
+                # The caller can use wrap() later if they wish.
+            
+            # Combine occupancies if they are fractional? For now just keep structural
+            total_occ = sum(fused_atoms[idx].get('occupancy', 1.0) for idx in active_overlaps)
+            if total_occ <= 1.01:
+                fused_atoms[survivor]['occupancy'] = float(total_occ)
+                
+            # Add all non-survivors to the removal list
+            for idx in active_overlaps:
+                if idx != survivor:
+                    to_remove.add(idx)
+
+    # Rebuild the final list excluding removed atoms
+    final_atoms = []
+    new_index = 1
+    for i, atom in enumerate(fused_atoms):
+        if i not in to_remove:
+            atom['index'] = new_index
+            
+            # Clean up fields that are now invalid
+            if 'neigh' in atom:
+                atom['neigh'] = []
+            if 'bonds' in atom:
+                atom['bonds'] = []
+            if 'angles' in atom:
+                atom['angles'] = []
+                
+            final_atoms.append(atom)
+            new_index += 1
+            
+    num_removed = n_original - len(final_atoms)
+    print(f"  Fused {num_removed} overlapping sites. New total: {len(final_atoms)} atoms.")
+    return final_atoms
+
+def ionize(ion_type, resname, limits, num_ions, min_distance=None, solute_atoms=None,           placement='random', direction=None, direction_value=None):
     """
     Add ions to a system within specified region limits.
     
@@ -1081,8 +1220,102 @@ def add_H_atom(atoms, Box, target_type, h_type='H', bond_length=0.96, coordinati
     -------
     list of dict
         Updated atoms list with new hydrogens.
+    Placement strategy
+    ------------------
+    New H directions are chosen deterministically to point opposite to the
+    local neighbor environment of the target atom (i.e. opposite the sum of
+    neighbor unit vectors). This avoids run-to-run randomness and places H in
+    a chemically intuitive direction for under-coordinated oxygen sites.
     """
     print(f"Adding H atoms to '{target_type}' (target CN={coordination})...")
+
+    def _normalize(vec, eps=1e-12):
+        norm = np.linalg.norm(vec)
+        if norm < eps:
+            return None
+        return vec / norm
+
+    def _least_aligned_axis(existing_vectors):
+        axes = [
+            np.array([1.0, 0.0, 0.0]), np.array([-1.0, 0.0, 0.0]),
+            np.array([0.0, 1.0, 0.0]), np.array([0.0, -1.0, 0.0]),
+            np.array([0.0, 0.0, 1.0]), np.array([0.0, 0.0, -1.0]),
+        ]
+        if not existing_vectors:
+            return np.array([0.0, 0.0, 1.0])
+
+        def worst_alignment(axis):
+            return max(abs(float(np.dot(axis, vec))) for vec in existing_vectors)
+
+        return min(axes, key=worst_alignment)
+
+    def _orthonormal_basis(base):
+        # Build two unit vectors orthogonal to base for deterministic cone sampling.
+        ref = np.array([1.0, 0.0, 0.0])
+        if abs(float(np.dot(base, ref))) > 0.9:
+            ref = np.array([0.0, 1.0, 0.0])
+        u = np.cross(base, ref)
+        u = _normalize(u)
+        if u is None:
+            ref = np.array([0.0, 0.0, 1.0])
+            u = _normalize(np.cross(base, ref))
+        if u is None:
+            # Degenerate numerical case; choose canonical fallback
+            u = np.array([1.0, 0.0, 0.0])
+        v = _normalize(np.cross(base, u))
+        if v is None:
+            v = np.array([0.0, 1.0, 0.0])
+        return u, v
+
+    def _pick_h_direction(neighbor_vectors, placed_vectors):
+        # Primary direction: opposite the vector sum of current neighbors.
+        if neighbor_vectors:
+            summed = np.sum(np.array(neighbor_vectors), axis=0)
+            base = _normalize(-summed)
+        else:
+            base = None
+
+        # If neighbors are highly symmetric (sum ~ 0), choose least-aligned axis.
+        if base is None:
+            base = _least_aligned_axis(neighbor_vectors + placed_vectors)
+            base = _normalize(base)
+        if base is None:
+            base = np.array([0.0, 0.0, 1.0])
+
+        u, v = _orthonormal_basis(base)
+        candidates = []
+
+        # Deterministic cone sampling around base to avoid clashes.
+        tilt_deg = (0.0, 20.0, 35.0, 50.0, 65.0)
+        azim_deg = (0.0, 90.0, 180.0, 270.0)
+        for tilt in tilt_deg:
+            t = np.deg2rad(tilt)
+            for azim in azim_deg:
+                a = np.deg2rad(azim)
+                direction = (
+                    np.cos(t) * base
+                    + np.sin(t) * (np.cos(a) * u + np.sin(a) * v)
+                )
+                direction = _normalize(direction)
+                if direction is not None:
+                    candidates.append(direction)
+
+        if not candidates:
+            return base
+
+        all_vectors = neighbor_vectors + placed_vectors
+        for cand in candidates:
+            too_close = False
+            for vec in all_vectors:
+                # Reject directions nearly collinear with existing bonds.
+                if float(np.dot(cand, vec)) > 0.9:
+                    too_close = True
+                    break
+            if not too_close:
+                return cand
+
+        # Fallback if all candidates are crowded.
+        return candidates[0]
     
     # Needs neighbor list
     if not atoms or 'neigh' not in atoms[0]:
@@ -1091,8 +1324,6 @@ def add_H_atom(atoms, Box, target_type, h_type='H', bond_length=0.96, coordinati
         atoms, _, _ = bond_angle(atoms, Box, rmaxM=2.45, rmaxH=1.2, same_molecule_only=False) # Use typical metal-oxygen cutoff
         
     new_atoms = []
-    count_added = 0
-    
     # Iterate through existing atoms containing neighbors
     n_original = len(atoms)
     
@@ -1129,51 +1360,30 @@ def add_H_atom(atoms, Box, target_type, h_type='H', bond_length=0.96, coordinati
                          elif vec[d] < -L/2: vec[d] += L
                 neighbor_vectors.append(vec / np.linalg.norm(vec))
             
+            placed_h_vectors = []
+
             # Add H atoms
             for _ in range(n_needed):
-                # Generate random unit vector
-                for attempt in range(20):
-                    # Random point on sphere
-                    costheta = random.uniform(-1, 1)
-                    phi = random.uniform(0, 2*np.pi)
-                    theta = np.arccos(costheta)
-                    
-                    hx = np.sin(theta) * np.cos(phi)
-                    hy = np.sin(theta) * np.sin(phi)
-                    hz = np.cos(theta)
-                    h_vec = np.array([hx, hy, hz])
-                    
-                    # Check angle with existing neighbors (avoid overlap)
-                    too_close = False
-                    for n_vec in neighbor_vectors:
-                        dot = np.dot(h_vec, n_vec)
-                        if dot > 0.9: # Very close overlap (~25 deg)
-                            too_close = True
-                            break
-                    
-                    if not too_close or attempt == 19:
-                        # Accept position
-                        h_pos = origin + h_vec * bond_length
-                        
-                        # Create new atom
-                        new_h = {
-                            'type': h_type,
-                            'element': 'H',
-                            'resname': atom.get('resname', 'MIN'),
-                            'molid': atom.get('molid', 1),
-                            'x': h_pos[0],
-                            'y': h_pos[1],
-                            'z': h_pos[2],
-                            'charge': 0.4, # Default placeholder
-                            'mass': 1.008
-                        }
-                        new_atoms.append(new_h)
-                        
-                        # Treat this new H as a neighbor for subsequent H additions to same atom
-                        neighbor_vectors.append(h_vec)
-                        break
-            
-            count_added += len(new_atoms) - count_added # Track added count
+                h_vec = _pick_h_direction(neighbor_vectors, placed_h_vectors)
+                h_pos = origin + h_vec * bond_length
+
+                # Create new atom
+                new_h = {
+                    'type': h_type,
+                    'element': 'H',
+                    'resname': atom.get('resname', 'MIN'),
+                    'molid': atom.get('molid', 1),
+                    'x': h_pos[0],
+                    'y': h_pos[1],
+                    'z': h_pos[2],
+                    'charge': 0.4, # Default placeholder
+                    'mass': 1.008
+                }
+                new_atoms.append(new_h)
+
+                # Treat this new H as a neighbor for subsequent H additions to same atom.
+                neighbor_vectors.append(h_vec)
+                placed_h_vectors.append(h_vec)
 
     print(f"  Added {len(new_atoms)} new '{h_type}' atoms.")
     
