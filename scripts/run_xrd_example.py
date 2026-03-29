@@ -7,10 +7,10 @@ and plots the calculated XRD profile. Optional flags let you tweak the scan
 range, wavelength, and whether to save the generated data files.
 
 Usage examples (run from repo root):
-  python run_xrd_example.py Kaolinite_GII_0.0487.pdb
-  python run_xrd_example.py Kaolinite_GII_0.0487.pdb --two-theta 5 70 --angle-step 0.01
-  python run_xrd_example.py Kaolinite_GII_0.0487.gro --save-output
-  python run_xrd_example.py Kaolinite_GII_0.0487.xyz --box 52 52 60 --wavelength 0.71073 --neutral --no-plot
+  python scripts/run_xrd_example.py Kaolinite_GII_0.0487.pdb
+  python scripts/run_xrd_example.py Kaolinite_GII_0.0487.pdb --two-theta 5 70 --angle-step 0.01
+  python scripts/run_xrd_example.py Kaolinite_GII_0.0487.gro --save-output
+  python scripts/run_xrd_example.py Kaolinite_GII_0.0487.xyz --box 52 52 60 --wavelength 0.71073 --neutral --no-plot
 
 Tips:
   - Provide --box when the file lacks box/cell info (3, 6, or 9 numbers).
@@ -24,6 +24,13 @@ import argparse
 import sys
 from pathlib import Path
 from typing import Iterable, List, Sequence
+
+import os
+import sys
+
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if REPO_ROOT not in sys.path:
+    sys.path.insert(0, REPO_ROOT)
 
 import atomipy as ap
 

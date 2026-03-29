@@ -6,6 +6,13 @@ logs structure statistics, and writes both a GROMACS ``.itp`` topology file
 and a typed PDB.
 """
 
+import os
+import sys
+
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if REPO_ROOT not in sys.path:
+    sys.path.insert(0, REPO_ROOT)
+
 from atomipy import import_pdb, minff, write_itp, write_pdb
 
 pdb_file = 'Kaolinite_GII_0.0487.pdb'

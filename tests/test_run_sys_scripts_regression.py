@@ -26,7 +26,7 @@ def psf_atom_count(psf_path: Path) -> int:
 
 class TestRunSysScriptsRegression(unittest.TestCase):
     def run_script_in_tempdir(self, script_name: str, checker):
-        script_path = REPO_ROOT / script_name
+        script_path = REPO_ROOT / "scripts" / script_name
         self.assertTrue(script_path.exists(), f"Missing script: {script_path}")
 
         with tempfile.TemporaryDirectory() as tmp_dir:
