@@ -3,7 +3,7 @@ Run Bond Valence Sum (BVS) and Shannon radii analysis on a structure file.
 
 
 Usage:
-  python run_BVS_analysis.py input.(pdb|gro|xyz|cif|mmcif) [--params bvparm2020.cif] [--csv output.csv]
+  python scripts/run_BVS_analysis.py input.(pdb|gro|xyz|cif|mmcif) [--params bvparm2020.cif] [--csv output.csv]
        [--elements Al Si O H] [--oxidations 3 4 -2 1]
        [--no-expand-symmetry]
 
@@ -16,6 +16,13 @@ import argparse
 import os
 import sys
 from typing import List
+
+import os
+import sys
+
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if REPO_ROOT not in sys.path:
+    sys.path.insert(0, REPO_ROOT)
 
 import atomipy as ap
 

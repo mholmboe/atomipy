@@ -6,9 +6,9 @@ This CLI imports a structure, runs MINFF typing, and writes an n2t mapping that
 captures the typed environment ready for gmx x2top.
 
 Usage examples (run from repo root):
-  python run_minff2n2t.py Kaolinite_GII_0.0487.pdb
-  python run_minff2n2t.py conf/preem1.gro --output preem1_minff_atomname2type.n2t
-  python run_minff2n2t.py unitcell.xyz --output unitcell_minff_atomname2type.n2t
+  python scripts/run_minff2n2t.py Kaolinite_GII_0.0487.pdb
+  python scripts/run_minff2n2t.py conf/preem1.gro --output preem1_minff_atomname2type.n2t
+  python scripts/run_minff2n2t.py unitcell.xyz --output unitcell_minff_atomname2type.n2t
 
 What it does:
   - Autodetects format with `import_auto` (keeps box/cell data).
@@ -18,6 +18,13 @@ What it does:
 
 import argparse
 from pathlib import Path
+
+import os
+import sys
+
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if REPO_ROOT not in sys.path:
+    sys.path.insert(0, REPO_ROOT)
 
 import atomipy as ap
 

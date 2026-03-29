@@ -6,9 +6,9 @@ an atom-name-to-type table via `atomipy.write_n2t`. Environments are merged so
 nearly identical sites share the same type definitions.
 
 Usage examples (run from repo root):
-  python run_struct2n2t.py Kaolinite_GII_0.0487.pdb
-  python run_struct2n2t.py conf/preem1.gro --output preem1_atomname2type.n2t
-  python run_struct2n2t.py unitcell.xyz --output unitcell_atomname2type.n2t
+  python scripts/run_struct2n2t.py Kaolinite_GII_0.0487.pdb
+  python scripts/run_struct2n2t.py conf/preem1.gro --output preem1_atomname2type.n2t
+  python scripts/run_struct2n2t.py unitcell.xyz --output unitcell_atomname2type.n2t
 
 What it does:
   - Autodetects format with `import_auto` and keeps any box/cell info.
@@ -19,6 +19,13 @@ What it does:
 import argparse
 import os
 import sys
+
+import os
+import sys
+
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if REPO_ROOT not in sys.path:
+    sys.path.insert(0, REPO_ROOT)
 
 import atomipy as ap
 

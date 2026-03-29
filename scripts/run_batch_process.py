@@ -11,6 +11,13 @@ This script processes multiple GRO files from a specified folder by:
 """
 
 # Import the atomipy package and other required libraries
+import os
+import sys
+
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if REPO_ROOT not in sys.path:
+    sys.path.insert(0, REPO_ROOT)
+
 import atomipy as ap
 import numpy as np
 import os

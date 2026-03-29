@@ -61,7 +61,7 @@ atominpython/                # Repository root
 │   ├── transform.py         # Coordinate transformations (frac/cart/wrap)
 │   ├── write_conf.py        # File exporters (PDB, GRO, XYZ)
 │   └── write_top.py         # Topology exporters (ITP, PSF, LMP)
-├── run_*.py                 # Example workflow scripts (e.g., run_minff_atomi.py)
+├── scripts/                 # Example workflow scripts (run_*.py)
 ├── setup.py                 # Installation script
 └── README.md                # This documentation
 ```
@@ -118,7 +118,7 @@ Understanding the core containers and fields used in atomipy makes it easier to 
 
 - Support for multiple forcefields: MINFF and CLAYFF atom typing and parameter assignment
 - Import/export PDB, Gromacs GRO, XYZ, and CIF/mmCIF files
-- CIF/mmCIF to PDB conversion helper (`run_cif2pdb.py`) with symmetry expansion, optional layered z-unfold, overlap fusion, optional BVS protonation diagnostics, and optional MINFF typing
+- CIF/mmCIF to PDB conversion helper (`scripts/run_cif2pdb.py`) with symmetry expansion, optional layered z-unfold, overlap fusion, optional BVS protonation diagnostics, and optional MINFF typing
 - Generation of GROMACS n2t (atom name to type) files for use with gmx x2top
   - Neighbour distances honour periodic boundary conditions when the Box is provided
   - Nearly identical environments are merged to avoid duplicate entries caused by floating-point noise
@@ -127,7 +127,7 @@ Understanding the core containers and fields used in atomipy makes it easier to 
   - For .gro files, Box dimensions should be in the last line
   - For .xyz files, system dimensions should be on the second line after a # character
 - Generating topology files for MINFF and CLAYFF forcefields, for Gromacs (.itp), NAMD (.psf, compatible with OpenMM) and LAMMPS (.data)
-- High-performance X-ray diffraction pattern simulation and plotting via `diffraction.xrd`, with optional CLI helper `run_xrd_example.py`
+- High-performance X-ray diffraction pattern simulation and plotting via `diffraction.xrd`, with optional CLI helper `scripts/run_xrd_example.py`
 - Handle both orthogonal and triclinic simulation cells with periodic boundary conditions
 - Calculate bond distances, angles, dihedrals, and 1–4 pairs (`bond_angle_dihedral`)
 - Bond valence analysis utilities (bond valence sums and Global Instability Index)
@@ -156,7 +156,7 @@ Understanding the core containers and fields used in atomipy makes it easier to 
 - tqdm (>=4.45.0) - for progress bars
 - Numba (>=0.50.0, optional) - for performance optimization via JIT compilation
 - Matplotlib + SciPy (optional, required for XRD plotting and `.mat` export)
-- GEMMI (optional, required for CIF/mmCIF import/export and `run_cif2pdb.py`)
+- GEMMI (optional, required for CIF/mmCIF import/export and `scripts/run_cif2pdb.py`)
 
 ## Installation
 
@@ -306,13 +306,13 @@ print("Dihedrals:", len(itp.get("dihedrals", {}).get("ai", [])))
 Alternatively, you can use the included MINFF helper script:
 
 ```bash
-python run_minff2n2t.py structure.gro --output minff_atomtypes.n2t
+python scripts/run_minff2n2t.py structure.gro --output minff_atomtypes.n2t
 ```
 
 For the simplest possible conversion you can call the structure-only helper:
 
 ```bash
-python run_struct2n2t.py structure.gro
+python scripts/run_struct2n2t.py structure.gro
 ```
 
 This script auto-detects the input format, forwards the Box dimensions, and writes `<structure>.n2t`.
@@ -342,8 +342,8 @@ ap.write_itp(typed, Box=Box_dim, file_path="structure.itp")
 ```
 
 Convenient helpers:
-- `run_create_itp_example.py` shows a minimal end-to-end MINFF + ITP + typed PDB workflow.
-- `run_minff2n2t.py` generates a MINFF-typed `.n2t` mapping for gmx x2top.
+- `scripts/run_create_itp_example.py` shows a minimal end-to-end MINFF + ITP + typed PDB workflow.
+- `scripts/run_minff2n2t.py` generates a MINFF-typed `.n2t` mapping for gmx x2top.
 
 ### Force Field Parameters (JSON)
 
@@ -378,7 +378,7 @@ atomipy includes a fast X-ray diffraction module (`atomipy.diffraction.xrd`) tha
 
 Command-line helper:
 ```bash
-python run_xrd_example.py Kaolinite_GII_0.0487.pdb --two-theta 5 70 --save-output
+python scripts/run_xrd_example.py Kaolinite_GII_0.0487.pdb --two-theta 5 70 --save-output
 ```
 
 Minimal API example:
@@ -399,18 +399,18 @@ fig.show()
 
 ### CIF to PDB helper script
 
-Use `run_cif2pdb.py` to prepare CIF/mmCIF structures for downstream MD workflows.
+Use `scripts/run_cif2pdb.py` to prepare CIF/mmCIF structures for downstream MD workflows.
 
 Typical usage:
 ```bash
 # Keep CIF atom names, auto-expand symmetry, fuse overlaps, write PDB
-python run_cif2pdb.py input.cif
+python scripts/run_cif2pdb.py input.cif
 
 # Add BVS protonation diagnostics
-python run_cif2pdb.py input.cif --check-protonation
+python scripts/run_cif2pdb.py input.cif --check-protonation
 
 # Assign MINFF atom types/charges before writing PDB
-python run_cif2pdb.py input.cif --assign-minff
+python scripts/run_cif2pdb.py input.cif --assign-minff
 ```
 
 What it supports:
@@ -485,7 +485,7 @@ What it supports:
 
 ### Diffraction
 
-- `xrd(atoms, Box, wavelength=1.54187, angle_step=0.02, two_theta_range=(2, 90), ...)`: Calculate and optionally plot/save an XRD powder pattern using the high-performance diffraction module (see `run_xrd_example.py` for CLI usage)
+- `xrd(atoms, Box, wavelength=1.54187, angle_step=0.02, two_theta_range=(2, 90), ...)`: Calculate and optionally plot/save an XRD powder pattern using the high-performance diffraction module (see `scripts/run_xrd_example.py` for CLI usage)
 - `get_orthogonal_box(Box)`: Get orthogonal Box dimensions from triclinic parameters
 - `replicate_system(atoms, Box, replicate=[1, 1, 1])`: Create supercells by replicating in a, b, c directions
 
@@ -730,13 +730,13 @@ ap.write_pdb(atoms, Box=Box_dim, file_path="substituted_clay.pdb")
 
 The package includes example scripts that demonstrate comprehensive workflows for processing mineral structures using atomipy:
 
-#### run_minff_atomi.py and run_clayff_atomi.py
+#### scripts/run_minff_atomi.py and scripts/run_clayff_atomi.py
 
 These scripts demonstrate workflows for using MINFF and CLAYFF forcefields respectively. Both serve as excellent starting points for users new to the package.
 
 #### What the script does:
 
-1. **Imports a structure file** (`run_minff_atomi.py` uses `Kaolinite_GII_0.0487.pdb`, `run_clayff_atomi.py` uses `Kaolinite_GII_0.0487.gro`)
+1. **Imports a structure file** (`scripts/run_minff_atomi.py` uses `Kaolinite_GII_0.0487.pdb`, `scripts/run_clayff_atomi.py` uses `Kaolinite_GII_0.0487.gro`)
 2. **Assigns chemical elements** to each atom using chemical knowledge-based rules
 3. **Creates a supercell** by replicating the unit cell to a target size (about 30 Å in each dimension)
 4. **Saves the replicated structure** in both GRO and PDB formats
@@ -747,7 +747,7 @@ These scripts demonstrate workflows for using MINFF and CLAYFF forcefields respe
 
 #### Running the scripts:
 
-Simply execute `python run_minff_atomi.py` or `python run_clayff_atomi.py` from the command line.
+Simply execute `python scripts/run_minff_atomi.py` or `python scripts/run_clayff_atomi.py` from the command line.
 The first expects `Kaolinite_GII_0.0487.pdb`; the second expects `Kaolinite_GII_0.0487.gro` in the working directory.
 
 #### Output files:

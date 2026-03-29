@@ -6,14 +6,21 @@ Processes a molecular system containing minerals, ions, and water,
 assigns CLAYFF atom types, and generates GROMACS-compatible output files.
 
 Usage:
-    python run_sys2clayff.py structure.pdb|.gro|.xyz
+    python scripts/run_sys2clayff.py structure.pdb|.gro|.xyz
 """
 
 import sys
+import os
+import sys
+
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if REPO_ROOT not in sys.path:
+    sys.path.insert(0, REPO_ROOT)
+
 import atomipy as ap
 
 if len(sys.argv) < 2:
-    print("Usage: python run_sys2clayff.py structure.pdb|.gro|.xyz")
+    print("Usage: python scripts/run_sys2clayff.py structure.pdb|.gro|.xyz")
     sys.exit(1)
 
 # Import and prepare structure
