@@ -132,7 +132,7 @@ except ImportError:
 
 # ===== Charge functions =====
 try:
-    from .charge import charge_minff, charge_clayff, balance_charges, assign_formal_charges
+    from .charge import charge_minff, charge_clayff, balance_charges, assign_formal_charges, get_formal_charge, get_half_formal_charge
 except ImportError:
     pass
 
@@ -177,7 +177,7 @@ __all__ = [
     'assign_resname',
     'minff', 'clayff', 'write_n2t', 'get_structure_stats',
     'load_forcefield', 'list_ff_blocks', 'get_ffparams_dir',
-    'charge_minff', 'charge_clayff', 'balance_charges', 'assign_formal_charges',
+    'charge_minff', 'charge_clayff', 'balance_charges', 'assign_formal_charges', 'get_formal_charge', 'get_half_formal_charge',
     'compute_bvs', 'global_instability_index', 'load_bv_params', 'load_shannon_radii', 'bond_valence', 'summarize_bvs',
     'analyze_bvs', 'conf2bvs',
     'get_radius', 'bond_distance',

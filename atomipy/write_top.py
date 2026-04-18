@@ -4,6 +4,11 @@ from datetime import datetime
 from atomipy.cell_utils import Cell2Box_dim
 from .bond_angle import bond_angle
 
+def _to_float(val, default=0.0):
+    if val in (None, ''): return default
+    try: return float(val)
+    except (ValueError, TypeError): return default
+
 
 def itp(atoms, Box=None, file_path=None, molecule_name=None, nrexcl=1, comment=None, 
           rmaxH=1.2, rmaxM=2.45, explicit_bonds=0, explicit_angles=1, KANGLE=500,
@@ -197,7 +202,7 @@ def itp(atoms, Box=None, file_path=None, molecule_name=None, nrexcl=1, comment=N
                 print(f"  {triplet}: ~{avg_low:.0f}° (cis) and ~{avg_high:.0f}° (trans), n={count}")
     
     # Calculate total charge
-    total_charge = sum(atom.get('charge', 0.0) for atom in atoms)
+    total_charge = sum(_to_float(atom.get('charge', 0.0)) for atom in atoms)
     total_charge = round(total_charge, 6)
         
     # Open the file for writing
@@ -250,8 +255,8 @@ def itp(atoms, Box=None, file_path=None, molecule_name=None, nrexcl=1, comment=N
             if at_name is None:
                 at_name = at_type
                 
-            charge = round(atom.get('charge', 0.0), 6)
-            mass = round(atom.get('mass', 0.0), 6)
+            charge = round(_to_float(atom.get('charge', 0.0)), 6)
+            mass = round(_to_float(atom.get('mass', 0.0)), 6)
             
             # Write the atom line
             f.write(f"{i:<7} {at_type:<7} {res_nr:<7} {res_name:<7} {at_name:<7} {i:<7}  {charge:>10.6f}    {mass:>7.4f}\n")
@@ -531,7 +536,7 @@ def psf(atoms, Box=None, file_path=None, segid=None, rmaxH=1.2, rmaxM=2.45,
                 print(f"  Consider using max_angle=150 to filter trans angles for NAMD")
     
     # Calculate total charge
-    total_charge = sum(atom.get('charge', 0.0) for atom in atoms)
+    total_charge = sum(_to_float(atom.get('charge', 0.0)) for atom in atoms)
     total_charge = round(total_charge, 6)
     
     # Open the file for writing
@@ -577,8 +582,8 @@ def psf(atoms, Box=None, file_path=None, segid=None, rmaxH=1.2, rmaxM=2.45,
             if at_type is None:
                 at_type = 'X'
                 
-            charge = atom.get('charge', 0.0)
-            mass = atom.get('mass', 0.0)
+            charge = _to_float(atom.get('charge', 0.0))
+            mass = _to_float(atom.get('mass', 0.0))
             
             # PSF format:
             # atom-ID  segment-name  residue-ID  residue-name  atom-name  atom-type  charge  mass  0
