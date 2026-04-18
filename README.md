@@ -437,7 +437,7 @@ What it supports:
 - `import_xyz(file_path)`: Import an XYZ file, returning `(atoms, Cell)`
 - `import_cif(file_path, expand_symmetry=True)`: Import a CIF/mmCIF file, returning `(atoms, Cell)`. Handles fractional coordinates and expands symmetry-equivalent sites by default (`expand_symmetry=False` keeps the asymmetric-unit listing). *Requires the optional `gemmi` dependency (`pip install "atomipy[cif]"`).*
 - `import_auto(file_path)`: Auto-detect format and import, returning `(atoms, Cell)` or `(atoms, Box_dim)` depending on the file type.
-- `write_pdb(atoms, Box, file_path)`: Write atoms to a PDB file
+- `write_pdb(atoms, Box, file_path, write_conect=False)`: Write atoms to a PDB file. Automatically extracts the MINFF `fftype` for CrystalMaker compatibility if available, outputs exact `SCALE` orthogonal-to-fractional crystallographic coordinate transformation matrices if `Box` is provided, and calculates the exact full formal element oxidation state for the atom charge field at columns 79-80 (instead of standard partial forcefield charges). If `write_conect=True`, it will additionally write `CONECT` bonding topologies directly.
 - `write_gro(atoms, Box, file_path)`: Write atoms to a Gromacs GRO file, including velocities if present
 - `write_xyz(atoms, Box, file_path)`: Write atoms to an XYZ file
 - `write_cif(atoms, Box, file_path)`: Write atoms to a CIF file. Outputs both Cartesian coordinates and converted fractional geometries. *Requires `gemmi`.*
@@ -517,6 +517,8 @@ What it supports:
 
 ### Charges
 
+- `get_formal_charge(element_or_type)`: Get the full formal oxidation state charge for a chemical element or atom type
+- `get_half_formal_charge(element_or_type)`: Get half the formal charge for an element or atom type (used historically in some clay modelling applications)
 - `assign_formal_charges(atoms)`: Assign formal charges to ions and water molecules based on residue names (SOL, ION) and element types
 - `charge_minff(atoms, Box, atom_labels=None, charges=None, resname=None)`: Assign MINFF charges to atoms based on coordination environment
 - `charge_clayff(atoms, Box, atom_labels=None, charges=None, resname=None)`: Assign CLAYFF charges to atoms based on coordination environment

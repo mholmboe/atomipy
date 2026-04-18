@@ -2,7 +2,7 @@ import os
 from .cell_utils import Box_dim2Cell, Cell2Box_dim, normalize_box
 
 
-def pdb(atoms, Box, file_path):
+def pdb(atoms, Box, file_path, write_conect=False):
     """Write atoms and Cell dimensions to a PDB file.
 
     Args:
@@ -12,6 +12,7 @@ def pdb(atoms, Box, file_path):
             a Box_dim variable having Box dimensions [lx, ly, lz, 0, 0, xy, 0, xz, yz] for triclinic cells.
            Note that for orthogonal boxes Cell = Box_dim.
        file_path: output filepath.
+       write_conect: bool, optional. If True, write CONECT records from 'bonds' or 'neigh' fields (default: False).
 
     Examples
     --------
@@ -31,6 +32,21 @@ def pdb(atoms, Box, file_path):
             # Write CRYST1 record; formatted width according to PDB spec
             a, b, c, alpha, beta, gamma = Cell
             f.write(f"CRYST1{a:9.3f}{b:9.3f}{c:9.3f}{alpha:7.2f}{beta:7.2f}{gamma:7.2f} P 1           1\n")
+            
+            # Write SCALE1, SCALE2, SCALE3 records (orthogonal-to-fractional coordinates transformation)
+            import numpy as np
+            alpha_rad, beta_rad, gamma_rad = np.radians([alpha, beta, gamma])
+            ca, cb, cg = np.cos([alpha_rad, beta_rad, gamma_rad])
+            sg = np.sin(gamma_rad)
+            v = np.sqrt(1 - ca**2 - cb**2 - cg**2 + 2*ca*cb*cg)
+            
+            s11, s12, s13 = 1/a, -cg / (a*sg), (ca*cg - cb) / (a*v*sg)
+            s21, s22, s23 = 0.0, 1 / (b*sg), (cb*cg - ca) / (b*v*sg)
+            s31, s32, s33 = 0.0, 0.0, sg / (c*v)
+            
+            f.write(f"SCALE1    {s11:10.6f}{s12:10.6f}{s13:10.6f}     {0.0:10.5f}\n")
+            f.write(f"SCALE2    {s21:10.6f}{s22:10.6f}{s23:10.6f}     {0.0:10.5f}\n")
+            f.write(f"SCALE3    {s31:10.6f}{s32:10.6f}{s33:10.6f}     {0.0:10.5f}\n")
         
         # Add MODEL record
         f.write("MODEL        1\n")
@@ -39,12 +55,21 @@ def pdb(atoms, Box, file_path):
             # Format the ATOM record according to PDB specification
             index = atom.get('index', i)
             
-            # Get atom name from 'type' field, fall back to element
+            # Get atom name from 'fftype' field, fall back to 'type', then 'element'
             # PDB atom names (cols 13-16). Rules: up to 4 chars.
             # - Alignment is tricky: usually left-aligned for elements <= 2 chars,
             #   right-aligned (?) or starting col 13 for longer names.
             #   Let's try space-padding and left-alignment for simplicity first.
-            raw_atomname = atom.get('type', atom.get('element', 'X'))
+            raw_atomname = atom.get('fftype')
+            if raw_atomname is None:
+                raw_atomname = atom.get('type')
+            if raw_atomname is None:
+                raw_atomname = atom.get('element')
+            if raw_atomname is None or str(raw_atomname).strip() == '':
+                raw_atomname = 'X'
+            else:
+                raw_atomname = str(raw_atomname)
+                
             if len(raw_atomname) == 1: # Single char element, place in col 14
                 pdb_atomname = f" {raw_atomname}  "
             elif len(raw_atomname) > 4: # Truncate
@@ -56,8 +81,12 @@ def pdb(atoms, Box, file_path):
             
             # Get residue name: use resname if available, otherwise UNK
             # PDB residue names (cols 18-20). 3 chars, right-aligned.
-            raw_resname = atom.get('resname', 'UNK')
-            pdb_resname = f"{raw_resname[:3]:>3}" 
+            raw_resname = atom.get('resname')
+            if raw_resname is None or str(raw_resname).strip() == '':
+                raw_resname = 'UNK'
+            else:
+                raw_resname = str(raw_resname)
+            pdb_resname = f"{raw_resname[:3]:>3}"
             
             chain_id = atom.get('chain_id', 'A') # Column 22: Chain identifier
             res_seq = atom.get('molid', 1) # Column 23-26: Residue sequence number (using 'molid' for consistency with import)
@@ -82,9 +111,11 @@ def pdb(atoms, Box, file_path):
                 temp_factor_val = 0.00
 
             # Element symbol (cols 77-78), right-justified, proper capitalization. Default to empty if not found.
-            raw_element = atom.get('element', '')
+            raw_element = atom.get('element')
+            if raw_element is None:
+                raw_element = ''
             # Capitalize properly: first letter uppercase, rest lowercase
-            if raw_element:
+            if str(raw_element).strip():
                 element_str = str(raw_element).strip()[:2]
                 if len(element_str) == 1:
                     element_symbol_pdb = f"{element_str.upper():>2}"
@@ -95,10 +126,18 @@ def pdb(atoms, Box, file_path):
                 element_symbol_pdb = "  "  # Empty if no element found
 
             # Charge (cols 79-80), right-justified. Default to empty if not found.
-            raw_charge = atom.get('charge', '') 
-            # PDB formal charge (cols 79-80) rarely used for partial charges; leave blank if non-numeric
-            if isinstance(raw_charge, (int, float)):
-                charge_str = f"{raw_charge:>2.0f}"
+            # PDB standard mandates formal charges (e.g. +2, -1), not partial forcefield charges.
+            from .charge import get_formal_charge
+            element_val = atom.get('element')
+            if element_val is None:
+                element_val = atom.get('type')
+            if element_val is None:
+                element_val = ''
+            formal_chg = get_formal_charge(element_val)
+            
+            if formal_chg != 0:
+                # Typically formatted like " 2" or "-1" for right-justified charge output
+                charge_str = f"{formal_chg:>2.0f}"
             else:
                 charge_str = "  "
             
@@ -127,6 +166,51 @@ def pdb(atoms, Box, file_path):
         
         # Add ENDMDL record
         f.write("ENDMDL\n")
+
+        if write_conect:
+            # Check if topological data exists, otherwise calculate it
+            has_bonds = any('bonds' in a and a['bonds'] for a in atoms)
+            has_neigh = any('neigh' in a and a['neigh'] for a in atoms)
+            
+            if not has_bonds and not has_neigh:
+                from .bond_angle import bond_angle
+                # Assign default MINFF-compliant bonding using bond_angle
+                atoms_from_bond, _, _ = bond_angle(atoms, Box)
+                # bond_angle updates in place, but we re-assign to be safe
+                atoms = atoms_from_bond
+
+            # Build index mapping for CONECT 
+            # (map 0-based atom list indices to PDB 1-based serials)
+            index_map = []
+            for i, atom in enumerate(atoms, start=1):
+                index_map.append(atom.get('index', i))
+                
+            for i, atom in enumerate(atoms):
+                bonds_data = atom.get('bonds', [])
+                neigh_data = atom.get('neigh', [])
+                
+                # Extract neighbor indices. Fall back to neigh if bonds is empty/non-existent
+                if bonds_data:
+                    # bonds is usually [(j, dist), ...]
+                    neighbors = [b[0] for b in bonds_data]
+                else:
+                    neighbors = neigh_data
+                    
+                if not neighbors:
+                    continue
+                    
+                source_serial = index_map[i]
+                target_serials = [index_map[n] for n in neighbors if n < len(index_map)]
+                
+                # Chunk target_serials into groups of 4 (PDB spec)
+                for k in range(0, len(target_serials), 4):
+                    chunk = target_serials[k:k+4]
+                    # Format: CONECT  idx1  idx2  idx3  idx4  idx5
+                    line = f"CONECT{source_serial:>5}"
+                    for t in chunk:
+                        line += f"{t:>5}"
+                    line += "\n"
+                    f.write(line)
         
         f.write("END\n")
 
@@ -169,7 +253,10 @@ def gro(atoms, Box, file_path):
             # Use 'type' field for atom name, fall back to element or first character of resname
             atomname = atom.get('type')
             if atomname is None:
-                atomname = atom.get('element') if atom.get('element') is not None else resname[0]
+                atomname = atom.get('element')
+            if atomname is None:
+                atomname = resname[0] if resname else 'X'
+            atomname = str(atomname)
                 
             index = atom.get('index', i)
             
@@ -269,7 +356,12 @@ def xyz(atoms, Box=None, file_path=None):
         # Write atom entries
         for atom in atoms:
             # Get atom type name instead of element
-            atom_type = atom.get('type', atom.get('element', 'X'))  # Try type first, then element, default to 'X'
+            atom_type = atom.get('type')
+            if atom_type is None:
+                atom_type = atom.get('element')
+            if atom_type is None:
+                atom_type = 'X'
+            atom_type = str(atom_type)
             
             # Get coordinates
             x = atom.get('x', 0.0)

@@ -159,10 +159,12 @@ def main():
     
     # Also generate a LAMMPS topology file for use with other minff dynamics packages
     print("Writing LAMMPS topology file...")
+    ff_params = ap.load_forcefield('GMINFF/gminff_all.json', blocks=['GMINFF_k500', 'OPC3_HFE_LM', 'OPC3'])
     ap.write_lmp(
         minff_atoms,
         Box=Box_dim,
         file_path="minff_topology.data",
+        forcefield=ff_params,
         detect_bimodal=True
     )
     
@@ -181,6 +183,16 @@ def main():
         minff_atoms,    
         Box=Box_dim,
         file_path="preem.gro"
+    )
+
+    # Step 9: Write final PDB file
+    # ---------------------------
+    print("Writing final structure to preem.pdb...")
+    ap.write_pdb(
+        minff_atoms,    
+        Box=Cell,
+        file_path="preem.pdb",
+        write_conect=True
     )
     
     print("\nDone! Generated files:")

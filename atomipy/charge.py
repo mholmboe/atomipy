@@ -83,9 +83,9 @@ def get_water_charge(atom_type):
     print(f"Warning: No water charge defined for atom type '{atom_type}'. Assuming charge 0.0")
     return 0.0
 
-def get_half_formal_charge(element_or_type):
+def get_formal_charge(element_or_type):
     """
-    Get half the formal charge for an element or atom type based on its common oxidation state.
+    Get the full formal charge for an element or atom type based on its common oxidation state.
     """
     oxidation_states = {
         'H': 1, 'LI': 1, 'NA': 1, 'K': 1, 'RB': 1, 'CS': 1,
@@ -105,13 +105,20 @@ def get_half_formal_charge(element_or_type):
     oxidation_states_upper = {k.upper(): v for k, v in oxidation_states.items()}
     key = str(element_or_type).upper()
     if key in oxidation_states_upper:
-        return oxidation_states_upper[key] / 2.0
+        return float(oxidation_states_upper[key])
     if len(key) > 1 and key[:2] in oxidation_states_upper:
-        return oxidation_states_upper[key[:2]] / 2.0
-    if key[0] in oxidation_states_upper:
-        return oxidation_states_upper[key[0]] / 2.0
+        return float(oxidation_states_upper[key[:2]])
+    if len(key) > 0 and key[0] in oxidation_states_upper:
+        return float(oxidation_states_upper[key[0]])
     print(f"Warning: No oxidation state defined for '{element_or_type}'. Assuming charge 0.0")
     return 0.0
+
+def get_half_formal_charge(element_or_type):
+    """
+    Get half the formal charge for an element or atom type based on its common oxidation state.
+    """
+    return get_formal_charge(element_or_type) / 2.0
+
 
 # =====================================================
 # MINFF forcefield charge functions (from charge_minff.py)

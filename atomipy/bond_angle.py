@@ -1,58 +1,33 @@
 import numpy as np
 from .dist_matrix import dist_matrix
 from .cell_list_dist_matrix import cell_list_dist_matrix
+from .cell_list_dist_matrix_fast import cell_list_dist_matrix_fast
 
-def bond_angle(atoms, Box, rmaxH=1.2, rmaxM=2.45, same_element_bonds=False, same_molecule_only=True, calculate_coordination=True, neighbor_element=None):
+def bond_angle(atoms, Box, rmaxH=1.2, rmaxM=2.45, same_element_bonds=False, same_molecule_only=True, calculate_coordination=True, neighbor_element=None, dm_method=None):
     """Compute bonds and angles for a given atomic structure.
     
+    ... [docs] ...
     
-    For each atom, bonds are determined based on a distance threshold:
-      - rmaxH (default 1.2 Å) if either atom is hydrogen
-      - rmaxM (default 2.45 Å) for bonds between non-hydrogen atoms.
-    
-    Angles are then computed for each pair of bonds at the central atom using the periodic boundary condition (PBC)
-    corrected vectors. The function updates each atom's 'neigh', 'bonds', and 'angles' fields in-place.
-    The same cutoffs are applied to both the neighbor list and bond list.
-
-    Args:
-       atoms: list of atom dictionaries (coordinates in Angstroms).
-       Box: a 1x3, 1x6 or 1x9 list representing Cell dimensions (in Angstroms):
-           - For orthogonal boxes, a 1x3 list [lx, ly, lz] where Box = Box_dim, and Cell would be [lx, ly, lz, 90, 90, 90]
-           - For Cell parameters, a 1x6 list [a, b, c, alpha, beta, gamma] (Cell format)
-           - For triclinic boxes, a 1x9 list [lx, ly, lz, 0, 0, xy, 0, xz, yz] (GROMACS Box_dim format)
-       rmaxH: cutoff distance for bonds involving hydrogen (default 1.2 Å).
-       rmaxM: cutoff distance for bonds between all other atoms (default 2.45 Å).
-       same_element_bonds: if False, bonds between atoms of the same element are ignored (default True).
-       same_molecule_only: if True, bonds are only formed between atoms with the same 'molid' (default False).
-
-    Returns:
-       tuple: (atoms, Bond_index, Angle_index)
-           - atoms: Updated atom list with 'neigh', 'bonds', and 'angles'.
-           - Bond_index: Nx3 numpy array where each row contains [atom1_idx, atom2_idx, distance]
-             with atom indices sorted from low to high.
-           - Angle_index: Mx10 numpy array with the following columns:
-             [atom1_idx, atom2_idx, atom3_idx, angle, dx12, dy12, dz12, dx23, dy23, dz23]
-             where atom2_idx is the middle/center atom of the angle, atom1_idx is the bonded atom
-             with the lowest index, and atom3_idx is the bonded atom with the highest index.
-             The dx,dy,dz values represent the distance vector components between the respective atoms.
-        calculate_coordination: If True, calculate coordination numbers for each atom and store in 'cn' field.
-        neighbor_element: Optional filter to only count neighbors of a specific element when calculating
-                         coordination numbers.
+        dm_method: Optional manual selection of distance matrix method: 
+                   'direct', 'old_cl', or 'fast_cl'. If None, auto-select based on size.
     """
     # Get the number of atoms
     N = len(atoms)
 
     # Check the size of the system to determine which method to use
-    # For large systems (>20000 atoms), cell_list_dist_matrix is more memory efficient
-    # For smaller systems, dist_matrix is faster
-    if len(atoms) > 15000:
-        # Large system - use Cell list method which is more memory efficient
-        print(f"Large system - using Cell list method for the distance matrix")
+    # For large systems (>2000 atoms), cell_list_dist_matrix_fast is more memory efficient and now highly vectorized
+    if dm_method == 'direct' or (dm_method is None and len(atoms) <= 2000):
+        # Smaller system (or forced direct) - use standard distance matrix
+        print(f"Using Direct distance matrix method (size: {len(atoms)})")
+        dmat, dx, dy, dz = dist_matrix(atoms, Box)
+    elif dm_method == 'old_cl':
+        # Forced old cell list
+        print(f"Using Old Cell List method (size: {len(atoms)})")
         dmat, dx, dy, dz, _, _ = cell_list_dist_matrix(atoms, Box, cutoff=max(rmaxH, rmaxM))
     else:
-        # Smaller system - use standard distance matrix which is faster
-        print(f"Small system - calculating the full distance matrix")
-        dmat, dx, dy, dz = dist_matrix(atoms, Box)
+        # Default or forced fast_cl
+        print(f"Using Memory-Efficient Fast Cell List method (size: {len(atoms)})")
+        dmat, dx, dy, dz, _, _ = cell_list_dist_matrix_fast(atoms, Box, cutoff=max(rmaxH, rmaxM), rmaxH=rmaxH)
     
     # Since dist_matrix doesn't provide precalculated bond lists, we'll create them based on cutoffs
     precalc_bond_list = []
@@ -70,44 +45,25 @@ def bond_angle(atoms, Box, rmaxH=1.2, rmaxM=2.45, same_element_bonds=False, same
     total_pairs = N * (N - 1) // 2  # Total number of pairs to check
     pair_count = 0
     
-    # Use tqdm if available, otherwise use a basic counter with percentage updates
-    if has_tqdm:
-        iterator = tqdm(range(N), desc="Finding bonds", unit="atom")
-    else:
-        print("Finding bonds...")
-        iterator = range(N)
-        last_percent = -1
+    # Vectorized bond identification
+    # Determine which atoms are hydrogen
+    types = np.array([atom.get('type', atom.get('name', '')) for atom in atoms])
+    is_h = np.array([bool(t and t[0].upper() == 'H') for t in types])
     
-    for i in iterator:
-        for j in range(i+1, N):  # Only consider each pair once
-            pair_count += 1
-            
-            # If no tqdm, show percentage updates
-            if not has_tqdm and N > 1000:
-                percent = int(100 * pair_count / total_pairs)
-                if percent > last_percent and percent % 10 == 0:
-                    print(f"  {percent}% complete...")
-                    last_percent = percent
-                    
-            if dmat[i, j] > 0:  # Skip diagonal and zero distances
-                # Determine if either atom is hydrogen by checking if type starts with H/h
-                type_i = atoms[i].get('type', atoms[i].get('name', ''))
-                type_j = atoms[j].get('type', atoms[j].get('name', ''))
-                
-                # Get first character of type and check if it's 'H' or 'h'
-                isH_i = type_i and type_i[0].upper() == 'H'
-                isH_j = type_j and type_j[0].upper() == 'H'
-                
-                # Apply appropriate cutoff based on atom types
-                if isH_i or isH_j:
-                    cutoff = rmaxH  # Use hydrogen cutoff
-                else:
-                    cutoff = rmaxM  # Use non-hydrogen cutoff
-                    
-                # If within cutoff, add to bond list
-                if dmat[i, j] <= cutoff:
-                    precalc_bond_list.append([i, j])
-                    dist_list.append(dmat[i, j])
+    # Create a cutoff matrix: rmaxH if either atom is H, otherwise rmaxM
+    # is_h[:, None] | is_h[None, :] is True if i is H OR j is H
+    cutoff_matrix = np.where(is_h[:, np.newaxis] | is_h[np.newaxis, :], rmaxH, rmaxM)
+    
+    # Find indices where distance is within cutoff and i < j (upper triangle)
+    # Using np.triu to only get each pair once
+    mask = (dmat > 0) & (dmat <= cutoff_matrix)
+    ii, jj = np.where(np.triu(mask, k=1))
+    
+    # Create the bond list and distance list
+    precalc_bond_list = np.column_stack((ii, jj))
+    dist_list = dmat[ii, jj]
+    
+    print(f"  Vectorized bond finding: identified {len(precalc_bond_list)} potential bonds")
 
     # Initialize lists for all atoms
     for i in range(N):

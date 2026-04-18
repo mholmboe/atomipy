@@ -211,6 +211,19 @@ def gro(file_path):
     elif values:
         Box_dim = values  # fall back to whatever was provided
 
+    # Save original atom types before element() overwrites them
+    original_types = [atom.get('type') for atom in atoms]
+
+    # Now use the element.py function to properly determine elements
+    # logic: element() populates the 'element' field but currently overwrites 'type'
+    element_module.element(atoms)
+    
+    # Restore original atom types so that 'type' reflects 'atname' (e.g. 'Alo')
+    # while 'element' reflects the chemical element (e.g. 'Al')
+    for atom, orig_type in zip(atoms, original_types):
+        if orig_type:
+            atom['type'] = orig_type
+
     # Convert Box to Cell
     return atoms, Box_dim
 

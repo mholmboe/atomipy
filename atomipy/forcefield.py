@@ -324,7 +324,7 @@ def get_structure_stats(atoms, Box=None, total_charge=0, log_file='output.log', 
     
     return result
 
-def minff(atoms, Box, ffname='minff', rmaxlong=2.45, rmaxH=1.2, log=False, log_file=None):
+def minff(atoms, Box, ffname='minff', rmaxlong=2.45, rmaxH=1.2, log=False, log_file=None, dm_method=None):
     """Assign MINFF forcefield specific atom types to atoms based on their coordination environment.
     
     This function updates the 'fftype' field based on the atom's element and its bonding environment,
