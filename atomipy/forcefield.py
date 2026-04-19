@@ -1642,15 +1642,26 @@ def write_n2t(atoms, Box=None, n2t_file=None, verbose=True):
 
     env_map = {}
 
-    distance_matrix = None
-    if Box is not None and all(key in atoms[0] for key in ['x', 'y', 'z']):
+    # Instead of a full distance matrix, we'll compute PBC distances on the fly if needed
+    H, Hinv = None, None
+    if Box is not None:
         try:
-            from .dist_matrix import dist_matrix
-            distance_matrix, _, _, _ = dist_matrix(atoms, Box)
+            from .cell_utils import normalize_box
+            _, Cell = normalize_box(Box)
+            a, b, c = Cell[0], Cell[1], Cell[2]
+            alpha, beta, gamma = (Cell[3], Cell[4], Cell[5]) if len(Cell) > 3 else (90, 90, 90)
+            ar, br, gr = np.radians([alpha, beta, gamma])
+            ax = a
+            bx = b * np.cos(gr)
+            by = b * np.sin(gr)
+            cx = c * np.cos(br)
+            cy = c * (np.cos(ar) - np.cos(br) * np.cos(gr)) / np.sin(gr)
+            cz = np.sqrt(max(0, c**2 - cx**2 - cy**2))
+            H = np.array([[ax, bx, cx], [0, by, cy], [0, 0, cz]])
+            Hinv = np.linalg.inv(H)
         except Exception as exc:
             if verbose:
-                print(f"Warning: failed to compute PBC distances ({exc})")
-            distance_matrix = None
+                print(f"Warning: failed to prepare PBC parameters ({exc})")
 
     for idx, atom in enumerate(atoms):
         center_type = str(atom.get('type', '') or 'X')
@@ -1679,16 +1690,21 @@ def write_n2t(atoms, Box=None, n2t_file=None, verbose=True):
 
             distance = bond_distance_map.get(neigh_idx)
             if distance is None:
-                if distance_matrix is not None:
-                    distance = float(distance_matrix[idx, neigh_idx])
-                else:
-                    x1, y1, z1 = atom.get('x'), atom.get('y'), atom.get('z')
-                    x2, y2, z2 = neigh_atom.get('x'), neigh_atom.get('y'), neigh_atom.get('z')
-                    if None not in (x1, y1, z1, x2, y2, z2):
-                        dx = float(x1) - float(x2)
-                        dy = float(y1) - float(y2)
-                        dz = float(z1) - float(z2)
-                        distance = math.sqrt(dx * dx + dy * dy + dz * dz)
+                x1, y1, z1 = atom.get('x'), atom.get('y'), atom.get('z')
+                x2, y2, z2 = neigh_atom.get('x'), neigh_atom.get('y'), neigh_atom.get('z')
+                if None not in (x1, y1, z1, x2, y2, z2):
+                    dx = float(x2) - float(x1)
+                    dy = float(y2) - float(y1)
+                    dz = float(z2) - float(z1)
+                    if H is not None and Hinv is not None:
+                        # Fractional coordinates for PBC
+                        f_vec = Hinv @ np.array([dx, dy, dz])
+                        f_vec -= np.round(f_vec)
+                        # Back to real space
+                        r_vec = H @ f_vec
+                        distance = np.linalg.norm(r_vec)
+                    else:
+                        distance = math.sqrt(dx*dx + dy*dy + dz*dz)
 
             neighbor_data.append((neigh_el, distance))
 

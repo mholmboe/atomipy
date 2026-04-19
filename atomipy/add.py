@@ -85,9 +85,8 @@ def update(*atoms_list, molid=None, use_resname=True, force=False):
         if not atoms:
             continue
 
-        # For appended structures, always re-enumerate molids by appearance order
-        # so mixed or non-sequential source molids become a clean continuous series.
-        updated_atoms = _update_single_structure(atoms, None, use_resname, force=True)
+        # For appended structures, re-enumerate only if necessary (preserve internal molid structure)
+        updated_atoms = _update_single_structure(atoms, None, use_resname, force=False)
 
         min_molid = min(atom['molid'] for atom in updated_atoms)
         offset = current_molid - min_molid

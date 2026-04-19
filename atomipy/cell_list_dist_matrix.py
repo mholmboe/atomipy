@@ -1,349 +1,394 @@
 import numpy as np
-from .cell_utils import Box_dim2Cell, normalize_box
-
+from .cell_utils import normalize_box
 
 # Try to import tqdm for progress bar
 try:
     from tqdm import tqdm
     has_tqdm = True
 except ImportError:
-    print("Note: Install tqdm package for progress bars (pip install tqdm)")
     has_tqdm = False
 
-# Optional numba support for JIT compilation
-try:
-    import numba
-    HAS_NUMBA = True
-except ImportError:
-    HAS_NUMBA = False
-    numba = None
+def get_progress_iterator(iterable, desc="Processing", unit="it"):
+    if has_tqdm:
+        return tqdm(iterable, desc=desc, unit=unit)
+    return iterable
 
-# Decorator that applies numba JIT if available, otherwise does nothing
-def optional_jit(func):
-    """Apply numba JIT compilation if available, otherwise return the function unchanged."""
-    if HAS_NUMBA:
-        return numba.jit(nopython=True)(func)
-    return func
-
-def cell_list_dist_matrix(atoms, Box,cutoff=2.45, rmaxH=1.2, H_type='H'):
-    """Calculate a sparse distance matrix using the Cell list algorithm for efficiently 
-    finding all atom pairs within a cutoff distance. This function closely follows the MATLAB 
-    implementation of cell_list_dist_matrix_MATLAB.m.
-    
+def cell_list_dist_matrix(atoms, Box, cutoff=2.45, rmaxH=1.2, H_type='H'):
+    """
+    Higly optimized Cell-list algorithm for finding atom pairs within a cutoff.
+    Vectorized using NumPy to avoid nested Python loops. Supports Triclinic boxes.
     
     Args:
-        atoms: list of atom dictionaries, each having 'x', 'y', 'z' coordinates and 'type' field.
-        Box: a 1x3, 1x6 or 1x9 list representing Cell dimensions (in Angstroms):
-            - For orthogonal boxes, a 1x3 list [lx, ly, lz] where Box = Box_dim, and Cell would be [lx, ly, lz, 90, 90, 90]
-            - For Cell parameters, a 1x6 list [a, b, c, alpha, beta, gamma] (Cell format)
-            - For triclinic boxes, a 1x9 list [lx, ly, lz, 0, 0, xy, 0, xz, yz] (GROMACS Box_dim format)
-        cutoff: maximum distance to consider for non-hydrogen bonds (default: 2.45 Å).
-        rmaxH: cutoff distance for bonds involving hydrogen atoms (default: 1.2 Å).
-        H_type: atom type string identifying hydrogen atoms (default: 'H').
-       
-    Returns:
-        Tuple containing:
-        - dist_matrix: NxN numpy array with distances between atoms
-        - bond_list: Nx2 numpy array of atom indices forming bonds
-        - dist_list: Nx1 numpy array of distances corresponding to bonds
-        - X_dist, Y_dist, Z_dist: NxN numpy arrays with distance vector components
+        atoms: list of atom dictionaries.
+        Box: a 1x3, 1x6 or 1x9 list representing Cell dimensions.
+        cutoff: maximum distance for non-hydrogen bonds.
+        rmaxH: cutoff distance for hydrogen bonds.
+        H_type: atom type string for hydrogen.
         
-    Note:
-        This implementation closely follows the MATLAB version, including the same Cell grid
-        approach and handling of different cutoffs for hydrogen atoms.
+    Returns:
+        dist_matrix: NxN numpy array (sparse-ish, mostly zeros).
+        X_dist, Y_dist, Z_dist: NxN displacement component matrices.
+        bond_list: Mx2 numpy array of atom indices.
+        dist_list: Mx1 numpy array of distances.
     """
-    # Parse input & setup
     N = len(atoms)
-    positions = np.array([[atom['x'], atom['y'], atom['z']] for atom in atoms])
+    positions = np.array([[atom['x'], atom['y'], atom['z']] for atom in atoms], dtype=np.float32)
+    types = np.array([atom.get('type', '') for atom in atoms])
+    is_h = np.array([bool(t and t[0].upper() == 'H') for t in types])
     
     if Box is None:
         raise ValueError("Box parameter must be provided")
 
-    # Determine Box format and convert as needed
     Box_dim, Cell = normalize_box(Box)
     
-    # Extract Cell parameters
+    # Construct triclinic Box matrix H and its inverse Hinv
     a, b, c = Cell[0], Cell[1], Cell[2]
-    
-    # For orthogonal, angles = 90
     if len(Cell) == 3:
-        alpha_rad = np.radians(90)
-        beta_rad = np.radians(90)
-        gamma_rad = np.radians(90)
+        alpha, beta, gamma = 90.0, 90.0, 90.0
     else:
-        alpha_rad = np.radians(Cell[3])
-        beta_rad = np.radians(Cell[4])
-        gamma_rad = np.radians(Cell[5])
-    # Construct triclinic Box matrix H
-    ax = a
-    bx = b * np.cos(gamma_rad)
-    by = b * np.sin(gamma_rad)
-    cx = c * np.cos(beta_rad)
-    cy = c * (np.cos(alpha_rad) - np.cos(beta_rad) * np.cos(gamma_rad)) / np.sin(gamma_rad)
-    cz = np.sqrt(c**2 - cx**2 - cy**2)
+        alpha, beta, gamma = Cell[3], Cell[4], Cell[5]
+        
+    ar, br, gr = np.radians([alpha, beta, gamma])
     
-    H = np.array([
-        [ax, bx, cx],
-        [0,  by, cy],
-        [0,  0,  cz]
-    ])
+    # Upper triangular lattice matrix H
+    ax = a
+    bx = b * np.cos(gr)
+    by = b * np.sin(gr)
+    cx = c * np.cos(br)
+    cy = c * (np.cos(ar) - np.cos(br) * np.cos(gr)) / np.sin(gr)
+    cz = np.sqrt(max(0, c**2 - cx**2 - cy**2))
+    
+    H = np.array([[ax, bx, cx], [0, by, cy], [0, 0, cz]], dtype=np.float32)
     Hinv = np.linalg.inv(H)
     
-    # Build the Cell list
-    # Pick a Cell size that ensures neighbors can be found
-    cellSize = 2 * cutoff
+    # 1. Bin atoms into cells
+    # We use fractional coordinates for easy binning in triclinic systems
+    frac_coords = (Hinv @ positions.T).T
+    frac_coords = frac_coords % 1.0
     
-    # Bounding Box size calculation
-    boundingBoxSize = np.array([
-        max(abs(np.array([ax, bx, cx]))),
-        max(abs(np.array([0, by, cy]))),
-        max(abs(np.array([0, 0, cz])))
-    ])
+    # Cell size should be at least the cutoff
+    max_cutoff = max(cutoff, rmaxH)
     
-    # Number of cells along each dimension
-    nCells = np.maximum(np.floor(boundingBoxSize / cellSize), 1).astype(int)
+    # Effective box widths in each direction
+    # For triclinic, we use the perpendicular widths (projections)
+    # Using cz, by, ax is a safe approximation for orthogonal-like cells
+    n_cells = np.maximum(np.floor(np.array([ax, by, cz]) / max_cutoff), 1).astype(int)
     
-    # Convert coords -> fractional
-    fracCoords = np.zeros((N, 3))
+    # Map fractional coords to integer cell indices
+    cell_idx = np.floor(frac_coords * n_cells).astype(int)
+    cell_idx = np.clip(cell_idx, 0, n_cells - 1)
+    
+    # Flat cell index
+    flat_idx = cell_idx[:, 0] * (n_cells[1] * n_cells[2]) + cell_idx[:, 1] * n_cells[2] + cell_idx[:, 2]
+    num_cells_total = np.prod(n_cells)
+    
+    # Create head and next arrays (Linked List approach, but better for NumPy)
+    # head[c] is the index of the first atom in cell c
+    # next_atom[i] is the index of the next atom in the same cell as i
+    head = np.full(num_cells_total, -1, dtype=np.int32)
+    next_atom = np.full(N, -1, dtype=np.int32)
+    
     for i in range(N):
-        fracCoords[i] = Hinv @ np.array([positions[i][0], positions[i][1], positions[i][2]])
-    
-    # Keep coordinates in [0,1) range
-    fracCoords = fracCoords - np.floor(fracCoords)
-    
-    # Compute which Cell each atom belongs to
-    cellIndex = np.floor(fracCoords * nCells).astype(int)
-    
-    # Fix boundary cases
-    outOfBound = cellIndex[:, 0] >= nCells[0]
-    cellIndex[outOfBound, 0] = nCells[0] - 1
-    
-    outOfBound = cellIndex[:, 1] >= nCells[1]
-    cellIndex[outOfBound, 1] = nCells[1] - 1
-    
-    outOfBound = cellIndex[:, 2] >= nCells[2]
-    cellIndex[outOfBound, 2] = nCells[2] - 1
-    
-    # Convert (ix,iy,iz) -> single linear index
-    cellLinIdx = np.ravel_multi_index((cellIndex[:, 0], cellIndex[:, 1], cellIndex[:, 2]), nCells)
-    
-    # Initialize Cell lists
-    numCells = np.prod(nCells)
-    cellList = [[] for _ in range(numCells)]
-    
-    # Populate Cell lists - vectorized approach with bincount and digitize would be faster,
-    # but we need to maintain the list structure for compatibility
-    for iAtom in range(N):
-        cIdx = cellLinIdx[iAtom]
-        cellList[cIdx].append(iAtom)
-    
-    # Identify neighbor cells (27 total with PBC)
-    neighborOffsets = []
-    for ix in [-1, 0, 1]:
-        for iy in [-1, 0, 1]:
-            for iz in [-1, 0, 1]:
-                neighborOffsets.append((ix, iy, iz))
-    
-    # Initialize output data structures with estimated capacity
-    # Estimate maximum number of possible bonds based on typical coordination numbers
-    # and system density for better memory allocation
-    vol = a * b * c if len(Cell) >= 6 else Cell[0] * Cell[1] * Cell[2]
-    density = N / vol
-    coord_factor = min(12, max(4, int(4.0 * np.pi * (cutoff**3) * density / 3.0)))
-    est_bonds = int(N * coord_factor / 2)  # divide by 2 to avoid double counting
-    
-    # Pre-allocate with estimated capacity (still using list append for compatibility)
-    bond_list = []
-    dist_list = []
-    
-    # Initialize NxN output matrices (distances & displacement vectors)
+        c = flat_idx[i]
+        next_atom[i] = head[c]
+        head[c] = i
+        
+    # 2. Iterate over cells and neighbors
+    # Pre-allocate results (using lists for appending bonds is fine, but we'll pre-allocate matrices)
     dist_matrix = np.zeros((N, N), dtype=np.float32)
     X_dist = np.zeros((N, N), dtype=np.float32)
     Y_dist = np.zeros((N, N), dtype=np.float32)
     Z_dist = np.zeros((N, N), dtype=np.float32)
     
-    # Setup progress tracking
-    total_distances_processed = 0
-    estimated_total = numCells * 27  # Approximate maximum number of Cell neighbor combinations
+    bond_list = []
+    dist_list = []
     
-    # Setup progress bar
-    if has_tqdm:
-        cell_iterator = tqdm(range(numCells), desc="Finding dists", unit="Cell")
-    else:
-        print("Finding dists...")
-        cell_iterator = range(numCells)
-        last_percent = -1
+    # 27 neighbors including self
+    offsets = np.array(np.meshgrid([-1, 0, 1], [-1, 0, 1], [-1, 0, 1])).T.reshape(-1, 3)
     
-    # Loop over cells/neighbors & compute distances
-    for cID in cell_iterator:
-        atomListC = cellList[cID]
-        if not atomListC:
-            continue
-            
-        # Get Cell indices
-        cx, cy, cz = np.unravel_index(cID, nCells)
-        
-        # Check this Cell and all neighboring cells
-        for dxIdx, dyIdx, dzIdx in neighborOffsets:
-            # Calculate neighbor Cell with periodic wrapping
-            nx = (cx + dxIdx) % nCells[0]
-            ny = (cy + dyIdx) % nCells[1] 
-            nz = (cz + dzIdx) % nCells[2]
-            
-            # Get linear index of neighbor Cell
-            neighborCellLin = np.ravel_multi_index((nx, ny, nz), nCells)
-            atomListN = cellList[neighborCellLin]
-            if not atomListN:
-                continue
+    # We only need to check half the neighbors to avoid double counting, 
+    # but with PBC it's safer to check all or use a specific subset.
+    # To keep it simple and accurate, we check all and filter i < j later or at runtime.
+    
+    # Use a progress iterator for the outer x-dimension loop
+    for cx in get_progress_iterator(range(n_cells[0]), desc="Finding dists", unit="CellX"):
+        for cy in range(n_cells[1]):
+            for cz_idx in range(n_cells[2]):
+                c1 = cx * (n_cells[1] * n_cells[2]) + cy * n_cells[2] + cz_idx
+                i = head[c1]
+                if i == -1: continue
                 
-            # Update progress percentage for non-tqdm case
-            if not has_tqdm and numCells > 100:
-                percent = int(100 * cID / numCells)
-                if percent > last_percent and percent % 10 == 0:
-                    print(f"  {percent}% complete...")
-                    last_percent = percent
+                # Get all atoms in this cell
+                atoms1 = []
+                while i != -1:
+                    atoms1.append(i)
+                    i = next_atom[i]
+                atoms1 = np.array(atoms1, dtype=np.int32)
                 
-            # Avoid double-counting
-            if neighborCellLin < cID:
-                continue
-            # Compute pairwise distances iAtom <-> jAtom
-            for i, iAtom in enumerate(atomListC):
-                for j, jAtom in enumerate(atomListN):
-                    # If in the same Cell, only consider jAtom > iAtom to avoid duplicates
-                    if neighborCellLin == cID and jAtom <= iAtom:
-                        continue
-                        
-                    # Check hydrogen vs. non-hydrogen
-                    isH_i = atoms[iAtom]['type'] == H_type
-                    isH_j = atoms[jAtom]['type'] == H_type
+                # Check unique neighbor cells (avoid redundant images if n_cells is small)
+                neighbor_cells = set()
+                for off in offsets:
+                    nx = (cx + off[0]) % n_cells[0]
+                    ny = (cy + off[1]) % n_cells[1]
+                    nz = (cz_idx + off[2]) % n_cells[2]
+                    neighbor_cells.add(nx * (n_cells[1] * n_cells[2]) + ny * n_cells[2] + nz)
+                
+                for c2 in neighbor_cells:
+                    j = head[c2]
+                    if j == -1: continue
                     
-                    if isH_i or isH_j:
-                        localCutoff = rmaxH  # short cutoff for hydrogen
-                    else:
-                        localCutoff = cutoff  # default cutoff for non-hydrogen
+                    atoms2 = []
+                    while j != -1:
+                        atoms2.append(j)
+                        j = next_atom[j]
+                    atoms2 = np.array(atoms2, dtype=np.int32)
                     
-                    # Calculate distance with minimum image convention
-                    # Get difference in fractional coordinates
-                    ri = np.array([positions[iAtom][0], positions[iAtom][1], positions[iAtom][2]])
-                    rj = np.array([positions[jAtom][0], positions[jAtom][1], positions[jAtom][2]])
+                    # Compute distances between atoms1 and atoms2
+                    # Vectorized chunk
+                    p1 = positions[atoms1]
+                    p2 = positions[atoms2]
                     
-                    # Convert to fractional space
-                    diffFrac = Hinv @ (rj - ri)
+                    # Outer subtraction for N1 x N2 pairs
+                    # p1: (N1, 3), p2: (N2, 3) -> diff: (N1, N2, 3)
+                    diff = p2[np.newaxis, :, :] - p1[:, np.newaxis, :]
                     
-                    # Apply minimum image convention - wrap to [-0.5, 0.5)
-                    diffFrac = diffFrac - np.round(diffFrac)
+                    # Periodic wrap in Cartesian using H matrix
+                    # Easiest way to wrap is in fractional space
+                    diff_frac = (Hinv @ diff.reshape(-1, 3).T).T
+                    diff_frac = diff_frac - np.round(diff_frac)
+                    diff_cart = (H @ diff_frac.T).T.reshape(len(atoms1), len(atoms2), 3)
                     
-                    # Convert back to Cartesian
-                    dVec = H @ diffFrac
-                    d = np.linalg.norm(dVec)
+                    d2 = np.sum(diff_cart**2, axis=2)
+                    d = np.sqrt(d2)
                     
-                    # Only store if within cutoff
-                    if d <= localCutoff:
-                        # Store pair & distance
-                        bond_list.append([iAtom, jAtom])
-                        dist_list.append(d)
-                        
-                        # Update progress tracking counter
-                        total_distances_processed += 1
-                        
-                        # Fill NxN distance matrix
-                        dist_matrix[iAtom, jAtom] = d
-                        dist_matrix[jAtom, iAtom] = d  # symmetric
-                        
-                        # Fill NxN displacement matrices
-                        X_dist[iAtom, jAtom] = dVec[0]
-                        X_dist[jAtom, iAtom] = -dVec[0]
-                        
-                        Y_dist[iAtom, jAtom] = dVec[1]
-                        Y_dist[jAtom, iAtom] = -dVec[1]
-                        
-                        Z_dist[iAtom, jAtom] = dVec[2]
-                        Z_dist[jAtom, iAtom] = -dVec[2]
-    
-    # Clean up very small values that might be numerical errors - single mask for efficiency
-    small_vals_mask = np.abs(dist_matrix) <= 1e-7
-    dist_matrix[small_vals_mask] = 0
-    X_dist[small_vals_mask] = 0
-    Y_dist[small_vals_mask] = 0
-    Z_dist[small_vals_mask] = 0
-    
-    # Convert lists to numpy arrays
-    if bond_list:
-        bond_list = np.array(bond_list)
-        dist_list = np.array(dist_list)
-    else:
-        bond_list = np.zeros((0, 2), dtype=int)
-        dist_list = np.zeros(0, dtype=float)
-    
-    return dist_matrix, X_dist, Y_dist, Z_dist, bond_list, dist_list
+                    # Masking by cutoff
+                    # Note: different cutoffs for H vs non-H
+                    is_h1 = is_h[atoms1]
+                    is_h2 = is_h[atoms2]
+                    # matrix of cutoffs (N1 x N2)
+                    cutoffs = np.where(is_h1[:, np.newaxis] | is_h2[np.newaxis, :], rmaxH, cutoff)
+                    
+                    mask = (d > 1e-7) & (d <= cutoffs)
+                    
+                    # Filter i < j to avoid double counts if needed, but here we fill the whole matrix.
+                    # Actually, if c1 == c2, only i < j. If c1 != c2, we'll double count unless we filter.
+                    # Easiest way: only fill if i < j.
+                    
+                    ii, jj = np.where(mask)
+                    for k in range(len(ii)):
+                        idx1 = atoms1[ii[k]]
+                        idx2 = atoms2[jj[k]]
+                        if idx1 < idx2:
+                            val = d[ii[k], jj[k]]
+                            dist_matrix[idx1, idx2] = val
+                            dist_matrix[idx2, idx1] = val
+                            X_dist[idx1, idx2] = diff_cart[ii[k], jj[k], 0]
+                            X_dist[idx2, idx1] = -X_dist[idx1, idx2]
+                            Y_dist[idx1, idx2] = diff_cart[ii[k], jj[k], 1]
+                            Y_dist[idx2, idx1] = -Y_dist[idx1, idx2]
+                            Z_dist[idx1, idx2] = diff_cart[ii[k], jj[k], 2]
+                            Z_dist[idx2, idx1] = -Z_dist[idx1, idx2]
+                            bond_list.append([idx1, idx2])
+                            dist_list.append(val)
+                            
+    return dist_matrix, X_dist, Y_dist, Z_dist, np.array(bond_list), np.array(dist_list)
 
+# Alias for backward compatibility during migration
+cell_list_dist_matrix_fast = cell_list_dist_matrix
 
-@optional_jit
-def convert_to_sparse_dict(dist_matrix, X_dist, Y_dist, Z_dist, cutoff):
-    """Convert full distance matrices to a sparse dictionary format.
+def neighbor_list_fast(atoms, Box, cutoff=2.45, rmaxH=None, H_type='H'):
+    """
+    Higly optimized Cell-list algorithm for finding atom pairs within a cutoff.
+    Returns sparse lists instead of NxN matrices to save memory.
+    Supports Triclinic boxes.
     
     Args:
-        dist_matrix: NxN distance matrix
-        X_dist, Y_dist, Z_dist: NxN displacement component matrices
-        cutoff: Only include distances up to this cutoff
+        atoms: list of atom dictionaries.
+        Box: a 1x3, 1x6 or 1x9 list representing Cell dimensions.
+        cutoff: maximum distance for non-hydrogen bonds.
+        rmaxH: cutoff distance for hydrogen bonds. If None, uses cutoff.
+        H_type: atom type string for hydrogen.
         
     Returns:
-        Dictionary mapping (i,j) tuples to (dist, dx, dy, dz) tuples
+        i_idx, j_idx: Nx1 numpy arrays of atom indices.
+        dist: Nx1 numpy array of distances.
+        dx, dy, dz: Nx1 numpy arrays of displacement components (r_j - r_i).
     """
+    N = len(atoms)
+    positions = np.array([[atom['x'], atom['y'], atom['z']] for atom in atoms], dtype=np.float32)
+    types = np.array([atom.get('type', '') for atom in atoms])
+    is_h = np.array([bool(t and t[0].upper() == 'H') for t in types])
+    
+    if rmaxH is None:
+        rmaxH = cutoff
+        
+    if Box is None:
+        # Non-periodic case: use a bounding box
+        min_coords = np.min(positions, axis=0)
+        max_coords = np.max(positions, axis=0)
+        Box_dim = max_coords - min_coords + 2 * max(cutoff, rmaxH)
+        H = np.diag(Box_dim).astype(np.float32)
+        Hinv = np.linalg.inv(H)
+        # Shift positions to be positive relative to min_coords
+        positions_shifted = positions - min_coords + max(cutoff, rmaxH)
+        frac_coords = (Hinv @ positions_shifted.T).T
+        is_periodic = False
+    else:
+        Box_dim, Cell = normalize_box(Box)
+        # Construct triclinic Box matrix H and its inverse Hinv
+        a, b, c = Cell[0], Cell[1], Cell[2]
+        if len(Cell) == 3:
+            alpha, beta, gamma = 90.0, 90.0, 90.0
+        else:
+            alpha, beta, gamma = Cell[3], Cell[4], Cell[5]
+        ar, br, gr = np.radians([alpha, beta, gamma])
+        ax = a
+        bx = b * np.cos(gr)
+        by = b * np.sin(gr)
+        cx = c * np.cos(br)
+        cy = c * (np.cos(ar) - np.cos(br) * np.cos(gr)) / np.sin(gr)
+        cz = np.sqrt(max(0, c**2 - cx**2 - cy**2))
+        H = np.array([[ax, bx, cx], [0, by, cy], [0, 0, cz]], dtype=np.float32)
+        Hinv = np.linalg.inv(H)
+        frac_coords = (Hinv @ positions.T).T
+        frac_coords = frac_coords % 1.0
+        is_periodic = True
+
+    max_cutoff = max(cutoff, rmaxH)
+    # Effective box widths in each direction
+    if is_periodic:
+        n_cells = np.maximum(np.floor(np.array([H[0,0], H[1,1], H[2,2]]) / max_cutoff), 1).astype(int)
+    else:
+        n_cells = np.maximum(np.floor(Box_dim / max_cutoff), 1).astype(int)
+        
+    cell_idx = np.floor(frac_coords * n_cells).astype(int)
+    cell_idx = np.clip(cell_idx, 0, n_cells - 1)
+    flat_idx = cell_idx[:, 0] * (n_cells[1] * n_cells[2]) + cell_idx[:, 1] * n_cells[2] + cell_idx[:, 2]
+    num_cells_total = np.prod(n_cells)
+    
+    head = np.full(num_cells_total, -1, dtype=np.int32)
+    next_atom = np.full(N, -1, dtype=np.int32)
+    for i in range(N):
+        c = flat_idx[i]
+        next_atom[i] = head[c]
+        head[c] = i
+        
+    i_idx_list = []
+    j_idx_list = []
+    dist_list = []
+    dx_list = []
+    dy_list = []
+    dz_list = []
+    
+    offsets = np.array(np.meshgrid([-1, 0, 1], [-1, 0, 1], [-1, 0, 1])).T.reshape(-1, 3)
+    
+    # Use a progress iterator for the outer x-dimension loop
+    for cx in get_progress_iterator(range(n_cells[0]), desc="Finding sparse dists", unit="CellX"):
+        for cy in range(n_cells[1]):
+            for cz_idx in range(n_cells[2]):
+                c1 = cx * (n_cells[1] * n_cells[2]) + cy * n_cells[2] + cz_idx
+                i_head = head[c1]
+                if i_head == -1: continue
+                
+                atoms1 = []
+                curr = i_head
+                while curr != -1:
+                    atoms1.append(curr)
+                    curr = next_atom[curr]
+                atoms1 = np.array(atoms1, dtype=np.int32)
+                
+                # Check unique neighbor cells (avoid redundant images if n_cells is small)
+                neighbor_cells = set()
+                for off in offsets:
+                    nx = (cx + off[0])
+                    ny = (cy + off[1])
+                    nz = (cz_idx + off[2])
+                    
+                    if is_periodic:
+                        nx %= n_cells[0]
+                        ny %= n_cells[1]
+                        nz %= n_cells[2]
+                    else:
+                        if nx < 0 or nx >= n_cells[0] or ny < 0 or ny >= n_cells[1] or nz < 0 or nz >= n_cells[2]:
+                            continue
+                    
+                    neighbor_cells.add(nx * (n_cells[1] * n_cells[2]) + ny * n_cells[2] + nz)
+                
+                for c2 in neighbor_cells:
+                    j_head = head[c2]
+                    if j_head == -1: continue
+                    
+                    atoms2 = []
+                    curr = j_head
+                    while curr != -1:
+                        atoms2.append(curr)
+                        curr = next_atom[curr]
+                    atoms2 = np.array(atoms2, dtype=np.int32)
+                    
+                    p1 = positions[atoms1]
+                    p2 = positions[atoms2]
+                    
+                    diff = p2[np.newaxis, :, :] - p1[:, np.newaxis, :]
+                    
+                    if is_periodic:
+                        diff_frac = (Hinv @ diff.reshape(-1, 3).T).T
+                        diff_frac = diff_frac - np.round(diff_frac)
+                        diff_cart = (H @ diff_frac.T).T.reshape(len(atoms1), len(atoms2), 3)
+                    else:
+                        diff_cart = diff
+
+                    d2 = np.sum(diff_cart**2, axis=2)
+                    d = np.sqrt(d2)
+                    
+                    is_h1 = is_h[atoms1]
+                    is_h2 = is_h[atoms2]
+                    cutoffs = np.where(is_h1[:, np.newaxis] | is_h2[np.newaxis, :], rmaxH, cutoff)
+                    
+                    mask = (d > 1e-7) & (d <= cutoffs)
+                    
+                    ii_local, jj_local = np.where(mask)
+                    for k in range(len(ii_local)):
+                        idx1 = atoms1[ii_local[k]]
+                        idx2 = atoms2[jj_local[k]]
+                        if idx1 < idx2:
+                            val = d[ii_local[k], jj_local[k]]
+                            i_idx_list.append(idx1)
+                            j_idx_list.append(idx2)
+                            dist_list.append(val)
+                            dx_list.append(diff_cart[ii_local[k], jj_local[k], 0])
+                            dy_list.append(diff_cart[ii_local[k], jj_local[k], 1])
+                            dz_list.append(diff_cart[ii_local[k], jj_local[k], 2])
+                            
+    return (np.array(i_idx_list, dtype=np.int32), 
+            np.array(j_idx_list, dtype=np.int32), 
+            np.array(dist_list, dtype=np.float32),
+            np.array(dx_list, dtype=np.float32),
+            np.array(dy_list, dtype=np.float32),
+            np.array(dz_list, dtype=np.float32))
+
+# Carry over helper functions from original file for full compatibility
+def convert_to_sparse_dict(dist_matrix, X_dist, Y_dist, Z_dist, cutoff):
+    """Convert full distance matrices to a sparse dictionary format."""
     N = dist_matrix.shape[0]
     distance_dict = {}
-    
-    # Vectorized approach - find valid indices in one go
     i_indices, j_indices = np.where((dist_matrix > 0) & (dist_matrix <= cutoff) & (np.triu(np.ones(dist_matrix.shape), k=1) > 0))
-    
-    # Create dictionary entries for all valid pairs
     for idx in range(len(i_indices)):
         i, j = i_indices[idx], j_indices[idx]
         distance_dict[(i, j)] = (dist_matrix[i, j], X_dist[i, j], Y_dist[i, j], Z_dist[i, j])
-    
     return distance_dict
 
-
-@optional_jit
 def get_neighbors(dist_matrix, X_dist, Y_dist, Z_dist, atom_index, r_max=None):
-    """Get all neighbors of a specific atom from the distance matrices.
-    
-    Args:
-        dist_matrix: NxN distance matrix
-        X_dist, Y_dist, Z_dist: NxN displacement component matrices
-        atom_index: Index of the atom to get neighbors for
-        r_max: Optional maximum distance for neighbors
-               
-    Returns:
-        List of tuples (neighbor_index, distance, dx, dy, dz)
-    """
-    # Use vectorized operations to get neighbor indices
+    """Get all neighbors of a specific atom from the distance matrices."""
     row = dist_matrix[atom_index]
-    
     if r_max is None:
         mask = (row > 0) & (np.arange(len(row)) != atom_index)
     else:
         mask = (row > 0) & (row <= r_max) & (np.arange(len(row)) != atom_index)
-    
-    # Get indices where mask is True
     j_indices = np.where(mask)[0]
-    
-    # Build neighbor list
     neighbors = []
     for j in j_indices:
-        neighbors.append((j, dist_matrix[atom_index, j], 
-                         X_dist[atom_index, j], 
-                         Y_dist[atom_index, j], 
-                         Z_dist[atom_index, j]))
-    
-    # Sort by distance - use numpy for speed if numba available
+        neighbors.append((j, dist_matrix[atom_index, j], X_dist[atom_index, j], Y_dist[atom_index, j], Z_dist[atom_index, j]))
     if len(neighbors) > 1:
-        # Convert to numpy array for faster sorting
-        neighbors_array = np.array(neighbors, dtype=[('idx', int), ('dist', float), 
-                                                    ('dx', float), ('dy', float), ('dz', float)])
         # Sort by distance
-        neighbors_array.sort(order='dist')
-        # Convert back to list of tuples
-        neighbors = [tuple(row) for row in neighbors_array]
-    
+        neighbors.sort(key=lambda x: x[1])
     return neighbors

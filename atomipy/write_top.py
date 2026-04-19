@@ -84,9 +84,9 @@ def itp(atoms, Box=None, file_path=None, molecule_name=None, nrexcl=1, comment=N
     
     # Call the bond_angle function with the provided rmaxH and rmaxM parameters
     # Note: bond_angle function expects coordinates in Angstroms
-    # Important: Use same_molecule_only=False to allow bonds between different molecules
+    # Important: Use same_molecule_only=True (default) to respect molecule boundaries
     # Keep same_element_bonds=False (default) which is correct for mineral structures
-    print(f"write_itp: Calling bond_angle with rmaxH={rmaxH}, rmaxM={rmaxM}, same_molecule_only=False")
+    print(f"write_itp: Calling bond_angle with rmaxH={rmaxH}, rmaxM={rmaxM}, same_molecule_only=True")
     updated_atoms, Bond_index, Angle_index = bond_angle(atoms, Box, rmaxH=rmaxH, rmaxM=rmaxM, same_element_bonds=False, same_molecule_only=True)
     print(f"write_itp: bond_angle found {len(Bond_index)} bonds and {len(Angle_index)} angles")
     
@@ -140,11 +140,12 @@ def itp(atoms, Box=None, file_path=None, molecule_name=None, nrexcl=1, comment=N
             print("Converted Angle_index from list to 1-based indexing")
     
     # Find atom indices for special types (similar to MATLAB script)
-    ind_H = [i for i, atom in enumerate(atoms, 1) if atom.get('type', '').startswith('H')]
-    ind_O = [i for i, atom in enumerate(atoms, 1) if atom.get('type', '').startswith('O')]
-    ind_Al = [i for i, atom in enumerate(atoms, 1) if atom.get('type', '').startswith('Al')]
-    ind_Si = [i for i, atom in enumerate(atoms, 1) if atom.get('type', '').startswith('Si')]
-    ind_Mgo = [i for i, atom in enumerate(atoms, 1) if atom.get('type', '').startswith('Mg')]
+    # Using sets for O(1) membership checks to avoid O(N^2) bottlenecks in filtering
+    ind_H = {i for i, atom in enumerate(atoms, 1) if atom.get('type', '').startswith('H')}
+    ind_O = {i for i, atom in enumerate(atoms, 1) if atom.get('type', '').startswith('O')}
+    ind_Al = {i for i, atom in enumerate(atoms, 1) if atom.get('type', '').startswith('Al')}
+    ind_Si = {i for i, atom in enumerate(atoms, 1) if atom.get('type', '').startswith('Si')}
+    ind_Mgo = {i for i, atom in enumerate(atoms, 1) if atom.get('type', '').startswith('Mg')}
     
     # Filter Bond_index to only include bonds with at least one hydrogen atom
     if Bond_index is not None and len(Bond_index) > 0:

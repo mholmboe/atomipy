@@ -1,69 +1,53 @@
 import numpy as np
-from .dist_matrix import dist_matrix
-from .cell_list_dist_matrix import cell_list_dist_matrix
-from .cell_list_dist_matrix_fast import cell_list_dist_matrix_fast
+from .dist_matrix import get_neighbor_list
+from . import config
 
 def bond_angle(atoms, Box, rmaxH=1.2, rmaxM=2.45, same_element_bonds=False, same_molecule_only=True, calculate_coordination=True, neighbor_element=None, dm_method=None):
-    """Compute bonds and angles for a given atomic structure.
-    
-    ... [docs] ...
-    
-        dm_method: Optional manual selection of distance matrix method: 
-                   'direct', 'old_cl', or 'fast_cl'. If None, auto-select based on size.
+    """
+    Parameters
+    ----------
+    atoms : list of dict
+        List of atom dictionaries containing Cartesian coordinates (keys: ``x``, ``y``, ``z``).
+    Box : list or array-like
+        Simulation cell dimensions.
+    rmaxH : float, optional
+        Cutoff distance (Å) for bonds involving hydrogen (default: 1.2).
+    rmaxM : float, optional
+        Cutoff distance (Å) for bonds between non-hydrogen atoms (default: 2.45).
+    same_element_bonds : bool, optional
+        If False, bonds between atoms of the same element are ignored (default: False).
+    same_molecule_only : bool, optional
+        If True, restrict bonds to atoms sharing the same ``molid`` (default: True).
+    calculate_coordination : bool, optional
+        If True, add coordination numbers to each atom dictionary (default: True).
+    neighbor_element : str, optional
+        If provided, coordination counts only neighbors of this element.
+    dm_method : str, optional
+        Manual selection of distance matrix method:
+        - 'direct': Force O(N^2) direct distance calculation.
+        - 'sparse': Force O(N) memory-efficient neighbor list.
+        - 'fast_cl': Force O(N) memory-intensive Full Cell List.
+        - None (default): Auto-select based on `config.SPARSE_THRESHOLD`.
+
+    Performance Note
+    ----------------
+    This function uses the central dispatcher `get_neighbor_list` to automatically 
+    switch between the Direct method (for small systems) and the Sparse Neighbor 
+    List method (for systems >= `config.SPARSE_THRESHOLD`). Use `dm_method` to
+    override this behavior.
     """
     # Get the number of atoms
     N = len(atoms)
 
-    # Check the size of the system to determine which method to use
-    # For large systems (>2000 atoms), cell_list_dist_matrix_fast is more memory efficient and now highly vectorized
-    if dm_method == 'direct' or (dm_method is None and len(atoms) <= 2000):
-        # Smaller system (or forced direct) - use standard distance matrix
-        print(f"Using Direct distance matrix method (size: {len(atoms)})")
-        dmat, dx, dy, dz = dist_matrix(atoms, Box)
-    elif dm_method == 'old_cl':
-        # Forced old cell list
-        print(f"Using Old Cell List method (size: {len(atoms)})")
-        dmat, dx, dy, dz, _, _ = cell_list_dist_matrix(atoms, Box, cutoff=max(rmaxH, rmaxM))
-    else:
-        # Default or forced fast_cl
-        print(f"Using Memory-Efficient Fast Cell List method (size: {len(atoms)})")
-        dmat, dx, dy, dz, _, _ = cell_list_dist_matrix_fast(atoms, Box, cutoff=max(rmaxH, rmaxM), rmaxH=rmaxH)
-    
-    # Since dist_matrix doesn't provide precalculated bond lists, we'll create them based on cutoffs
-    precalc_bond_list = []
-    dist_list = []
-    
-    # Try to import tqdm for progress bar
-    try:
-        from tqdm import tqdm
-        has_tqdm = True
-    except ImportError:
-        print("Note: Install tqdm package for progress bars (pip install tqdm)")
-        has_tqdm = False
-
-    # Create bond lists based on the distance matrix and appropriate cutoffs
-    total_pairs = N * (N - 1) // 2  # Total number of pairs to check
-    pair_count = 0
-    
-    # Vectorized bond identification
-    # Determine which atoms are hydrogen
-    types = np.array([atom.get('type', atom.get('name', '')) for atom in atoms])
-    is_h = np.array([bool(t and t[0].upper() == 'H') for t in types])
-    
-    # Create a cutoff matrix: rmaxH if either atom is H, otherwise rmaxM
-    # is_h[:, None] | is_h[None, :] is True if i is H OR j is H
-    cutoff_matrix = np.where(is_h[:, np.newaxis] | is_h[np.newaxis, :], rmaxH, rmaxM)
-    
-    # Find indices where distance is within cutoff and i < j (upper triangle)
-    # Using np.triu to only get each pair once
-    mask = (dmat > 0) & (dmat <= cutoff_matrix)
-    ii, jj = np.where(np.triu(mask, k=1))
-    
-    # Create the bond list and distance list
-    precalc_bond_list = np.column_stack((ii, jj))
-    dist_list = dmat[ii, jj]
-    
-    print(f"  Vectorized bond finding: identified {len(precalc_bond_list)} potential bonds")
+    # Use the central dispatcher to get neighbors and distances
+    # It automatically handles Direct vs Sparse based on config.SPARSE_THRESHOLD
+    i_idx, j_idx, dists, dx_s, dy_s, dz_s = get_neighbor_list(
+        atoms, 
+        Box, 
+        cutoff=max(rmaxH, rmaxM), 
+        rmaxH=rmaxH, 
+        dm_method=dm_method
+    )
 
     # Initialize lists for all atoms
     for i in range(N):
@@ -71,92 +55,90 @@ def bond_angle(atoms, Box, rmaxH=1.2, rmaxM=2.45, same_element_bonds=False, same
         atoms[i]['bonds'] = []
         atoms[i]['angles'] = []
     
+    # Process bonds and adjacency
+    bond_pairs = []
+    
+    # Determine element types for filtering (if needed)
+    types = np.array([atom.get('type', atom.get('name', '')) for atom in atoms])
+    is_h = np.array([bool(t and t[0].upper() == 'H') for t in types])
+    
+    # Since rmaxH and rmaxM might differ, we need to filter the dispatcher results
+    # which were calculated with max(rmaxH, rmaxM)
+    cutoff_vec = np.where(is_h[i_idx] | is_h[j_idx], rmaxH, rmaxM)
+    mask = (dists <= cutoff_vec)
+    
+    cand_i = i_idx[mask]
+    cand_j = j_idx[mask]
+    cand_dists = dists[mask]
+    cand_dx = dx_s[mask]
+    cand_dy = dy_s[mask]
+    cand_dz = dz_s[mask]
+    
+    # Adjacency with vectors for angle calculation
+    # neighbors_vecs[i] = list of (j, dx, dy, dz) where dx = x_j - x_i
+    neighbors_vecs = [[] for _ in range(N)]
+
     # Filter bonds based on element types and molecule IDs
-    bond_pairs = []  # Store bonds as (atom1_idx, atom2_idx, distance)
-    
-    # Process the precalculated bonds from cell_list_dist_matrix
-    if len(precalc_bond_list) > 0:
-        for k in range(len(precalc_bond_list)):
-            i, j = precalc_bond_list[k]
-            distance = dist_list[k]
+    for k in range(len(cand_i)):
+        i, j = cand_i[k], cand_j[k]
+        dist = cand_dists[k]
+        
+        el_i = atoms[i].get('element', 'X')
+        el_j = atoms[j].get('element', 'X')
+        molid_i = atoms[i].get('molid', None)
+        molid_j = atoms[j].get('molid', None)
+        
+        # Apply element check and molecule check
+        molecule_condition = True if not same_molecule_only else (molid_i == molid_j)
+        element_condition = same_element_bonds or el_i != el_j
+        
+        if element_condition and molecule_condition:
+            atoms[i]['neigh'].append(j)
+            atoms[i]['bonds'].append((j, dist))
+            atoms[j]['neigh'].append(i)
+            atoms[j]['bonds'].append((i, dist))
+            bond_pairs.append((i, j, dist))
             
-            # Ensure i < j for consistency - smaller index always in first column
-            if i > j:
-                i, j = j, i
-                
-            el_i = atoms[i].get('element','X')
-            el_j = atoms[j].get('element','X')
-            
-            # Get molecule IDs if available, otherwise use None
-            molid_i = atoms[i].get('molid', None)
-            molid_j = atoms[j].get('molid', None)
-            
-            # Apply element check and molecule check if needed
-            molecule_condition = True if not same_molecule_only else (molid_i == molid_j)
-            element_condition = same_element_bonds or el_i != el_j
-            
-            if element_condition and molecule_condition:
-                # Add to both atoms' neighbor and bond lists
-                atoms[i]['neigh'].append(j)
-                atoms[i]['bonds'].append((j, distance))
-                
-                atoms[j]['neigh'].append(i)
-                atoms[j]['bonds'].append((i, distance))
-                
-                # Store bond information as tuple (low_idx, high_idx, distance)
-                bond_pairs.append((i, j, distance))
-    
-    # Calculate angles for atoms with bonds
-    angle_data = []  # Store angle data
-    
+            dx_ij = cand_dx[k]
+            dy_ij = cand_dy[k]
+            dz_ij = cand_dz[k]
+            neighbors_vecs[i].append((j, dx_ij, dy_ij, dz_ij))
+            neighbors_vecs[j].append((i, -dx_ij, -dy_ij, -dz_ij))
+
+    print(f"  Identified {len(bond_pairs)} valid bonds")
+
+    # Calculate angles
+    angle_data = []
     for i in range(N):
-        # Skip if atom has less than 2 bonds
         if len(atoms[i]['neigh']) < 2:
             continue
             
-        # Compute angles for each pair of bonded neighbors
-        for m in range(len(atoms[i]['neigh'])):
-            for n in range(m+1, len(atoms[i]['neigh'])):
-                j = atoms[i]['neigh'][m]
-                k = atoms[i]['neigh'][n]
-                
-                # Get vectors from atom i to atoms j and k with PBC correction
-                rij = np.array([dx[i, j], dy[i, j], dz[i, j]])
-                rik = np.array([dx[i, k], dy[i, k], dz[i, k]])
-                
-                # Normalize vectors
+        # Use neighbors_vecs for displacement lookup (available for all methods via dispatcher)
+        for m in range(len(neighbors_vecs[i])):
+            for n in range(m+1, len(neighbors_vecs[i])):
+                j, dx_ij, dy_ij, dz_ij = neighbors_vecs[i][m]
+                k, dx_ik, dy_ik, dz_ik = neighbors_vecs[i][n]
+                rij = np.array([dx_ij, dy_ij, dz_ij])
+                rik = np.array([dx_ik, dy_ik, dz_ik])
+                    
                 rij_norm = np.linalg.norm(rij)
                 rik_norm = np.linalg.norm(rik)
-                
-                # Calculate angle using dot product
                 cos_angle = np.dot(rij, rik) / (rij_norm * rik_norm)
-                
-                # Clamp to valid range to prevent numerical errors
                 cos_angle = max(min(cos_angle, 1.0), -1.0)
                 angle = np.degrees(np.arccos(cos_angle))
                 
-                # Add angle to atom's data
                 atoms[i]['angles'].append(((j, k), angle))
-                
-                # Store angle data with proper ordering for Angle_index
-                # Ensure first atom has lower index than third atom
+                # Standard Ordering (atom1 < atom3)
                 if j < k:
                     atom1, atom3 = j, k
-                    # Vector from middle atom (i) to lowest index atom (j)
-                    dx12, dy12, dz12 = dx[i, j], dy[i, j], dz[i, j]
-                    # Vector from middle atom (i) to highest index atom (k)
-                    dx23, dy23, dz23 = dx[i, k], dy[i, k], dz[i, k]
+                    dx12, dy12, dz12 = dx_ij, dy_ij, dz_ij
+                    dx23, dy23, dz23 = dx_ik, dy_ik, dz_ik
                 else:
                     atom1, atom3 = k, j
-                    # Vector from middle atom (i) to lowest index atom (k)
-                    dx12, dy12, dz12 = dx[i, k], dy[i, k], dz[i, k]
-                    # Vector from middle atom (i) to highest index atom (j)
-                    dx23, dy23, dz23 = dx[i, j], dy[i, j], dz[i, j]
+                    dx12, dy12, dz12 = dx_ik, dy_ik, dz_ik
+                    dx23, dy23, dz23 = dx_ij, dy_ij, dz_ij
                 
-                # Store the angle data in consistent format
-                angle_data.append((atom1, i, atom3, angle, 
-                                 dx12, dy12, dz12, 
-                                 dx23, dy23, dz23))
+                angle_data.append((atom1, i, atom3, angle, dx12, dy12, dz12, dx23, dy23, dz23))
     
     # Convert bond_pairs list to Nx3 numpy array
     Bond_index = np.array(bond_pairs)
@@ -282,40 +264,54 @@ def bond_angle_dihedral(atoms, Box, rmaxH=1.2, rmaxM=2.45, same_element_bonds=Fa
         adjacency[a].append(b)
         adjacency[b].append(a)
 
-    # Oriented angle list using full neighbor permutations (not sorted) for dihedral construction
-    from .dist_matrix import dist_matrix  # local import to avoid cycles
-    _, dx, dy, dz = dist_matrix(atoms, Box)
-    oriented_angles = []
-    for center, neighs in enumerate(adjacency):
-        if len(neighs) < 2:
-            continue
-        for n1 in neighs:
-            for n2 in neighs:
-                if n1 == n2:
-                    continue
-                v1 = np.array([dx[center, n1], dy[center, n1], dz[center, n1]])
-                v2 = np.array([dx[center, n2], dy[center, n2], dz[center, n2]])
-                norm1 = np.linalg.norm(v1)
-                norm2 = np.linalg.norm(v2)
-                if norm1 == 0 or norm2 == 0:
-                    continue
-                cos_angle = np.dot(v1, v2) / (norm1 * norm2)
-                cos_angle = max(min(cos_angle, 1.0), -1.0)
-                angle = np.degrees(np.arccos(cos_angle))
-                oriented_angles.append(
-                    (
-                        n1,
-                        center,
-                        n2,
-                        angle,
-                        v1[0],
-                        v1[1],
-                        v1[2],
-                        v2[0],
-                        v2[1],
-                        v2[2],
-                    )
-                )
+    # Build oriented list using the same sparse/dense logic
+    if len(atoms) >= config.SPARSE_THRESHOLD:
+        from .cell_list_dist_matrix import neighbor_list_fast
+        i_idx, j_idx, dists, dx_s, dy_s, dz_s = neighbor_list_fast(atoms, Box, cutoff=max(rmaxH, rmaxM), rmaxH=rmaxH)
+        # Create mapping for quick lookup: (i, j) -> (dx, dy, dz)
+        # For dihedrals, we only care about bonded neighbors
+        bond_vecs = {}
+        for k in range(len(i_idx)):
+            idx1, idx2 = i_idx[k], j_idx[k]
+            bond_vecs[(idx1, idx2)] = (dx_s[k], dy_s[k], dz_s[k])
+            bond_vecs[(idx2, idx1)] = (-dx_s[k], -dy_s[k], -dz_s[k])
+        
+        oriented_angles = []
+        for center, neighs in enumerate(adjacency):
+            if len(neighs) < 2: continue
+            for n1 in neighs:
+                for n2 in neighs:
+                    if n1 == n2: continue
+                    if (center, n1) not in bond_vecs or (center, n2) not in bond_vecs: continue
+                    
+                    v1 = np.array(bond_vecs[(center, n1)])
+                    v2 = np.array(bond_vecs[(center, n2)])
+                    norm1 = np.linalg.norm(v1)
+                    norm2 = np.linalg.norm(v2)
+                    if norm1 == 0 or norm2 == 0: continue
+                    cos_angle = np.dot(v1, v2) / (norm1 * norm2)
+                    cos_angle = max(min(cos_angle, 1.0), -1.0)
+                    angle = np.degrees(np.arccos(cos_angle))
+                    oriented_angles.append((n1, center, n2, angle, v1[0], v1[1], v1[2], v2[0], v2[1], v2[2]))
+    else:
+        # Standard dense approach for smaller systems
+        from .dist_matrix import dist_matrix
+        _, dx, dy, dz = dist_matrix(atoms, Box)
+        oriented_angles = []
+        for center, neighs in enumerate(adjacency):
+            if len(neighs) < 2: continue
+            for n1 in neighs:
+                for n2 in neighs:
+                    if n1 == n2: continue
+                    v1 = np.array([dx[center, n1], dy[center, n1], dz[center, n1]])
+                    v2 = np.array([dx[center, n2], dy[center, n2], dz[center, n2]])
+                    norm1 = np.linalg.norm(v1)
+                    norm2 = np.linalg.norm(v2)
+                    if norm1 == 0 or norm2 == 0: continue
+                    cos_angle = np.dot(v1, v2) / (norm1 * norm2)
+                    cos_angle = max(min(cos_angle, 1.0), -1.0)
+                    angle = np.degrees(np.arccos(cos_angle))
+                    oriented_angles.append((n1, center, n2, angle, v1[0], v1[1], v1[2], v2[0], v2[1], v2[2]))
     oriented_angles = np.array(oriented_angles)
     if oriented_angles.size == 0:
         empty_dihedral = np.empty((0, 5))
