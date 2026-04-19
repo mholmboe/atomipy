@@ -8,8 +8,8 @@ import copy
 import os
 import random
 import numpy as np
-from .dist_matrix import dist_matrix
-from .cell_list_dist_matrix import cell_list_dist_matrix
+from .dist_matrix import dist_matrix, get_neighbor_list
+from . import config
 from .move import translate
 from .transform import cartesian_to_fractional, fractional_to_cartesian
 from .cell_utils import Cell2Box_dim
@@ -145,6 +145,12 @@ def substitute(atoms, Box, num_oct_subst, o1_type, o2_type, min_o2o2_dist,
     The algorithm ensures that substitutions are distributed equally between the top and
     bottom halves of the structure and maintains minimum separation distances between
     substituted atoms.
+    
+    Performance Note
+    ----------------
+    This function uses the central dispatcher `get_neighbor_list` to handle 
+    neighbor searches, automatically choosing the most efficient method (Direct or 
+    Sparse) based on the system size and `config.SPARSE_THRESHOLD`.
     """
     # Make a deep copy to avoid modifying the original
     atoms = copy.deepcopy(atoms)
@@ -154,6 +160,8 @@ def substitute(atoms, Box, num_oct_subst, o1_type, o2_type, min_o2o2_dist,
         lo_limit = -1e9
     if hi_limit is None:
         hi_limit = 1e9
+    
+    from .dist_matrix import get_neighbor_list
     
     # Map dimension name to index (support both MATLAB-style 1-3 and Python-style 0-2)
     if dimension == 1:
@@ -235,9 +243,16 @@ def substitute(atoms, Box, num_oct_subst, o1_type, o2_type, min_o2o2_dist,
         # Select indices for substitution
         oct_subst_index = []
         
-        # Calculate distance matrix for O1 atoms
-        print(f"Calculating distance matrix for {len(o1_atoms)} octahedral sites...")
-        o1_dist_matrix, _, _, _ = dist_matrix(o1_atoms, Box)
+        # Get sparse neighbor list for O1 sites
+        # Use dispatcher to find neighbors within cutoff
+        i_idx_o1, j_idx_o1, dists_o1, _, _, _ = get_neighbor_list(o1_atoms, Box, cutoff=min_o2o2_dist)
+        
+        # Create adjacency list for quick distance checks
+        o1_neighbors = [set() for _ in range(len(o1_atoms))]
+        for k in range(len(i_idx_o1)):
+            idx1, idx2 = i_idx_o1[k], j_idx_o1[k]
+            o1_neighbors[idx1].add(idx2)
+            o1_neighbors[idx2].add(idx1)
         
         # Perform substitutions
         i = 0
@@ -245,13 +260,24 @@ def substitute(atoms, Box, num_oct_subst, o1_type, o2_type, min_o2o2_dist,
         n_oct_hi = 0
         n_oct_mid = 0
         
+        # Track which local o1_atoms indices have been converted to o2_type
+        placed_o2_indices = set(j for j, atom in enumerate(o1_atoms) if atom['type'] == o2_type)
+        
         while (n_oct_lo + n_oct_hi + n_oct_mid) < num_oct_subst and i < len(o1_atoms):
-            # Find existing O2 atoms
-            ind_o2_local = [j for j, atom in enumerate(o1_atoms) if atom['type'] == o2_type]
-            
             # Check if current candidate is too close to existing O2 atoms
-            o2_distances = o1_dist_matrix[rand_o1_index[i], ind_o2_local] if ind_o2_local else []
-            too_close = np.any(np.array(o2_distances) < min_o2o2_dist) if len(o2_distances) > 0 else False
+            too_close = False
+            curr_idx = rand_o1_index[i]
+            
+            # Skip if already O2
+            if o1_atoms[curr_idx]['type'] == o2_type:
+                i += 1
+                continue
+
+            # A candidate is too close if it is a neighbor of any O2 atom in our sparse list
+            for neighbor_idx in o1_neighbors[curr_idx]:
+                if neighbor_idx in placed_o2_indices:
+                    too_close = True
+                    break
             
             # Get position along specified dimension
             current_pos = o1_data[rand_o1_index[i], dim_index]
@@ -264,16 +290,19 @@ def substitute(atoms, Box, num_oct_subst, o1_type, o2_type, min_o2o2_dist,
                     n_oct_lo += 1
                     o1_atoms[rand_o1_index[i]]['type'] = o2_type
                     o1_atoms[rand_o1_index[i]]['element'] = o2_element
+                    placed_o2_indices.add(rand_o1_index[i])
                 elif n_oct_hi < num_oct_subst / 2 and current_pos > ave_oct_z:
                     oct_subst_index.append(rand_o1_index[i])
                     n_oct_hi += 1
                     o1_atoms[rand_o1_index[i]]['type'] = o2_type
                     o1_atoms[rand_o1_index[i]]['element'] = o2_element
+                    placed_o2_indices.add(rand_o1_index[i])
                 elif (n_oct_lo + n_oct_hi + n_oct_mid) < num_oct_subst and current_pos == ave_oct_z:
                     oct_subst_index.append(rand_o1_index[i])
                     n_oct_mid += 1
                     o1_atoms[rand_o1_index[i]]['type'] = o2_type
                     o1_atoms[rand_o1_index[i]]['element'] = o2_element
+                    placed_o2_indices.add(rand_o1_index[i])
             
             i += 1
         
@@ -333,19 +362,24 @@ def substitute(atoms, Box, num_oct_subst, o1_type, o2_type, min_o2o2_dist,
         # Create random permutation for T1 atoms
         rand_t1_index = np.random.permutation(len(t1_atoms))
         
-        # Calculate distance matrix for T1 atoms
-        print(f"Calculating distance matrix for {len(t1_atoms)} tetrahedral sites...")
-        t1_dist_matrix, _, _, _ = dist_matrix(t1_atoms, Box)
-        
-        # Calculate distance matrix between T1 and O2 atoms if octahedral subst was done
-        t1o2_dist_matrix = None
+        # Get sparse neighbor list for T1 sites
+        i_idx_t1, j_idx_t1, dists_t1, _, _, _ = neighbor_list_fast(t1_atoms, Box, cutoff=min_t2t2_dist)
+        t1_neighbors = [set() for _ in range(len(t1_atoms))]
+        for k in range(len(i_idx_t1)):
+            idx1, idx2 = i_idx_t1[k], j_idx_t1[k]
+            t1_neighbors[idx1].add(idx2)
+            t1_neighbors[idx2].add(idx1)
+            
+        # Get sparse neighbor list for T1-O2 distances
+        t1o2_neighbors = [set() for _ in range(len(t1_atoms))]
         if num_oct_subst > 0 and o2_atoms:
-            print(f"Calculating T1-O2 distance matrix...")
-            # Create combined list with T1 atoms first, then O2 atoms
             combined_atoms = t1_atoms + o2_atoms
-            combined_dist_matrix, _, _, _ = dist_matrix(combined_atoms, Box)
-            # Extract the T1-O2 block
-            t1o2_dist_matrix = combined_dist_matrix[:len(t1_atoms), len(t1_atoms):]
+            n_t1 = len(t1_atoms)
+            i_idx_comb, j_idx_comb, _, _, _, _ = get_neighbor_list(combined_atoms, Box, cutoff=min_t2t2_dist)
+            # Filter for T1-O2 pairs (i < j case: i in T1, j in O2)
+            mask = (i_idx_comb < n_t1) & (j_idx_comb >= n_t1)
+            for k in np.where(mask)[0]:
+                t1o2_neighbors[i_idx_comb[k]].add(j_idx_comb[k] - n_t1)
         
         # Perform substitutions
         i = 0
@@ -353,19 +387,20 @@ def substitute(atoms, Box, num_oct_subst, o1_type, o2_type, min_o2o2_dist,
         n_tet_hi = 0
         tet_subst_index = []
         
+        # Track which local t1_atoms indices have been converted to t2_type
+        placed_t2_indices = set()
+        
         while (n_tet_lo + n_tet_hi) < num_tet_subst and i < len(t1_atoms):
-            # Find existing T2 atoms
-            ind_t2_local = [j for j, atom in enumerate(t1_atoms) if atom['type'] == t2_type]
-            
             # Check if current candidate is too close to existing T2 atoms
-            t2_distances = t1_dist_matrix[rand_t1_index[i], ind_t2_local] if ind_t2_local else []
-            too_close_t2 = np.any(np.array(t2_distances) < min_t2t2_dist) if len(t2_distances) > 0 else False
+            too_close_t2 = False
+            curr_idx = rand_t1_index[i]
+            for neighbor_idx in t1_neighbors[curr_idx]:
+                if neighbor_idx in placed_t2_indices:
+                    too_close_t2 = True
+                    break
             
             # Check if too close to O2 atoms
-            too_close_o2 = False
-            if t1o2_dist_matrix is not None:
-                to_distances = t1o2_dist_matrix[rand_t1_index[i], :]
-                too_close_o2 = np.any(to_distances < min_t2t2_dist)
+            too_close_o2 = len(t1o2_neighbors[curr_idx]) > 0
             
             # Get position along specified dimension
             current_pos = t1_data[rand_t1_index[i], dim_index]
@@ -377,10 +412,12 @@ def substitute(atoms, Box, num_oct_subst, o1_type, o2_type, min_o2o2_dist,
                     tet_subst_index.append(rand_t1_index[i])
                     n_tet_lo += 1
                     t1_atoms[rand_t1_index[i]]['type'] = t2_type
+                    placed_t2_indices.add(rand_t1_index[i])
                 elif n_tet_hi < num_tet_subst / 2 and current_pos >= ave_tet_z:
                     tet_subst_index.append(rand_t1_index[i])
                     n_tet_hi += 1
                     t1_atoms[rand_t1_index[i]]['type'] = t2_type
+                    placed_t2_indices.add(rand_t1_index[i])
             
             i += 1
         
@@ -411,28 +448,30 @@ def substitute(atoms, Box, num_oct_subst, o1_type, o2_type, min_o2o2_dist,
         # Check minimum O2-O2 distance
         o2_atoms_final = [atom for atom in atoms if atom['type'] == o2_type]
         if len(o2_atoms_final) > 1:
-            o2_dist_matrix, _, _, _ = dist_matrix(o2_atoms_final, Box)
-            # Get off-diagonal minimum (exclude diagonal zeros)
-            np.fill_diagonal(o2_dist_matrix, np.inf)
-            min_o2_dist = np.min(o2_dist_matrix)
+            from .dist_matrix import get_neighbor_list
+            _, _, dists_v, _, _, _ = get_neighbor_list(o2_atoms_final, Box, cutoff=min_o2o2_dist)
+            min_o2_dist = np.min(dists_v) if len(dists_v) > 0 else min_o2o2_dist
             print(f"Minimum {o2_type}-{o2_type} distance: {min_o2_dist:.3f} Å")
     
     if num_tet_subst > 0:
         # Check minimum T2-T2 distance
         t2_atoms_final = [atom for atom in atoms if atom['type'] == t2_type]
         if len(t2_atoms_final) > 1:
-            t2_dist_matrix, _, _, _ = dist_matrix(t2_atoms_final, Box)
-            np.fill_diagonal(t2_dist_matrix, np.inf)
-            min_t2_dist = np.min(t2_dist_matrix)
+            from .dist_matrix import get_neighbor_list
+            _, _, dists_v, _, _, _ = get_neighbor_list(t2_atoms_final, Box, cutoff=min_t2t2_dist)
+            min_t2_dist = np.min(dists_v) if len(dists_v) > 0 else min_t2t2_dist
             print(f"Minimum {t2_type}-{t2_type} distance: {min_t2_dist:.3f} Å")
         
         # Check minimum T2-O2 distance if both substitutions were done
-        if num_oct_subst > 0 and o2_atoms_final and t2_atoms_final:
+        if num_oct_subst > 0 and len(t2_atoms_final) > 0:
             combined_atoms = t2_atoms_final + o2_atoms_final
-            combined_dist_matrix, _, _, _ = dist_matrix(combined_atoms, Box)
-            t2o2_block = combined_dist_matrix[:len(t2_atoms_final), len(t2_atoms_final):]
-            if t2o2_block.size > 0:
-                min_t2o2_dist = np.min(t2o2_block)
+            from .dist_matrix import get_neighbor_list
+            i_idx_v, j_idx_v, dists_v, _, _, _ = get_neighbor_list(combined_atoms, Box, cutoff=min_t2t2_dist)
+            # Filter for T2-O2 pairs
+            mask = (i_idx_v < len(t2_atoms_final)) & (j_idx_v >= len(t2_atoms_final))
+            min_t2o2_dist = np.min(dists_v[mask]) if np.any(mask) else np.inf
+            
+            if min_t2o2_dist < 1000:
                 print(f"Minimum {t2_type}-{o2_type} distance: {min_t2o2_dist:.3f} Å")
     # Print composition
     print("\n=== Composition ===")
@@ -487,40 +526,41 @@ def merge(atoms1, atoms2, Box, type_mode='molid', atom_label=None, min_distance=
     atoms2 = copy.deepcopy(atoms2)
     
     # Calculate distances between atoms1 and atoms2
-    if len(atoms1) + len(atoms2) > 20000:
-        # For large systems, use cell list method
-        combined = atoms1 + atoms2
-        dist_matrix_result = cell_list_dist_matrix(combined, Box)
-        # Extract only the atoms1-atoms2 part
-        dist_matrix_result = dist_matrix_result[:len(atoms1), len(atoms1):]
-        if isinstance(dist_matrix_result, tuple):
-            # If dist_matrix returns a tuple, use the first element (the actual distance matrix)
-            dist_matrix_result = dist_matrix_result[0][:len(atoms1), len(atoms1):]
-    else:
-        # For smaller systems, use standard distance matrix
-        xs1 = np.array([atom['x'] for atom in atoms1])
-        ys1 = np.array([atom['y'] for atom in atoms1])
-        zs1 = np.array([atom['z'] for atom in atoms1])
-        coords1 = np.column_stack((xs1, ys1, zs1))
-        
-        xs2 = np.array([atom['x'] for atom in atoms2])
-        ys2 = np.array([atom['y'] for atom in atoms2])
-        zs2 = np.array([atom['z'] for atom in atoms2])
-        coords2 = np.column_stack((xs2, ys2, zs2))
-        
-        # Calculate distances
-        dist_matrix_result = dist_matrix(atoms1 + atoms2, Box)
-        if isinstance(dist_matrix_result, tuple):
-            # If dist_matrix returns a tuple, use the first element (the actual distance matrix)
-            dist_matrix_result = dist_matrix_result[0][:len(atoms1), len(atoms1):]
-        else:
-            dist_matrix_result = dist_matrix_result[:len(atoms1), len(atoms1):]
+    # Combined atoms for the neighbor search
+    combined = atoms1 + atoms2
+    n1 = len(atoms1)
+    n2 = len(atoms2)
     
-    # Create a mask for atoms to remove
-    to_remove = []
-    for i in range(len(atoms2)):
-        atom = atoms2[i]
-        # Check if this atom is of the type that should use small_dist
+    # Use sparse neighbor list for all systems to save memory
+    # Use central dispatcher (O(N) approach)
+    from .dist_matrix import get_neighbor_list
+    
+    # The maximum distance we care about
+    max_dist = standard_dist if standard_dist > small_dist else small_dist
+    
+    # Get sparse neighbor list for the combined system
+    i_idx, j_idx, dists, _, _, _ = get_neighbor_list(combined, Box, cutoff=max_dist)
+    
+    # Filter for pairs where one atom is in atoms1 and the other is in atoms2
+    # Since i_idx < j_idx, we check cases where:
+    # 1. i is in atoms1 (< n1) and j is in atoms2 (>= n1)
+    mask = (i_idx < n1) & (j_idx >= n1)
+    
+    solute_indices = i_idx[mask]
+    solvent_relative_indices = j_idx[mask] - n1
+    pair_distances = dists[mask]
+    
+    # Create a mapping of solvent index to its minimum distance to any solute atom
+    # We only care about distances below the threshold
+    min_dists_to_solute = np.full(n2, np.inf)
+    
+    # We need to handle atom_label specific thresholds
+    for k in range(len(solute_indices)):
+        solv_idx = solvent_relative_indices[k]
+        d = pair_distances[k]
+        
+        # Check threshold for this specific solvent atom
+        atom = atoms2[solv_idx]
         use_small_dist = False
         if atom_label is not None:
             if isinstance(atom_label, str) and atom.get('type', '') == atom_label:
@@ -530,11 +570,11 @@ def merge(atoms1, atoms2, Box, type_mode='molid', atom_label=None, min_distance=
         
         dist_threshold = small_dist if use_small_dist else standard_dist
         
-        # Check if any atom in atoms1 is too close
-        for j in range(len(atoms1)):
-            if dist_matrix_result[j, i] < dist_threshold:
-                to_remove.append(i)
-                break
+        if d < dist_threshold:
+            min_dists_to_solute[solv_idx] = min(min_dists_to_solute[solv_idx], d)
+    
+    # Create a list of atoms2 indices to remove
+    to_remove = np.where(min_dists_to_solute < np.inf)[0].tolist()
     
     # Handle removal based on type_mode
     if type_mode.lower() == 'molid':
@@ -713,20 +753,18 @@ def _get_surface_atoms(atoms, distance_threshold=2.5):
         # If scipy is not available, use a distance-based approach
         surface_atoms = []
         
-        # Use cell list distance matrix for efficiency
-        dist_matrix = cell_list_dist_matrix(atoms, [1000, 1000, 1000])  # Large Box to ignore PBC
+        # Use selection logic based on threshold
+        # Use central dispatcher (O(N) approach)
+        from .dist_matrix import get_neighbor_list
+        i_idx, j_idx, _, _, _, _ = get_neighbor_list(atoms, [1000, 1000, 1000], cutoff=distance_threshold)
+        counts = np.zeros(len(atoms))
+        if len(i_idx) > 0:
+            np.add.at(counts, i_idx, 1)
+            np.add.at(counts, j_idx, 1)
         
-        for i, atom in enumerate(atoms):
-            # An atom is on the surface if it has empty space around it
-            # We check if any direction has no atoms within distance_threshold
-            neighbors = 0
-            for j in range(len(atoms)):
-                if i != j and dist_matrix[i, j] < distance_threshold:
-                    neighbors += 1
-            
-            # If atom has few neighbors, it's likely on the surface
-            if neighbors < 12:  # Typical number for dense packing is 12-14
-                surface_atoms.append(atom)
+        for i, count in enumerate(counts):
+            if count < 12:
+                surface_atoms.append(atoms[i])
         
         return surface_atoms
 
@@ -773,29 +811,28 @@ def fuse_atoms(atoms, Box, rmax=0.5, criteria='average'):
     --------
     merge : Merges two different atom lists (e.g., solute and solvent)
     """
-    print(f"Fusing atoms closer than {rmax} Å (criteria='{criteria}')...")
-    
-    from .dist_matrix import dist_matrix
-    from .cell_utils import normalize_box
+    from .dist_matrix import get_neighbor_list
     
     n_original = len(atoms)
     if n_original <= 1:
         return [dict(a) for a in atoms]
 
-    # Normalize Box for safe processing
-    Box_dim, _ = normalize_box(Box)
+    # Use sparse neighbor list for efficiency
+    # Use dispatcher
+    i_idx, j_idx, dists_sparse, dx_s, dy_s, dz_s = get_neighbor_list(atoms, Box, cutoff=rmax)
     
-    # Calculate O(N^2) distance matrix for the whole system
-    dist_mat, dx, dy, dz = dist_matrix(atoms, Box_dim)
-    
-    import numpy as np
+    # Create adjacency list with displacement info
+    # Each entry in neighbors[i] is (j, dx, dy, dz) where dx = x_j - x_i
+    neighbors = [[] for _ in range(n_original)]
+    for k in range(len(i_idx)):
+        idx1, idx2 = i_idx[k], j_idx[k]
+        d = dists_sparse[k]
+        if d < rmax:
+            neighbors[idx1].append((idx2, dx_s[k], dy_s[k], dz_s[k]))
+            neighbors[idx2].append((idx1, -dx_s[k], -dy_s[k], -dz_s[k]))
     
     # We will process atoms and collect a set of indices to remove
     to_remove = set()
-    
-    # We create a deep copy of atoms since we may modify coordinates
-    import copy
-    fused_atoms = copy.deepcopy(atoms)
     
     # To mimic MATLAB's backward loop exactly while being safe with Python sets,
     # we iterate backwards. i goes from n_original-1 down to 0
@@ -803,13 +840,11 @@ def fuse_atoms(atoms, Box, rmax=0.5, criteria='average'):
         if i in to_remove:
             continue
             
-        # Find all atoms within rmax of atom i (including i itself)
-        # We look at column i of the distance matrix
-        dists = dist_mat[:, i]
-        overlap_indices = np.where(dists < rmax)[0]
-        
-        # Filter out atoms already marked for removal
-        active_overlaps = [idx for idx in overlap_indices if idx not in to_remove]
+        # Find active neighbors (overlaps)
+        active_overlaps = [i] # Self is always an overlap with self=0 dist
+        for neigh_idx, n_dx, n_dy, n_dz in neighbors[i]:
+            if neigh_idx not in to_remove:
+                active_overlaps.append(neigh_idx)
         
         if len(active_overlaps) > 1:
             # We have a cluster of overlapping atoms!
@@ -818,23 +853,42 @@ def fuse_atoms(atoms, Box, rmax=0.5, criteria='average'):
                 # Find the atom with the highest occupancy
                 best_idx = max(active_overlaps, key=lambda idx: fused_atoms[idx].get('occupancy', 1.0))
                 survivor = best_idx
-                # Mark everyone else for removal
             elif criteria == 'order':
                 # Keep the one that came first in the file (lowest index)
                 best_idx = min(active_overlaps)
                 survivor = best_idx
             else:
                 # 'average' (MATLAB behavior default)
-                # The survivor is 'i'. We average the relative distances coordinates
                 survivor = i
-                mean_dx = np.mean(dx[active_overlaps, i])
-                mean_dy = np.mean(dy[active_overlaps, i])
-                mean_dz = np.mean(dz[active_overlaps, i])
+                # Calculate mean displacement relative to 'i'
+                # For i itself, dx=dy=dz=0
+                total_dx = 0.0
+                total_dy = 0.0
+                total_dz = 0.0
+                count = 0
+                for skip_idx in active_overlaps:
+                    if skip_idx == i:
+                        count += 1
+                        continue # dx=0
+                    # Find displacement from i to skip_idx
+                    for n_idx, n_dx, n_dy, n_dz in neighbors[i]:
+                        if n_idx == skip_idx:
+                            total_dx += n_dx
+                            total_dy += n_dy
+                            total_dz += n_dz
+                            count += 1
+                            break
+                
+                mean_dx = total_dx / count
+                mean_dy = total_dy / count
+                mean_dz = total_dz / count
                 
                 # Shift survivor by the mean differential
-                fused_atoms[survivor]['x'] -= float(mean_dx)
-                fused_atoms[survivor]['y'] -= float(mean_dy)
-                fused_atoms[survivor]['z'] -= float(mean_dz)
+                # We add the mean displacement (which is (sum(x_j - x_i)) / N)
+                # survivor_new = x_i + mean_dx
+                fused_atoms[survivor]['x'] += float(mean_dx)
+                fused_atoms[survivor]['y'] += float(mean_dy)
+                fused_atoms[survivor]['z'] += float(mean_dz)
                 
                 # Ensure it remains wrapped (optional depending on use case, but safe)
                 # The caller can use wrap() later if they wish.
@@ -871,7 +925,7 @@ def fuse_atoms(atoms, Box, rmax=0.5, criteria='average'):
     print(f"  Fused {num_removed} overlapping sites. New total: {len(final_atoms)} atoms.")
     return final_atoms
 
-def ionize(ion_type, resname, limits, num_ions, min_distance=None, solute_atoms=None,           placement='random', direction=None, direction_value=None):
+def ionize(ion_type, resname, limits, num_ions, Box=None, min_distance=None, solute_atoms=None,           placement='random', direction=None, direction_value=None):
     """
     Add ions to a system within specified region limits.
     
@@ -983,6 +1037,13 @@ def ionize(ion_type, resname, limits, num_ions, min_distance=None, solute_atoms=
                 dx = ion['x'] - solute_atom['x']
                 dy = ion['y'] - solute_atom['y']
                 dz = ion['z'] - solute_atom['z']
+                
+                if Box is not None:
+                    L = Box[:3]
+                    dx = dx - L[0] * np.round(dx / L[0])
+                    dy = dy - L[1] * np.round(dy / L[1])
+                    dz = dz - L[2] * np.round(dz / L[2])
+                
                 dist = np.sqrt(dx*dx + dy*dy + dz*dz)
                 
                 if dist < min_distance:
@@ -1000,6 +1061,14 @@ def ionize(ion_type, resname, limits, num_ions, min_distance=None, solute_atoms=
                 dx = ion['x'] - placed_ion['x']
                 dy = ion['y'] - placed_ion['y']
                 dz = ion['z'] - placed_ion['z']
+                
+                if Box is not None:
+                    # Apply Minimum Image Convention
+                    L = Box[:3]
+                    dx = dx - L[0] * np.round(dx / L[0])
+                    dy = dy - L[1] * np.round(dy / L[1])
+                    dz = dz - L[2] * np.round(dz / L[2])
+                
                 dist = np.sqrt(dx*dx + dy*dy + dz*dz)
                 
                 if dist < min_distance:
@@ -1030,7 +1099,7 @@ def ionize(ion_type, resname, limits, num_ions, min_distance=None, solute_atoms=
     return ions
 
 
-def insert(molecule_atoms, limits, rotate='random', min_distance=2.0, 
+def insert(molecule_atoms, limits, Box=None, rotate='random', min_distance=2.0, 
            num_molecules=1, solute_atoms=None, type_constraints=None, z_diff=None):
     """
     Insert molecules into a system within specified region limits.
@@ -1070,6 +1139,7 @@ def insert(molecule_atoms, limits, rotate='random', min_distance=2.0,
     """
     from .move import rotate as rotate_atoms
     from .move import place
+    from .dist_matrix import get_neighbor_list
     
     # Standardize limits to [xlo, ylo, zlo, xhi, yhi, zhi] format
     if len(limits) == 3:
@@ -1129,6 +1199,13 @@ def insert(molecule_atoms, limits, rotate='random', min_distance=2.0,
                     dx = mol_atom['x'] - solute_atom['x']
                     dy = mol_atom['y'] - solute_atom['y']
                     dz = mol_atom['z'] - solute_atom['z']
+                    
+                    if Box is not None:
+                        L = Box[:3]
+                        dx = dx - L[0] * np.round(dx / L[0])
+                        dy = dy - L[1] * np.round(dy / L[1])
+                        dz = dz - L[2] * np.round(dz / L[2])
+                    
                     dist = np.sqrt(dx*dx + dy*dy + dz*dz)
                     
                     if dist < min_distance:
@@ -1144,6 +1221,13 @@ def insert(molecule_atoms, limits, rotate='random', min_distance=2.0,
                     dx = mol_atom['x'] - existing_atom['x']
                     dy = mol_atom['y'] - existing_atom['y']
                     dz = mol_atom['z'] - existing_atom['z']
+                    
+                    if Box is not None:
+                        L = Box[:3]
+                        dx = dx - L[0] * np.round(dx / L[0])
+                        dy = dy - L[1] * np.round(dy / L[1])
+                        dz = dz - L[2] * np.round(dz / L[2])
+                    
                     dist = np.sqrt(dx*dx + dy*dy + dz*dz)
                     
                     if dist < min_distance:
@@ -1321,7 +1405,7 @@ def add_H_atom(atoms, Box, target_type, h_type='H', bond_length=0.96, coordinati
     if not atoms or 'neigh' not in atoms[0]:
         print("  Calculating neighbor list...")
         from .bond_angle import bond_angle
-        atoms, _, _ = bond_angle(atoms, Box, rmaxM=2.45, rmaxH=1.2, same_molecule_only=False) # Use typical metal-oxygen cutoff
+        atoms, _, _ = bond_angle(atoms, Box, rmaxM=2.45, rmaxH=1.2, same_molecule_only=True) # Use typical metal-oxygen cutoff
         
     new_atoms = []
     # Iterate through existing atoms containing neighbors
@@ -1427,7 +1511,7 @@ def adjust_H_atom(atoms, Box, h_type='H', neighbor_type='O', distance=0.96):
     # Needs neighbor list
     if not atoms or 'neigh' not in atoms[0]:
         from .bond_angle import bond_angle
-        atoms, _, _ = bond_angle(atoms, Box, rmaxH=2.0, rmaxM=2.5, same_molecule_only=False) # Larger cutoff for potentially distorted bonds
+        atoms, _, _ = bond_angle(atoms, Box, rmaxH=2.0, rmaxM=2.5, same_molecule_only=True) # Larger cutoff for potentially distorted bonds
     
     adj_count = 0
     xyz_box = Box[:3] if Box else [1000, 1000, 1000]
@@ -1637,3 +1721,100 @@ def adjust_Hw_atom(atoms, Box, water_resname='SOL', water_model='OPC3'):
             del atom['neigh']
             
     return full_list
+
+
+def reorder(atoms, neworder, by=None):
+    """
+    Reorder the atoms in an atom list. Useful for creating united-atom structures from
+    all-atom structures (by omitting non-polar H indices), or reordering the atom 
+    list with respect to residue name or atom type.
+
+    Parameters
+    ----------
+    atoms : list of dict
+        List of atom dictionaries.
+    neworder : list
+        If `by` is None, this is a list of 1-based indices (int) corresponding to the 
+        new atom order WITHIN each molecule (molid).
+        If `by` is 'resname' or 'type', this is a list of strings defining the target order.
+    by : str, optional
+        Sorting mode. Can be None (index-based), 'resname', or 'type'.
+
+    Returns
+    -------
+    list of dict
+        Reordered atoms list.
+        
+    Examples
+    --------
+    # Orders according to within-molecule indices, dropping atoms not in list
+    atoms = ap.reorder(atoms, [1, 3, 4, 5, 6])
+    
+    # Orders according to resname sequentially
+    atoms = ap.reorder(atoms, ['MMT', 'SOL', 'ION'], by='resname')
+    
+    # Orders according to atom type sequentially
+    atoms = ap.reorder(atoms, ['Na', 'Ow', 'Hw'], by='type')
+    """
+    import copy
+    from .add import update
+    
+    if not isinstance(neworder, (list, tuple)):
+        raise ValueError("neworder must be a list or tuple")
+
+    if by is None or str(by).lower() == 'index':
+        # Apply within each molecule (molid)
+        ordered_atoms = []
+        
+        # Group atoms by molid sequentially to preserve overall molecule order
+        current_molid = None
+        current_molecule = []
+        molecules = []
+        
+        for atom in atoms:
+            m = atom.get('molid', 1)
+            if m != current_molid:
+                if len(current_molecule) > 0:
+                    molecules.append(current_molecule)
+                current_molecule = []
+                current_molid = m
+            current_molecule.append(atom)
+            
+        if len(current_molecule) > 0:
+            molecules.append(current_molecule)
+            
+        for mol in molecules:
+            for idx in neworder:
+                try:
+                    py_idx = int(idx) - 1
+                    if 0 <= py_idx < len(mol):
+                        ordered_atoms.append(copy.deepcopy(mol[py_idx]))
+                    else:
+                        print(f"Warning: Index {idx} is out of bounds for molecule of size {len(mol)}.")
+                except ValueError:
+                    print(f"Warning: Cannot parse explicit index '{idx}' as integer.")
+                    
+    elif str(by).lower() in ('resname', 'resnames'):
+        ordered_atoms = []
+        for rname in neworder:
+            subset = [copy.deepcopy(a) for a in atoms if str(a.get('resname', '')).strip() == str(rname).strip()]
+            if not subset:
+                print(f"Warning: No atoms found with resname '{rname}'.")
+            ordered_atoms.extend(subset)
+            
+    elif str(by).lower() in ('type', 'atomtype'):
+        ordered_atoms = []
+        for atype in neworder:
+            subset = [copy.deepcopy(a) for a in atoms if str(a.get('type', '')).strip() == str(atype).strip()]
+            if not subset:
+                print(f"Warning: No atoms found with type '{atype}'.")
+            ordered_atoms.extend(subset)
+    else:
+        raise ValueError("Invalid 'by' parameter. Use None, 'resname', or 'type'.")
+
+    # Update indices and molids seamlessly
+    if not ordered_atoms:
+        print("Warning: Reorder operation resulted in an empty atom list.")
+        return []
+        
+    return update(ordered_atoms, force=True)

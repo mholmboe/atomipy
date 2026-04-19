@@ -10,9 +10,10 @@ import copy
 import os
 import random
 import numpy as np
+from . import config
 
 
-def find_H2O(atoms, Box_dim=None, rmin=1.25):
+def find_H2O(atoms, Box_dim=None, rmin=1.30):
     """
     Find water molecules in a molecular system using distance-based detection.
 
@@ -59,88 +60,93 @@ def find_H2O(atoms, Box_dim=None, rmin=1.25):
     --------
     assign_resname : Assign residue names including 'SOL' for water
     """
-    from .dist_matrix import dist_matrix
+    from .cell_list_dist_matrix import neighbor_list_fast
     
     if not atoms:
         return [], []
     
     atoms = copy.deepcopy(atoms)
     
-    # Find all O and H atom indices based on element/type
-    O_indices = []
-    H_indices = []
+    # 1. Identify types/elements for all atoms once
+    N = len(atoms)
+    is_oxygen = np.zeros(N, dtype=bool)
+    is_hydrogen = np.zeros(N, dtype=bool)
     
     for i, atom in enumerate(atoms):
         element = atom.get('element', '')
         atom_type = atom.get('type', atom.get('atom_name', ''))
         
         # Check element first (can be 'O', 'Ow', 'Oh', etc), then type
-        is_oxygen = (element and element[0].upper() == 'O') or \
-                    (not element and atom_type and atom_type[0].upper() == 'O')
-        is_hydrogen = (element and element[0].upper() == 'H') or \
-                      (not element and atom_type and atom_type[0].upper() == 'H')
+        is_o = (element and element[0].upper() == 'O') or \
+               (not element and atom_type and atom_type[0].upper() == 'O')
+        is_h = (element and element[0].upper() == 'H') or \
+               (not element and atom_type and atom_type[0].upper() == 'H')
         
-        if is_oxygen:
-            O_indices.append(i)
-        elif is_hydrogen:
-            H_indices.append(i)
+        if is_o:
+            is_oxygen[i] = True
+        elif is_h:
+            is_hydrogen[i] = True
     
-    if not O_indices or len(H_indices) < 2:
+    if not np.any(is_oxygen) or np.sum(is_hydrogen) < 2:
         print("Found 0 water molecules (0 atoms)")
         return [], atoms
     
-    # Compute distance matrix
-    if Box_dim is not None:
-        dist_mat, _, _, _ = dist_matrix(atoms, Box_dim)
-    else:
-        # Non-periodic distance calculation
-        coords = np.array([[a['x'], a['y'], a['z']] for a in atoms])
-        diff = coords[:, np.newaxis, :] - coords[np.newaxis, :, :]
-        dist_mat = np.sqrt(np.sum(diff**2, axis=2))
+    # 2. Use the central dispatcher to find all pairs within rmin
+    # It automatically selects between Direct and Sparse based on config.SPARSE_THRESHOLD
+    from .dist_matrix import get_neighbor_list
+    i_idx, j_idx, dists, _, _, _ = get_neighbor_list(atoms, Box_dim, cutoff=rmin, rmaxH=rmin)
     
-    # Find water molecules: O atoms with exactly 2 H neighbors within rmin
+    # 3. Filter for O-H pairs
+    # Since neighbor_list_fast returns i < j, we check both (i=O, j=H) and (i=H, j=O)
+    is_oh_pair = (is_oxygen[i_idx] & is_hydrogen[j_idx]) | (is_hydrogen[i_idx] & is_oxygen[j_idx])
+    
+    oh_i = i_idx[is_oh_pair]
+    oh_j = j_idx[is_oh_pair]
+    oh_dists = dists[is_oh_pair]
+    
+    # Map H indices to their closest O neighbor
+    h_to_o = {}
+    for k in range(len(oh_i)):
+        idx1, idx2 = oh_i[k], oh_j[k]
+        o_idx = idx1 if is_oxygen[idx1] else idx2
+        h_idx = idx2 if is_oxygen[idx1] else idx1
+        
+        dist = oh_dists[k]
+        if h_idx not in h_to_o or dist < h_to_o[h_idx][1]:
+            h_to_o[h_idx] = (o_idx, dist)
+    
+    # Map O indices back to their assigned H neighbors
+    o_to_h = {}
+    for h_idx, (o_idx, dist) in h_to_o.items():
+        if o_idx not in o_to_h:
+            o_to_h[o_idx] = []
+        o_to_h[o_idx].append(h_idx)
+    
+    # 4. Find water molecules: O with exactly 2 H neighbors
     water_atoms = []
     water_indices_set = set()
     molid = 1
     
-    for o_idx in O_indices:
-        # Find H atoms within rmin of this O
-        h_neighbors = []
-        for h_idx in H_indices:
-            if dist_mat[o_idx, h_idx] < rmin:
-                h_neighbors.append(h_idx)
+    # Sort O indices for deterministic results
+    for o_idx in sorted(o_to_h.keys()):
+        h_neighbors = o_to_h[o_idx]
         
-        # Water molecule: O with exactly 2 H neighbors
         if len(h_neighbors) == 2:
+            h1_idx, h2_idx = h_neighbors
+            
             # Check these atoms haven't already been assigned to water
-            if o_idx in water_indices_set:
-                continue
-            if h_neighbors[0] in water_indices_set or h_neighbors[1] in water_indices_set:
+            if o_idx in water_indices_set or h1_idx in water_indices_set or h2_idx in water_indices_set:
                 continue
             
-            # Create water molecule atoms with new molid and types
-            o_atom = copy.deepcopy(atoms[o_idx])
-            o_atom['molid'] = molid
-            o_atom['type'] = 'Ow'
-            o_atom['resname'] = 'SOL'
-            o_atom['_orig_index'] = o_idx
+            # Create water molecule atoms
+            for idx, role in [(o_idx, 'Ow'), (h1_idx, 'Hw'), (h2_idx, 'Hw')]:
+                atom = copy.deepcopy(atoms[idx])
+                atom['molid'] = molid
+                atom['type'] = role
+                atom['resname'] = 'SOL'
+                water_atoms.append(atom)
+                water_indices_set.add(idx)
             
-            h1_atom = copy.deepcopy(atoms[h_neighbors[0]])
-            h1_atom['molid'] = molid
-            h1_atom['type'] = 'Hw'
-            h1_atom['resname'] = 'SOL'
-            h1_atom['_orig_index'] = h_neighbors[0]
-            
-            h2_atom = copy.deepcopy(atoms[h_neighbors[1]])
-            h2_atom['molid'] = molid
-            h2_atom['type'] = 'Hw'
-            h2_atom['resname'] = 'SOL'
-            h2_atom['_orig_index'] = h_neighbors[1]
-            
-            water_atoms.extend([o_atom, h1_atom, h2_atom])
-            water_indices_set.add(o_idx)
-            water_indices_set.add(h_neighbors[0])
-            water_indices_set.add(h_neighbors[1])
             molid += 1
     
     # Create non-water atoms list
@@ -165,10 +171,16 @@ def find_H2O(atoms, Box_dim=None, rmin=1.25):
 
 
 def solvate(limits, density=1000.0, min_distance=2.0, max_solvent='max', 
-           solute_atoms=None, solvent_type='spce', custom_solvent=None, custom_box=None,
+           solute_atoms=None, Box=None, solvent_type='spce', custom_solvent=None, custom_box=None,
            include_solute=False):
     """
     Solvate a structure or region with water or other solvent molecules.
+    
+    Performance Note
+    ----------------
+    This function uses the central dispatcher `get_neighbor_list` for shell distance 
+    calculations, automatically switching to a memory-efficient sparse neighbor list 
+    for systems larger than `config.SPARSE_THRESHOLD` to prevent O(N^2) memory bottlenecks.
     
     Parameters
     ----------
@@ -220,7 +232,7 @@ def solvate(limits, density=1000.0, min_distance=2.0, max_solvent='max',
     """
     # Import functions here to avoid circular imports
     from .build import merge, slice as build_slice
-    from .dist_matrix import dist_matrix
+    from .dist_matrix import dist_matrix, get_neighbor_list
     from .cell_utils import Cell2Box_dim
     from . import import_conf
     
@@ -319,25 +331,31 @@ def solvate(limits, density=1000.0, min_distance=2.0, max_solvent='max',
     elif shell_thickness is not None and solute_atoms is not None:
         # Create a shell of solvent around the solute
         # First, merge solvent with solute, removing overlaps
-        non_overlapping = merge(solute_atoms, sliced_solvent, box_dim, 
+        non_overlapping = merge(solute_atoms, sliced_solvent, Box if Box is not None else box_dim, 
                                atom_label=['HW1', 'HW2'], 
                                min_distance=[min_distance, min_distance/2])
         
         # Now create a shell by keeping only molecules within the shell distance
         # but not closer than min_distance
         combined = solute_atoms + non_overlapping
-        distances = dist_matrix(combined, box_dim)[0]
         
-        # Extract solute-solvent distances
-        solute_solvent_dist = distances[:len(solute_atoms), len(solute_atoms):]
+        # Use the central dispatcher to get neighbors and distances
+        # It automatically handles Direct vs Sparse based on config.SPARSE_THRESHOLD
+        n_solute = len(solute_atoms)
+        i_idx, j_idx, dists, _, _, _ = get_neighbor_list(
+            combined, 
+            box_dim, 
+            cutoff=shell_thickness, 
+            dm_method=dm_method if 'dm_method' in locals() else None
+        )
         
-        # Identify molecules in the shell
-        shell_molids = set()
-        for i, atom in enumerate(non_overlapping):
-            dist_idx = i + len(solute_atoms)  # Index in the combined distance matrix
-            min_dist = min(distances[:len(solute_atoms), dist_idx])
-            if min_dist <= shell_thickness:
-                shell_molids.add(atom['molid'])
+        # Filter for solute-solvent pairs
+        # i_idx < j_idx holds in the dispatcher. We need i < n_solute and j >= n_solute
+        mask = (i_idx < n_solute) & (j_idx >= n_solute)
+        
+        # Map which solvent indices are within reach
+        shell_indices = set(j_idx[mask] - n_solute)
+        shell_molids = set(non_overlapping[idx]['molid'] for idx in shell_indices)
         
         # Keep only molecules in the shell
         solvent_result = [atom for atom in non_overlapping 
@@ -353,7 +371,7 @@ def solvate(limits, density=1000.0, min_distance=2.0, max_solvent='max',
                                  if atom['molid'] in selected_molids]
     else:
         # Just remove overlapping solvent molecules
-        solvent_result = merge(solute_atoms, sliced_solvent, box_dim,
+        solvent_result = merge(solute_atoms, sliced_solvent, Box if Box is not None else box_dim,
                               atom_label=['HW1', 'HW2'],
                               min_distance=[min_distance, min_distance/2])
         

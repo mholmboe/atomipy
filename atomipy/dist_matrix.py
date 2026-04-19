@@ -1,6 +1,7 @@
 import numpy as np
 
 from atomipy.cell_utils import Cell2Box_dim, Box_dim2Cell, normalize_box
+from . import config
 
 # Try to import tqdm for progress bar
 try:
@@ -231,3 +232,63 @@ def dist_matrix_hybrid(atoms, Box=None, use_pbc=True):
         return dist_matrix(atoms, Box)
     else:
         return dist_matrix_direct(atoms)
+
+def get_neighbor_list(atoms, Box, cutoff, rmaxH=None, dm_method=None):
+    """
+    Central dispatcher for finding atom pairs within a cutoff distance.
+    Automatically chooses between Direct (O(N^2)) and Sparse (O(N)) methods
+    based on the system size and config.SPARSE_THRESHOLD.
+
+    Args:
+        atoms: list of atom dictionaries.
+        Box: a 1x3, 1x6 or 1x9 list representing Cell dimensions.
+        cutoff: maximum distance for non-hydrogen bonds.
+        rmaxH: cutoff distance for hydrogen bonds. If None, uses cutoff.
+        dm_method: optional override ('direct' or 'sparse').
+        
+    Returns:
+        i_idx, j_idx (numpy.ndarray): Pairs of atom indices.
+        dist (numpy.ndarray): Pairwise distances.
+        dx, dy, dz (numpy.ndarray): Displacement components (r_j - r_i).
+    """
+    if rmaxH is None:
+        rmaxH = cutoff
+
+    n_atoms = len(atoms)
+    
+    # Decision logic
+    is_sparse = False
+    if dm_method == 'sparse':
+        is_sparse = True
+    elif dm_method == 'direct':
+        is_sparse = False
+    elif n_atoms >= config.SPARSE_THRESHOLD:
+        is_sparse = True
+
+    if is_sparse:
+        # Use the optimized sparse neighbor list from cell_list_dist_matrix
+        from .cell_list_dist_matrix import neighbor_list_fast
+        return neighbor_list_fast(atoms, Box, cutoff, rmaxH)
+    else:
+        # Use the direct distance matrix and convert to sparse format
+        dmat, dx_mat, dy_mat, dz_mat = dist_matrix(atoms, Box)
+        
+        # Masking by cutoff (handling H vs non-H)
+        types = np.array([atom.get('type', atom.get('name', '')) for atom in atoms])
+        is_h = np.array([bool(t and t[0].upper() == 'H') for t in types])
+        
+        # Create a matrix of cutoffs
+        cutoffs = np.where(is_h[:, np.newaxis] | is_h[np.newaxis, :], rmaxH, cutoff)
+        
+        mask = (dmat > 1e-7) & (dmat <= cutoffs)
+        # Use upper triangle to avoid double counting
+        upper_tri_mask = np.triu(np.ones((n_atoms, n_atoms), dtype=bool), k=1)
+        mask = mask & upper_tri_mask
+        
+        i_idx, j_idx = np.where(mask)
+        return (i_idx.astype(np.int32), 
+                j_idx.astype(np.int32), 
+                dmat[i_idx, j_idx].astype(np.float32), 
+                dx_mat[i_idx, j_idx].astype(np.float32), 
+                dy_mat[i_idx, j_idx].astype(np.float32), 
+                dz_mat[i_idx, j_idx].astype(np.float32))
