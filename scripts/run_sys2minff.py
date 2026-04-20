@@ -29,15 +29,20 @@ atoms = ap.element(atoms)
 
 # Separate water, ions, and minerals
 SOL, noSOL = ap.find_H2O(atoms, Box_dim)
+# Standardize resnames
 noSOL = ap.assign_resname(noSOL)
-IONS = [a for a in noSOL if a.get('resname') == 'ION']
+
+# Separate and consolidate mineral atoms (to allow bonding across residues if molid=1)
 MIN = [a for a in noSOL if a.get('resname') == 'MIN']
+OTHER = [a for a in noSOL if a.get('resname') != 'MIN']
 
-# Combine into full system for charge assignment
 if MIN:
-    MIN = ap.molecule(MIN, molid=1, resname='MIN')
+    # Force all mineral atoms into one molecule (molid=1)
+    MIN = ap.update(MIN, molid=1)
 
-System = ap.update(MIN, IONS, SOL)
+# Assemble system robustly (preserve all atoms)
+# Order: Ions/Other first, then Mineral, then Water
+System = ap.update(OTHER, MIN, SOL)
 
 # Assign MINFF atom types to the entire system
 System = ap.minff(System, Box_dim)

@@ -17,7 +17,7 @@ from .charge import charge_minff, charge_clayff, assign_formal_charges
 from .element import element  # Correct function name is 'element' not 'set_element'
 from .mass import set_atomic_masses
 
-def get_structure_stats(atoms, Box=None, total_charge=0, log_file='output.log', ffname='minff'):
+def get_structure_stats(atoms, Box=None, total_charge=None, log_file='output.log', ffname='minff'):
     """Generate statistics about atom types, coordination, and charges in the structure.
     
     This function analyzes atom types, their coordination environment, charges,
@@ -28,14 +28,22 @@ def get_structure_stats(atoms, Box=None, total_charge=0, log_file='output.log', 
         atoms: List of atom dictionaries containing 'type', 'neigh', 'charge', etc. keys.
         Box: Optional simulation cell dimensions. Accepts 1x3 (orthogonal),
              1x6 (Cell parameters), or 1x9 (triclinic GROMACS-style) arrays.
-        total_charge: Total charge of the system (default: 0). If 0, it will be calculated.
+        total_charge: Total charge of the system. If None, it will be calculated.
         log_file: Path to the output log file (default: 'output.log').
         ffname: The name of the forcefield used, e.g., 'minff' or 'clayff' (default: 'minff').
     
     Returns:
         A string containing the structure statistics.
     """
-    if total_charge == 0:
+    if Box is not None:
+        from .bond_angle import bond_angle
+        # Check if neighbor data is present by sampling the first 10 atoms
+        if atoms and not any(atoms[i].get('neigh') for i in range(min(len(atoms), 10))):
+            print(f"  No coordination data found. Auto-calculating bonds for {ffname} report...")
+            # Use bond_angle to populate neigh, bonds, and angles
+            atoms, _, _ = bond_angle(atoms, Box, calculate_coordination=True)
+
+    if total_charge is None:
         total_charge = sum(float(a.get('charge', 0) or 0) for a in atoms)
     
     import numpy as np
