@@ -43,6 +43,13 @@ def get_structure_stats(atoms, Box=None, total_charge=None, log_file='output.log
             # Use bond_angle to populate neigh, bonds, and angles
             atoms, _, _ = bond_angle(atoms, Box, calculate_coordination=True)
 
+    # Check if charges are missing or all zero
+    has_charges = atoms and any(atom.get('charge') is not None for atom in atoms)
+    if not has_charges or sum(abs(float(atom.get('charge', 0) or 0)) for atom in atoms) < 1e-10:
+        from .charge import assign_formal_charges
+        print("  No pre-defined charges found. Auto-assigning formal charges for report...")
+        atoms = assign_formal_charges(atoms)
+
     if total_charge is None:
         total_charge = sum(float(a.get('charge', 0) or 0) for a in atoms)
     
