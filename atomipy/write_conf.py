@@ -152,8 +152,11 @@ def pdb(atoms, Box, file_path, write_conect=False):
             except (ValueError, TypeError):
                 occupancy_val = 1.00
 
-            # Temperature Factor (cols 61-66), default 0.00
-            temp_factor_val = atom.get('temp_factor', 0.00)
+            # Temperature Factor (cols 61-66), default to partial charge if available
+            temp_factor_val = atom.get('charge')
+            if temp_factor_val is None:
+                temp_factor_val = atom.get('temp_factor', 0.00)
+            
             try:
                 temp_factor_val = float(temp_factor_val)
             except (ValueError, TypeError):
