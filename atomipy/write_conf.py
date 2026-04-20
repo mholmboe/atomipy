@@ -165,14 +165,10 @@ def pdb(atoms, Box, file_path, write_conect=False):
             if not raw_element:
                 raw_element = _infer_element(atom)
 
-            # Capitalize properly: first letter uppercase, rest lowercase
             element_str = str(raw_element).strip()
             if element_str:
-                if len(element_str) == 1:
-                    element_symbol_pdb = f"{element_str.upper():>2}"
-                else:
-                    element_symbol_pdb = f"{element_str[0].upper()}{element_str[1:].lower()}"
-                    element_symbol_pdb = f"{element_symbol_pdb:>2}"
+                # Proper PDB element formatting: right-justified in 2 columns
+                element_symbol_pdb = f"{element_str.upper():>2}"
             else:
                 element_symbol_pdb = " X"
 
