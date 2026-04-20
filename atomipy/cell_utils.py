@@ -17,7 +17,7 @@ def normalize_box(Box):
     (GROMACS triclinic) formats and returns a tuple (Box_dim, Cell).
     """
     if Box is None:
-        raise ValueError("Box must be provided")
+        return None, None
 
     Box = np.array(Box, dtype=float)
 
