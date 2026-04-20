@@ -1,0 +1,126 @@
+"""
+This module provides functions for assigning residue names to atoms.
+
+The main function guesses and assigns residue names (resname) based on atom types,
+with special handling for water and ions.
+"""
+
+def assign_resname(atoms, default_resname='MIN'):
+    """
+    Assign residue names to atoms based on their types.
+    
+    This function assigns 'SOL' to water atoms, 'ION' to ion atoms,
+    and the specified default residue name to all other atoms.
+    
+    Parameters
+    ----------
+    atoms : list of dict
+        Atom dictionaries.
+    default_resname : str, optional
+        Residue name to assign to non-water, non-ion atoms (default 'MIN').
+
+    Returns
+    -------
+    list of dict
+        Updated atoms with `resname` assigned.
+
+    Examples
+    --------
+    atoms = assign_resname(atoms)
+    atoms = assign_resname(atoms, default_resname='CLAY')
+    """
+    # Define atom type patterns for water and ions
+    water_types = ['Hw', 'Ow', 'OW', 'HW','OH2']
+    
+    ion_types = [
+        # Charged ion type names (explicit charge notation)
+        'Li+', 'LI+', 'Na+', 'NA+', 'K+', 
+        'Rb+', 'RB+', 'Cs+', 'CS+',
+        'Ca2+', 'CA2+', 'Cu2+', 'CU2+',
+        'Ni2+', 'NI2+', 'Zn2+', 'ZN2+',
+        'Sr2+', 'SR2+', 'Ba2+', 'BA2+',
+        'Mg2+', 'MG2+',
+        'F-', 'Cl-', 'CL-', 'Br-', 'BR-', 'I-',
+        
+        # GROMACS/CHARMM ion type names (unambiguous)
+        'SOD', 'POT', 'CLA', 'CAL'
+    ]
+    
+    # Ion residue names (common naming conventions)
+    ion_resnames = [
+        'SOD', 'POT', 'CLA', 'CAL', 'MG', 'NA', 'K', 'CL', 'CA', 'ION',
+        'LI', 'RB', 'CS', 'CU', 'NI', 'ZN', 'SR', 'BA', 'BR', 'F'
+    ]
+    
+    # Create list of atom indices for each category
+    sol_indices = []
+    ion_indices = []
+    
+    # Process each atom to identify water and ions
+    for i, atom in enumerate(atoms):
+        atom_type = atom.get('type', '')
+        atom_resname = atom.get('resname', '').upper()
+        
+        # Check for water atoms (case-insensitive prefix match)
+        is_water = any(atom_type.lower().startswith(water_type.lower()) for water_type in water_types)
+        
+        # Check for ion atoms by type OR by resname
+        is_ion = (atom_type in ion_types or 
+                  atom_type.upper() in ion_types or
+                  atom_resname in ion_resnames)
+        
+        if is_water:
+            sol_indices.append(i)
+        elif is_ion:
+            ion_indices.append(i)
+    
+    # Sort indices
+    sol_indices.sort()
+    ion_indices.sort()
+    
+    # Assign 'SOL' to water atoms
+    for i in sol_indices:
+        atoms[i]['resname'] = 'SOL'
+    
+    # Assign 'ION' to ion atoms
+    for i in ion_indices:
+        atoms[i]['resname'] = 'ION'
+    
+    # Assign default resname to remaining atoms (always assign, overwriting existing)
+    other_indices = [i for i in range(len(atoms)) if i not in sol_indices and i not in ion_indices]
+    for i in other_indices:
+        atoms[i]['resname'] = default_resname
+    
+    # Print summary
+    print(f"Assigned resnames: {len(sol_indices)} water (SOL), {len(ion_indices)} ions (ION), "
+          f"{len(other_indices)} other atoms ({default_resname})")
+    
+    return atoms
+
+
+def change_default_resname(atoms, new_resname, current_resname='MIN'):
+    """
+    Change the residue name for atoms with a specific current residue name.
+    
+    This is useful to reclassify groups of atoms without affecting water and ions.
+    
+    Args:
+        atoms: List of atom dictionaries
+        new_resname: The new residue name to assign
+        current_resname: The current residue name to change (default: 'MIN')
+    
+    Returns:
+        The updated list of atom dictionaries
+    
+    Example:
+        # Change all 'MIN' residues to 'CLAY'
+        atoms = ap.resname.change_default_resname(atoms, 'CLAY')
+    """
+    count = 0
+    for atom in atoms:
+        if atom.get('resname') == current_resname:
+            atom['resname'] = new_resname
+            count += 1
+    
+    print(f"Changed {count} atoms from resname '{current_resname}' to '{new_resname}'")
+    return atoms

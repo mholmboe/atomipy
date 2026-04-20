@@ -1,0 +1,294 @@
+import numpy as np
+
+from atomipy.cell_utils import Cell2Box_dim, Box_dim2Cell, normalize_box
+from . import config
+
+# Try to import tqdm for progress bar
+try:
+    from tqdm import tqdm
+    has_tqdm = True
+except ImportError:
+    print("Note: Install tqdm package for progress bars (pip install tqdm)")
+    has_tqdm = False
+
+def dist_matrix(atoms, Box):
+    """Calculate the distance matrix between atoms following the MATLAB implementation approach.
+    
+    This function closely mimics the behavior of the MATLAB dist_matrix_MATLAB.m function,
+    calculating distances with periodic boundary conditions in a per-atom loop approach.
+    
+    Args:
+        atoms: list of atom dictionaries, each having 'x', 'y', 'z' coordinates.
+        Box: a 1x3, 1x6 or 1x9 list representing Cell dimensions (in Angstroms):
+            - For orthogonal boxes, a 1x3 list [lx, ly, lz] where Box = Box_dim, and Cell would be [lx, ly, lz, 90, 90, 90]
+            - For Cell parameters, a 1x6 list [a, b, c, alpha, beta, gamma] (Cell format)
+            - For triclinic boxes, a 1x9 list [lx, ly, lz, 0, 0, xy, 0, xz, yz] (GROMACS Box_dim format)
+       
+    Returns:
+        A tuple of four numpy arrays: 
+        - A numpy array of shape (N, N) with pairwise distances.
+        - Three numpy arrays of shape (N, N) with pairwise x, y, z differences.
+        
+    Note:
+        This implementation follows the approach in the MATLAB dist_matrix_MATLAB.m function,
+        using per-atom iteration.
+    """
+    
+    if Box is None:
+        raise ValueError("Box parameter must be provided")
+    
+    # Determine Box format and convert as needed
+    Box_dim, Cell = normalize_box(Box)
+    
+    # Extract Box dimensions
+    if len(Box_dim) == 3:
+        # Orthogonal Box
+        lx, ly, lz = Box_dim
+        xy, xz, yz = 0, 0, 0
+    elif len(Box_dim) == 9:
+        # Triclinic Box in GROMACS format [lx, ly, lz, 0, 0, xy, 0, xz, yz]
+        lx, ly, lz = Box_dim[0], Box_dim[1], Box_dim[2]
+        xy, xz, yz = Box_dim[5], Box_dim[7], Box_dim[8]
+    
+    # Extract atomic positions
+    n_atoms = len(atoms)
+    xyz = np.array([[atom['x'], atom['y'], atom['z']] for atom in atoms], dtype=np.float32)
+
+    
+    # Initialize output arrays
+    distances = np.zeros((n_atoms, n_atoms), dtype=np.float32)
+    dx = np.zeros((n_atoms, n_atoms), dtype=np.float32)
+    dy = np.zeros((n_atoms, n_atoms), dtype=np.float32)
+    dz = np.zeros((n_atoms, n_atoms), dtype=np.float32)
+
+    # Setup progress tracking
+    total_distances_processed = 0
+    
+    # Calculate distance matrix
+    if len(Box_dim) == 3:
+        # Orthogonal Box approach
+        # Setup progress bar
+        if has_tqdm:
+            atom_iterator = tqdm(range(n_atoms), desc="Finding dists", unit="atom")
+        else:
+            print("Finding distances...")
+            atom_iterator = range(n_atoms)
+            last_percent = -1
+            
+        for i in atom_iterator:
+            # Update progress percentage for non-tqdm case
+            if not has_tqdm and n_atoms > 100:
+                percent = int(100 * i / n_atoms)
+                if percent > last_percent and percent % 10 == 0:
+                    print(f"  {percent}% complete...")
+                    last_percent = percent
+            # Calculate distance components
+            rx = xyz[i, 0] - xyz[:, 0]
+            ry = xyz[i, 1] - xyz[:, 1]
+            rz = xyz[i, 2] - xyz[:, 2]
+            
+            # Apply minimum image convention for orthogonal Box
+            rx[rx > lx/2] -= lx
+            rx[rx < -lx/2] += lx
+            
+            ry[ry > ly/2] -= ly
+            ry[ry < -ly/2] += ly
+            
+            rz[rz > lz/2] -= lz
+            rz[rz < -lz/2] += lz
+            
+            # Calculate distances
+            r = np.sqrt(rx**2 + ry**2 + rz**2)
+            
+            # Store results
+            distances[:, i] = r
+            dx[:, i] = -rx  # Note the negative sign to match MATLAB implementation
+            dy[:, i] = -ry
+            dz[:, i] = -rz
+    else:
+        # Triclinic Box approach
+        # Setup progress bar
+        if has_tqdm:
+            atom_iterator = tqdm(range(n_atoms), desc="Finding dists", unit="atom")
+        else:
+            print("Finding distances...")
+            atom_iterator = range(n_atoms)
+            last_percent = -1
+            
+        for i in atom_iterator:
+            # Update progress percentage for non-tqdm case
+            if not has_tqdm and n_atoms > 100:
+                percent = int(100 * i / n_atoms)
+                if percent > last_percent and percent % 10 == 0:
+                    print(f"  {percent}% complete...")
+                    last_percent = percent
+            # Calculate initial distance components
+            rx = xyz[i, 0] - xyz[:, 0]
+            ry = xyz[i, 1] - xyz[:, 1]
+            rz = xyz[i, 2] - xyz[:, 2]
+            
+            # Apply minimum image convention for triclinic Box
+            # First handle z-direction
+            z_gt_ind = rz > lz/2
+            z_lt_ind = rz < -lz/2
+            
+            rz[z_gt_ind] -= lz
+            rz[z_lt_ind] += lz
+            
+            rx[z_gt_ind] -= xz
+            rx[z_lt_ind] += xz
+            
+            ry[z_gt_ind] -= yz
+            ry[z_lt_ind] += yz
+            
+            # Then handle y-direction
+            y_gt_ind = ry > ly/2
+            y_lt_ind = ry < -ly/2
+            
+            ry[y_gt_ind] -= ly
+            ry[y_lt_ind] += ly
+            
+            rx[y_gt_ind] -= xy
+            rx[y_lt_ind] += xy
+            
+            # Finally handle x-direction
+            x_gt_ind = rx > lx/2
+            x_lt_ind = rx < -lx/2
+            
+            rx[x_gt_ind] -= lx
+            rx[x_lt_ind] += lx
+            
+            # Calculate distances
+            r = np.sqrt(rx**2 + ry**2 + rz**2)
+            
+            # Store results
+            distances[:, i] = r
+            dx[:, i] = -rx  # Note the negative sign to match MATLAB implementation
+            dy[:, i] = -ry
+            dz[:, i] = -rz
+    
+    # Transpose distances to match MATLAB output format
+    distances = distances.T
+    dx = dx.T
+    dy = dy.T
+    dz = dz.T
+    
+    return distances, dx, dy, dz
+
+def dist_matrix_direct(atoms):
+    """Calculate a direct distance matrix between atoms without periodic boundaries.
+    
+    Args:
+        atoms: list of atom dictionaries, each having 'x', 'y', 'z' coordinates.
+       
+    Returns:
+        A tuple of four numpy arrays: 
+        - A numpy array of shape (N, N) with pairwise distances.
+        - Three numpy arrays of shape (N, N) with pairwise x, y, z differences.
+    """
+    # Extract atomic positions
+    n_atoms = len(atoms)
+    positions = np.array([[atom['x'], atom['y'], atom['z']] for atom in atoms])
+    
+    # Calculate direct distances
+    distances = np.zeros((n_atoms, n_atoms))
+    dx = np.zeros((n_atoms, n_atoms))
+    dy = np.zeros((n_atoms, n_atoms))
+    dz = np.zeros((n_atoms, n_atoms))
+    
+    for i in range(n_atoms):
+        rx = positions[i, 0] - positions[:, 0]
+        ry = positions[i, 1] - positions[:, 1]
+        rz = positions[i, 2] - positions[:, 2]
+        
+        r = np.sqrt(rx**2 + ry**2 + rz**2)
+        
+        distances[i, :] = r
+        dx[i, :] = rx
+        dy[i, :] = ry
+        dz[i, :] = rz
+    
+    return distances, dx, dy, dz
+
+def dist_matrix_hybrid(atoms, Box=None, use_pbc=True):
+    """Calculate the distance matrix using either direct or PBC approach based on use_pbc flag.
+    
+    Args:
+        atoms: list of atom dictionaries, each having 'x', 'y', 'z' coordinates.
+        Box: a 1x3, 1x6 or 1x9 list representing Cell dimensions (in Angstroms):
+            - For orthogonal boxes, a 1x3 list [lx, ly, lz]
+            - For Cell parameters, a 1x6 list [a, b, c, alpha, beta, gamma] (Cell format)
+            - For triclinic boxes, a 1x9 list [lx, ly, lz, 0, 0, xy, 0, xz, yz] (Box_dim format)
+        use_pbc: Whether to use periodic boundary conditions (default: True).
+       
+    Returns:
+        A tuple of four numpy arrays: 
+        - A numpy array of shape (N, N) with pairwise distances.
+        - Three numpy arrays of shape (N, N) with pairwise x, y, z differences.
+    """
+    if use_pbc:
+        if Box is None:
+            raise ValueError("Box parameter must be provided when use_pbc=True")
+        return dist_matrix(atoms, Box)
+    else:
+        return dist_matrix_direct(atoms)
+
+def get_neighbor_list(atoms, Box, cutoff, rmaxH=None, dm_method=None):
+    """
+    Central dispatcher for finding atom pairs within a cutoff distance.
+    Automatically chooses between Direct (O(N^2)) and Sparse (O(N)) methods
+    based on the system size and config.SPARSE_THRESHOLD.
+
+    Args:
+        atoms: list of atom dictionaries.
+        Box: a 1x3, 1x6 or 1x9 list representing Cell dimensions.
+        cutoff: maximum distance for non-hydrogen bonds.
+        rmaxH: cutoff distance for hydrogen bonds. If None, uses cutoff.
+        dm_method: optional override ('direct' or 'sparse').
+        
+    Returns:
+        i_idx, j_idx (numpy.ndarray): Pairs of atom indices.
+        dist (numpy.ndarray): Pairwise distances.
+        dx, dy, dz (numpy.ndarray): Displacement components (r_j - r_i).
+    """
+    if rmaxH is None:
+        rmaxH = cutoff
+
+    n_atoms = len(atoms)
+    
+    # Decision logic
+    is_sparse = False
+    if dm_method == 'sparse':
+        is_sparse = True
+    elif dm_method == 'direct':
+        is_sparse = False
+    elif n_atoms >= config.SPARSE_THRESHOLD:
+        is_sparse = True
+
+    if is_sparse:
+        # Use the optimized sparse neighbor list from cell_list_dist_matrix
+        from .cell_list_dist_matrix import neighbor_list_fast
+        return neighbor_list_fast(atoms, Box, cutoff, rmaxH)
+    else:
+        # Use the direct distance matrix and convert to sparse format
+        dmat, dx_mat, dy_mat, dz_mat = dist_matrix(atoms, Box)
+        
+        # Masking by cutoff (handling H vs non-H)
+        types = np.array([atom.get('type', atom.get('name', '')) for atom in atoms])
+        is_h = np.array([bool(t and t[0].upper() == 'H') for t in types])
+        
+        # Create a matrix of cutoffs
+        cutoffs = np.where(is_h[:, np.newaxis] | is_h[np.newaxis, :], rmaxH, cutoff)
+        
+        mask = (dmat > 1e-7) & (dmat <= cutoffs)
+        # Use upper triangle to avoid double counting
+        upper_tri_mask = np.triu(np.ones((n_atoms, n_atoms), dtype=bool), k=1)
+        mask = mask & upper_tri_mask
+        
+        i_idx, j_idx = np.where(mask)
+        return (i_idx.astype(np.int32), 
+                j_idx.astype(np.int32), 
+                dmat[i_idx, j_idx].astype(np.float32), 
+                dx_mat[i_idx, j_idx].astype(np.float32), 
+                dy_mat[i_idx, j_idx].astype(np.float32), 
+                dz_mat[i_idx, j_idx].astype(np.float32))
