@@ -1,3 +1,20 @@
+Direct mathdo full matrices
+System Size ($N$)	Total Elements	RAM Required	Feasibility
+2,000	4.0 Million	64 MB	Desktop / Web
+5,000	25.0 Million	400 MB	Desktop
+10,000	100 Million	1.6 GB	High-end Laptop
+25,000	625 Million	10 GB	Server / Workstation
+50,000	2.5 Billion	40 GB	Large Server
+100,000	10.0 Billion	160 GB	Rare / Supercomputer
+
+Sparse
+System Size ($N$)	Approx. Elements	RAM Required	Feasibility
+2,000	~0.4 Million	10 MB	Mobile / Web
+10,000	~2.0 Million	50 MB	Mobile / Web
+50,000	~10 Million	250 MB	Any Laptop
+100,000	~20 Million	500 MB	Any Laptop
+1,000,000	~200 Million	5 GB	Workstation
+
 Target Size	Actual Atoms	Direct $O(N^2)$	Cell List (Full $N \times N$)	Cell List (Sparse)
 2,000	2,056	0.193 s	6.808 s	8.875 s
 4,000	4,284	0.699 s	23.909 s	26.791 s
