@@ -83,15 +83,7 @@ from atomipy.transform import direct_cartesian_to_fractional, direct_fractional_
 from atomipy.dist_matrix import dist_matrix
 from atomipy.cell_utils import Box_dim2Cell, Cell2Box_dim, normalize_box
 
-try:
-    import matplotlib.pyplot as plt
-except ImportError:
-    plt = None
-
-try:
-    from scipy.signal import find_peaks
-except ImportError:
-    find_peaks = None
+# matplotlib and scipy are now lazy-loaded inside xrd() to save memory
 
 # Waasmaier-Kirfel coefficients table for atomic scattering factors
 WAASMAIER_KIRFEL_DATA = [ # Plain Python list for mixed types
@@ -681,10 +673,15 @@ def xrd(atoms, Box, wavelength=1.54187, angle_step=0.02,
     """
     print("Starting XRD calculation...")
 
-    if plot and plt is None:
-        raise ImportError("matplotlib is required for XRD plotting. Install atomipy[xrd] or matplotlib.")
-    if plot and find_peaks is None:
-        raise ImportError("scipy is required for XRD peak picking in plot mode. Install atomipy[xrd] or scipy.")
+    if plot:
+        try:
+            import matplotlib.pyplot as plt
+        except ImportError:
+            raise ImportError("matplotlib is required for XRD plotting. Install atomipy[xrd] or matplotlib.")
+        try:
+            from scipy.signal import find_peaks
+        except ImportError:
+            raise ImportError("scipy is required for XRD peak picking in plot mode. Install atomipy[xrd] or scipy.")
     
     Box_dim, Cell = normalize_box(Box)
     
