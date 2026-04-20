@@ -233,7 +233,13 @@ def get_structure_stats(atoms, Box=None, total_charge=None, log_file='output.log
         
         # Find unique charge values (with some tolerance for floating point comparison)
         unique_charges = []
-        for charge in charges:
+        for raw_charge in charges:
+            # Cast to float to avoid TypeError if charges are strings
+            try:
+                charge = float(raw_charge)
+            except (ValueError, TypeError):
+                charge = 0.0
+                
             # Only add if this is a new unique charge (accounting for floating point precision)
             if not any(abs(charge - uc) < 1e-6 for uc in unique_charges):
                 unique_charges.append(charge)
