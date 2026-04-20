@@ -10,6 +10,7 @@ The package now supports generating GROMACS n2t (atom name to type) files for bo
 - [Common Variables](#common-variables)
   - [Structure Containers](#structure-containers)
   - [Atom dictionary fields](#atom-dictionary-fields)
+- [Configuration & Performance](#configuration--performance)
 - [Key Features](#key-features)
 - [Requirements](#requirements)
 - [Installation](#installation)
@@ -134,7 +135,9 @@ Understanding the core containers and fields used in atomipy makes it easier to 
 - Ionic/crystal radii utilities from Revised Shannon radii, including bond-distance estimates
 - Element type assignment
 - Coordination number analysis
-- Distance matrices with PBC corrections (using both full matrix and efficient cell-list algorithms)
+- Distance matrices with PBC corrections:
+  - **Automatic Scalability**: Standardized $O(N)$ memory-efficient sparse algorithms for large systems.
+  - **Customizable Thresholds**: Global configuration for switching between Direct ($O(N^2)$) and Sparse ($O(N)$) methods.
 - Progress tracking for computationally intensive calculations
 - Consolidated charge module with support for formal, MINFF, and CLAYFF charge assignments
 - Unified coordinate transformation system:
@@ -216,6 +219,36 @@ import atomipy as ap
 print("atomipy imported successfully, version:", ap.__version__)
 PY
 ```
+
+## Configuration & Performance
+
+atomipy is designed to handle systems ranging from small molecules to large mineral slabs with over 100,000 atoms. To balance speed and memory efficiency, it uses a centralized configuration and dispatching system to control distance calculation thresholds.
+
+### Central Dispatcher: `get_neighbor_list()`
+
+The package features a central function, `ap.dist_matrix.get_neighbor_list()`, which acts as the decision-making "brain" for all distance-based calculations. Functions like `bond_angle`, `solvate`, and `substitute` all defer to this dispatcher.
+
+### Global Thresholds
+
+By default, the dispatcher uses a size-based switching logic:
+- **Systems < 5000 atoms**: Use the **Direct** $O(N^2)$ method (faster for small systems due to NumPy vectorization).
+- **Systems ≥ 5000 atoms**: Use the **Sparse Neighbor List** $O(N)$ method (memory-efficient and scalable).
+
+### Customizing Settings
+
+You can easily customize this threshold or force a specific method at runtime:
+
+```python
+import atomipy as ap
+
+# Change the sparse method threshold globally
+ap.config.SPARSE_THRESHOLD = 2500
+
+# Or force a specific method for a single call
+atoms, bonds, angles = ap.bond_angle(atoms, Box=cell, dm_method='sparse')
+```
+
+This ensures that even on memory-constrained systems, you can safely process large structures without risk of $O(N^2)$ memory bottlenecks.
 
 ## Getting Started for Python Beginners
 
@@ -465,9 +498,10 @@ What it supports:
 
 ### Structure Analysis
 
-- `bond_angle(atoms, Box, rmaxH=1.2, rmaxM=2.45)`: Compute bonds and angles for a given atomic structure
-- `dist_matrix(atoms, Box)`: Calculate a full distance matrix between all atoms with PBC
-- `cell_list_dist_matrix(atoms, Box)`: Calculate a sparse distance matrix between all atoms with PBC
+- `bond_angle(atoms, Box, ...)`: Compute bonds and angles for a given atomic structure. Automatically scales between Direct and Sparse methods based on system size.
+- `dist_matrix(atoms, Box)`: Calculate a full distance matrix between all atoms with PBC.
+- `cell_list_dist_matrix(atoms, Box)`: Calculate a sparse distance matrix (Full Cell List) between all atoms with PBC.
+- `neighbor_list_fast(atoms, Box, cutoff)`: High-performance sparse neighbor list ($O(N)$ time and memory), used by default for systems $\ge$ 5000 atoms.
 - `find_H2O(atoms, Box_dim=None, rmin=1.25)`: Find water molecules in a system based on O-H bonding patterns. Returns water atoms, their 0-based indices, and unique molecule IDs.
 - `get_structure_stats(atoms, Box=None, total_charge=0, log_file='output.log', ffname='minff')`: Generate and log statistics about atom types, coordination environments, charges, bond distances, and angles. Returns a formatted report string and optionally writes to a log file. Works with both 'minff' and 'clayff' forcefields.
 
