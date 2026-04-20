@@ -13,6 +13,41 @@ def _smart_open(f, mode='w'):
             yield opened_f
 
 
+def _infer_element(atom):
+    """Infer element symbol from atom attributes."""
+    # Priority: element > fftype > type
+    for key in ['element', 'fftype', 'type']:
+        val = atom.get(key)
+        if not val or not isinstance(val, str):
+            continue
+        
+        # Strip digits and extra chars
+        import re
+        m = re.match(r'([A-Za-z]+)', val.strip())
+        if not m:
+            continue
+            
+        symbol = m.group(1)
+        
+        # Special common labels in mineralogy/MD
+        # e.g. HW, OW, MW (water/minerals), SI, AL, MG, FE, CA
+        if len(symbol) >= 2:
+            s_up = symbol.upper()
+            if s_up.startswith('HW'): return 'H'
+            if s_up.startswith('OW'): return 'O'
+            if s_up in ['SI', 'AL', 'MG', 'FE', 'CA', 'CL', 'NA', 'LI', 'ZN']:
+                return s_up[0] + s_up[1].lower()
+            
+        # Default: first character for common organic elements, 
+        # or first 2 chars for others if applicable
+        if symbol[0].upper() in 'HCONSP':
+            return symbol[0].upper()
+        
+        return symbol[:2] if len(symbol) >= 2 else symbol.upper()
+    
+    return 'X'
+
+
 def pdb(atoms, Box, file_path, write_conect=False):
     """Write atoms and Cell dimensions to a PDB file.
 
@@ -124,20 +159,21 @@ def pdb(atoms, Box, file_path, write_conect=False):
             except (ValueError, TypeError):
                 temp_factor_val = 0.00
 
-            # Element symbol (cols 77-78), right-justified, proper capitalization. Default to empty if not found.
+            # Element symbol (cols 77-78), right-justified, proper capitalization.
             raw_element = atom.get('element')
-            if raw_element is None:
-                raw_element = ''
+            if not raw_element:
+                raw_element = _infer_element(atom)
+
             # Capitalize properly: first letter uppercase, rest lowercase
-            if str(raw_element).strip():
-                element_str = str(raw_element).strip()[:2]
+            element_str = str(raw_element).strip()
+            if element_str:
                 if len(element_str) == 1:
                     element_symbol_pdb = f"{element_str.upper():>2}"
                 else:
                     element_symbol_pdb = f"{element_str[0].upper()}{element_str[1:].lower()}"
                     element_symbol_pdb = f"{element_symbol_pdb:>2}"
             else:
-                element_symbol_pdb = "  "  # Empty if no element found
+                element_symbol_pdb = " X"
 
             # Charge (cols 79-80), right-justified. Default to empty if not found.
             # PDB standard mandates formal charges (e.g. +2, -1), not partial forcefield charges.
