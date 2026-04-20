@@ -212,7 +212,8 @@ def get_structure_stats(atoms, Box=None, total_charge=None, log_file='output.log
         output.append("-" * 80)
         output.append("")
     
-    output.append(f"Total charge ({ffname.upper()}): {total_charge:.7f}")
+    total_charge = float(total_charge) if total_charge is not None else 0.0
+    output.append(f"Total charge: {total_charge:.7f}\n")
     
     if abs(round(total_charge) - total_charge) > 1e-10:
         output.append("Warning: Non-integer total charge. Adjusting to nearest integer.")
