@@ -109,22 +109,22 @@ def pdb(atoms, Box, file_path, write_conect=False):
             # - Alignment is tricky: usually left-aligned for elements <= 2 chars,
             #   right-aligned (?) or starting col 13 for longer names.
             #   Let's try space-padding and left-alignment for simplicity first.
-            raw_atomname = atom.get('fftype')
-            if raw_atomname is None:
-                raw_atomname = atom.get('type')
-            if raw_atomname is None:
-                raw_atomname = atom.get('element')
-            if raw_atomname is None or str(raw_atomname).strip() == '':
-                raw_atomname = 'X'
+            # PDB Standard: 
+            # - 1-char elements (H, O, C, N...) symbols in col 14
+            # - 2-char elements (SI, AL, MG, FE...) symbols start in col 13
+            raw_atomname = atom.get('type', atom.get('fftype', 'X'))[:4]
+            element_str = _infer_element(atom)
+            
+            if len(element_str) == 1:
+                # 1-character element (like H), indent the name to col 14
+                pdb_atomname = f" {raw_atomname:<3}"[:4]
             else:
-                raw_atomname = str(raw_atomname)
-                
-            if len(raw_atomname) == 1: # Single char element, place in col 14
-                pdb_atomname = f" {raw_atomname}  "
-            elif len(raw_atomname) > 4: # Truncate
-                pdb_atomname = raw_atomname[:4]
-            else: # Left-align others
-                pdb_atomname = f"{raw_atomname:<4}"
+                # 2-character element (like Si), start at col 13
+                pdb_atomname = f"{raw_atomname:<4}"[:4]
+
+            # Character check to ensure it's exactly 4 chars
+            if len(pdb_atomname) < 4:
+                pdb_atomname = pdb_atomname.ljust(4)
             
             alt_loc = ' ' # Column 17: Alternate location indicator
             
