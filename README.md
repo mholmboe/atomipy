@@ -37,28 +37,24 @@ atominpython/                # Repository root
 │   ├── ffparams/            # Force field parameters (GMINFF/TMINFF JSONs & ITPs)
 │   ├── structures/          # Bundled library of mineral structures
 │   ├── __init__.py          # Package init, public API exports
-│   ├── add.py               # Atom property update utilities (legacy, merging to move/build)
 │   ├── analysis.py          # High-performance analysis (RDF, CN, unwrap)
 │   ├── bond_angle.py        # Topology analysis (bonds, angles, dihedrals)
 │   ├── bond_valence.py      # Bond valence sum analysis (BVS, GII)
 │   ├── build.py             # Structure manipulation, merge & substitutions
 │   ├── cell_utils.py        # Box_dim ↔ Cell conversion utilities
 │   ├── charge.py            # Charge assignment logic
-│   ├── diffraction.py       # High-performance XRD simulation
 │   ├── distances.py         # O(N) Sparse & O(N²) Direct distance dispatchers
 │   ├── element.py           # Chemical element assignment
-│   ├── ffparams.py          # Force field parameter file loader
 │   ├── forcefield.py        # MINFF/CLAYFF force field logic
 │   ├── move.py              # Translate, rotate, place, center, bend
-│   ├── radius.py            # Van der Waals, ionic, and Shannon radii
 │   ├── replicate.py         # Supercell replication
-│   ├── resname.py           # Residue name assignment
-│   ├── solvent.py           # Solvation & water molecule repairs (TIP4P/SPC)
-│   ├── transform.py         # Coordinate transformations (frac/cart/wrap/scale)
-│   ├── write_conf.py        # File exporters (PDB, GRO, XYZ, PQR, POSCAR, SDF, Traj)
-│   ├── import_conf.py       # File importers (PDB, GRO, XYZ, CIF, PQR, POSCAR, Traj)
+│   ├── solvent.py           # Solvation & water molecule repairs
+│   ├── transform.py         # Coordinate transformations (frac/cart/wrap)
+│   ├── write_conf.py        # File exporters (PDB, GRO, XYZ, etc.)
+│   ├── import_conf.py       # File importers (PDB, GRO, XYZ, CIF, etc.)
 │   └── write_top.py         # Topology exporters (ITP, PSF, LMP)
 ├── scripts/                 # Example workflow scripts (run_*.py)
+├── atomipy-web-module/      # Modern React-based visual builder (React Flow)
 ├── setup.py                 # Installation script
 └── README.md                # This documentation
 ```
