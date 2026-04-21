@@ -119,11 +119,11 @@ Understanding the core containers and fields used in atomipy makes it easier to 
 - Generation of GROMACS n2t (atom name to type) files for use with gmx x2top
 - High-performance X-ray diffraction pattern simulation and plotting
 - Distance matrices and neighbor lists with PBC corrections:
-  - **Extreme Scalability**: Optimized $O(N)$ cell-lists for systems with **>1,000,000 atoms**.
+  - **Extreme Scalability**: Optimized $O(N)$ cell-lists for systems with **>100,000 atoms**.
   - **Memory Efficiency**: Sparse algorithms prevent RAM exhaustion on large-scale supercells.
   - **Automatic Dispatch**: Smart switching between Direct ($O(N^2)$) and Sparse ($O(N)$) methods.
 - Advanced Structural Analysis:
-  - **RDF/g(r)**: Radial distribution functions for multi-million atom systems.
+  - **RDF/g(r)**: Radial distribution functions for large-scale systems.
   - **Coordination Numbers**: Fast atom-by-atom environment analysis.
   - **Unwrap**: Restore molecular continuity for systems split by PBC.
 - Progress tracking for computationally intensive calculations
@@ -210,7 +210,7 @@ PY
 
 ## Configuration & Performance
 
-atomipy is designed to handle systems ranging from small molecules to large mineral slabs with **over 1,000,000 atoms**. To balance speed and memory efficiency, it uses an $O(N)$ cell-list based configuration and dispatching system to control distance calculation thresholds.
+atomipy is designed to handle systems ranging from small molecules to large mineral slabs with **over 100,000 atoms**. To balance speed and memory efficiency, it uses an $O(N)$ cell-list based configuration and dispatching system to control distance calculation thresholds.
 
 The package features a central function, `ap.distances.get_neighbor_list()`, which acts as the decision-making "brain" for all distance-based calculations. Functions like `bond_angle`, `solvate`, and `RDF` all defer to this dispatcher.
 
@@ -218,7 +218,7 @@ The package features a central function, `ap.distances.get_neighbor_list()`, whi
 
 By default, the dispatcher uses a size-based switching logic:
 - **Systems < 5,000 atoms**: Use the **Direct** $O(N^2)$ method (faster for small systems due to NumPy vectorization).
-- **Systems ≥ 5,000 atoms**: Use the **Sparse Neighbor List** $O(N)$ method (memory-efficient and scalable to millions of atoms).
+- **Systems ≥ 5,000 atoms**: Use the **Sparse Neighbor List** $O(N)$ method (memory-efficient and scalable to hundreds of thousands of atoms).
 
 ### Customizing Settings
 
