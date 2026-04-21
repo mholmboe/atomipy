@@ -157,7 +157,7 @@ try:
 except ImportError:
     pass
 try:
-    from .bond_valence import analyze_bvs, conf2bvs
+    from .bond_valence import analyze_bvs, conf2bvs, add_hydrogens_bvs
 except ImportError:
     pass
 try:
@@ -194,7 +194,7 @@ __all__ = [
     'load_forcefield', 'list_ff_blocks', 'get_ffparams_dir',
     'charge_minff', 'charge_clayff', 'balance_charges', 'assign_formal_charges', 'get_formal_charge', 'get_half_formal_charge',
     'compute_bvs', 'global_instability_index', 'load_bv_params', 'load_shannon_radii', 'bond_valence', 'summarize_bvs',
-    'analyze_bvs', 'conf2bvs',
+    'analyze_bvs', 'conf2bvs', 'add_hydrogens_bvs',
     'get_radius', 'bond_distance',
     'unwrap_coordinates', 'calculate_rdf', 'coordination_number', 'closest_atom',
     'xrd', 'occupancy_atom', 'atomic_scattering_factors', 'calculate_multiplicity', 'bragg_law'

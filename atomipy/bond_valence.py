@@ -32,6 +32,7 @@ import math
 import os
 import re
 import csv
+import copy
 from typing import Dict, Iterable, List, Optional, Tuple
 
 from .bond_angle import bond_angle
@@ -560,3 +561,102 @@ def conf2bvs(
         csv_path=csv_path,
         top_n=top_n,
     )
+
+
+def add_hydrogens_bvs(
+    atoms: List[dict],
+    Box: Iterable[float],
+    delta_threshold: float = -0.5,
+    max_additions: int = 10,
+    bond_length: float = 0.96,
+    coordination: int = 2,
+) -> List[dict]:
+    """
+    Automatically add hydrogen atoms to undersaturated oxygen sites based on BVS.
+
+    Parameters
+    ----------
+    atoms : list of dict
+        Structure atoms.
+    Box : list
+        Box dimensions.
+    delta_threshold : float
+        Minimum BVS deficit (BVS - expected_ox) to trigger protonation.
+    max_additions : int
+        Maximum number of hydrogens to add globally.
+    bond_length : float
+        O-H bond length.
+    coordination : int
+        Target coordination number for add_H_atom. Default is 2.
+
+    Returns
+    -------
+    list of dict
+        Updated atoms list.
+    """
+    if max_additions <= 0:
+        return atoms
+
+    # Perform BVS analysis
+    report = analyze_bvs(atoms, Box)
+    results = report.get("results", [])
+
+    candidates = []
+    # Identify target oxygens
+    for row in results:
+        el = (row.get("element") or "").upper()
+        delta = row.get("delta")
+
+        # We target Oxygen with significant deficit
+        if el != "O" or delta is None or delta >= delta_threshold:
+            continue
+
+        idx0 = int(row.get("index", 1)) - 1
+
+        # Check if it already has an H neighbor
+        has_h = False
+        for neighbor_idx, _, _ in row.get("bonds", []):
+            neighbor = atoms[neighbor_idx - 1]
+            if (neighbor.get("element") or "").upper() == "H":
+                has_h = True
+                break
+
+        if not has_h:
+            candidates.append((delta, idx0))
+
+    # Sort by most undersaturated first
+    candidates.sort(key=lambda x: x[0])
+
+    # Process top candidates
+    target_indices = [idx0 for _, idx0 in candidates[:max_additions]]
+    if not target_indices:
+        return atoms
+
+    from .build import add_H_atom
+
+    current_atoms = copy.deepcopy(atoms)
+
+    for idx0 in target_indices:
+        # Use a temporary unique type so add_H_atom only targets this specific oxygen
+        original_type = current_atoms[idx0].get("type", "O")
+        temp_type = f"__BVS_TARGET_{idx0}__"
+        current_atoms[idx0]["type"] = temp_type
+
+        # Add the hydrogen
+        current_atoms = add_H_atom(
+            current_atoms,
+            Box,
+            target_type=temp_type,
+            h_type="H",
+            bond_length=bond_length,
+            coordination=coordination,
+            max_h_per_atom=1
+        )
+
+        # Find the target atom again to restore its type
+        for atom in current_atoms:
+            if atom.get("type") == temp_type:
+                atom["type"] = original_type
+                break
+
+    return current_atoms
