@@ -31,6 +31,9 @@ import_gro = import_conf.gro
 import_xyz = import_conf.xyz
 import_cif = import_conf.cif
 import_mmcif = import_conf.cif  # alias — cif() handles both CIF and mmCIF
+import_pqr = import_conf.pqr
+import_poscar = import_conf.poscar
+import_traj = import_conf.import_traj
 import_auto = import_conf.auto
 
 from . import write_conf
@@ -38,6 +41,10 @@ write_pdb = write_conf.pdb
 write_gro = write_conf.gro
 write_xyz = write_conf.xyz
 write_cif = write_conf.cif
+write_pqr = write_conf.pqr
+write_poscar = write_conf.poscar
+write_sdf = write_conf.sdf
+write_traj = write_conf.write_traj
 write_auto = write_conf.auto
 
 # Topology file generation
@@ -59,9 +66,13 @@ except ImportError:
     pass
 
 # ===== Structure analysis functions =====
-from .dist_matrix import dist_matrix, get_neighbor_list
-from .cell_list_dist_matrix import cell_list_dist_matrix
+from .distances import dist_matrix, get_neighbor_list, cell_list_dist_matrix
 from . import config
+from . import analysis
+unwrap_coordinates = analysis.unwrap_coordinates
+calculate_rdf = analysis.calculate_rdf
+coordination_number = analysis.coordination_number
+closest_atom = analysis.closest_atom
 from .bond_angle import bond_angle, bond_angle_dihedral
 
 # ===== Cell and coordinate transformation functions =====
@@ -91,13 +102,11 @@ translate = move.translate
 rotate = move.rotate
 place = move.place
 center = move.center
+bend = move.bend
 
-from . import add
-update = add.update
+from .build import update
 
-# ===== General functions =====
-from . import general
-scale = general.scale
+from .transform import scale
 
 # ===== Build functions =====
 from . import build
@@ -115,12 +124,14 @@ adjust_H_atom = build.adjust_H_atom
 adjust_Hw_atom = build.adjust_Hw_atom
 is_centrosymmetric_along_z = build.is_centrosymmetric_along_z
 reorder = build.reorder
+condense = build.condense
+create_grid = build.create_grid
 
 # ===== Resname functions =====
 from .resname import assign_resname
 
 # ===== Solvent functions =====
-from .solvent import find_H2O, solvate
+from .solvent import find_H2O, solvate, spc2tip4p, tip3p2tip4p
 
 # ===== Force field functions =====
 try:
@@ -150,7 +161,7 @@ try:
 except ImportError:
     pass
 try:
-    from .size import get_radius, bond_distance
+    from .radius import get_radius, bond_distance
 except ImportError:
     pass
 
@@ -161,12 +172,12 @@ except ImportError:
     pass
 
 # Version information
-__version__ = "0.94"
+__version__ = "0.95"
 
 # Expose key functions at the package level
 __all__ = [
-    'import_pdb', 'import_gro', 'import_xyz', 'import_cif', 'import_mmcif', 'import_auto',
-    'write_pdb', 'write_gro', 'write_xyz', 'write_cif', 'write_auto',
+    'import_pdb', 'import_gro', 'import_xyz', 'import_cif', 'import_mmcif', 'import_pqr', 'import_poscar', 'import_traj', 'import_auto',
+    'write_pdb', 'write_gro', 'write_xyz', 'write_cif', 'write_pqr', 'write_poscar', 'write_sdf', 'write_traj', 'write_auto',
     'write_itp', 'write_psf', 'write_lmp', 'import_itp_topology',
     'element', 'radius', 'mass', 'set_atomic_masses', 'com',
     'dist_matrix', 'cell_list_dist_matrix', 'config', 'bond_angle', 'bond_angle_dihedral', 'find_H2O',
@@ -174,16 +185,17 @@ __all__ = [
     'cartesian_to_fractional', 'fractional_to_cartesian', 'wrap', 'wrap_coordinates',
     'triclinic_to_orthogonal', 'orthogonal_to_triclinic', 'get_orthogonal_box', 'get_cell_vectors',
     'direct_cartesian_to_fractional', 'direct_fractional_to_cartesian',
-    'replicate_system', 'translate', 'rotate', 'place', 'center', 'update', 'scale',
+    'replicate_system', 'translate', 'rotate', 'place', 'center', 'update', 'scale', 'bend',
     'substitute', 'molecule', 'merge', 'slice', 'remove', 'delete_sites', 'fuse_atoms', 'solvate', 'ionize', 'insert',
-    'add_H_atom', 'adjust_H_atom', 'adjust_Hw_atom', 'reorder',
+    'add_H_atom', 'adjust_H_atom', 'adjust_Hw_atom', 'reorder', 'condense', 'create_grid',
     'is_centrosymmetric_along_z',
-    'assign_resname',
+    'assign_resname', 'spc2tip4p', 'tip3p2tip4p',
     'minff', 'clayff', 'write_n2t', 'get_structure_stats',
     'load_forcefield', 'list_ff_blocks', 'get_ffparams_dir',
     'charge_minff', 'charge_clayff', 'balance_charges', 'assign_formal_charges', 'get_formal_charge', 'get_half_formal_charge',
     'compute_bvs', 'global_instability_index', 'load_bv_params', 'load_shannon_radii', 'bond_valence', 'summarize_bvs',
     'analyze_bvs', 'conf2bvs',
     'get_radius', 'bond_distance',
+    'unwrap_coordinates', 'calculate_rdf', 'coordination_number', 'closest_atom',
     'xrd', 'occupancy_atom', 'atomic_scattering_factors', 'calculate_multiplicity', 'bragg_law'
 ]
