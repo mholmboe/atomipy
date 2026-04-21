@@ -37,30 +37,26 @@ atominpython/                # Repository root
 │   ├── ffparams/            # Force field parameters (GMINFF/TMINFF JSONs & ITPs)
 │   ├── structures/          # Bundled library of mineral structures
 │   ├── __init__.py          # Package init, public API exports
-│   ├── add.py               # Atom property update utilities
+│   ├── add.py               # Atom property update utilities (legacy, merging to move/build)
+│   ├── analysis.py          # High-performance analysis (RDF, CN, unwrap)
 │   ├── bond_angle.py        # Topology analysis (bonds, angles, dihedrals)
 │   ├── bond_valence.py      # Bond valence sum analysis (BVS, GII)
-│   ├── build.py             # Structure manipulation & substitutions
-│   ├── cell_list_dist_matrix.py  # Cell-list based sparse distance matrix
+│   ├── build.py             # Structure manipulation, merge & substitutions
 │   ├── cell_utils.py        # Box_dim ↔ Cell conversion utilities
 │   ├── charge.py            # Charge assignment logic
 │   ├── diffraction.py       # High-performance XRD simulation
-│   ├── dist_matrix.py       # Full pairwise distance matrix with PBC
+│   ├── distances.py         # O(N) Sparse & O(N²) Direct distance dispatchers
 │   ├── element.py           # Chemical element assignment
 │   ├── ffparams.py          # Force field parameter file loader
 │   ├── forcefield.py        # MINFF/CLAYFF force field logic
-│   ├── general.py           # General utilities (e.g., scale)
-│   ├── import_conf.py       # File importers (PDB, GRO, XYZ, CIF/mmCIF)
-│   ├── import_top.py        # Topology file importer (ITP)
-│   ├── mass.py              # Atomic masses and center of mass
-│   ├── move.py              # Translate, rotate, place, center
-│   ├── radius.py            # Van der Waals and ionic radii
+│   ├── move.py              # Translate, rotate, place, center, bend
+│   ├── radius.py            # Van der Waals, ionic, and Shannon radii
 │   ├── replicate.py         # Supercell replication
 │   ├── resname.py           # Residue name assignment
-│   ├── size.py              # Shannon radii, bond distance estimates
-│   ├── solvent.py           # Solvation & water molecule detection
-│   ├── transform.py         # Coordinate transformations (frac/cart/wrap)
-│   ├── write_conf.py        # File exporters (PDB, GRO, XYZ)
+│   ├── solvent.py           # Solvation & water molecule repairs (TIP4P/SPC)
+│   ├── transform.py         # Coordinate transformations (frac/cart/wrap/scale)
+│   ├── write_conf.py        # File exporters (PDB, GRO, XYZ, PQR, POSCAR, SDF, Traj)
+│   ├── import_conf.py       # File importers (PDB, GRO, XYZ, CIF, PQR, POSCAR, Traj)
 │   └── write_top.py         # Topology exporters (ITP, PSF, LMP)
 ├── scripts/                 # Example workflow scripts (run_*.py)
 ├── setup.py                 # Installation script
@@ -118,26 +114,18 @@ Understanding the core containers and fields used in atomipy makes it easier to 
 ## Key Features
 
 - Support for multiple forcefields: MINFF and CLAYFF atom typing and parameter assignment
-- Import/export PDB, Gromacs GRO, XYZ, and CIF/mmCIF files
-- CIF/mmCIF to PDB conversion helper (`scripts/run_cif2pdb.py`) with symmetry expansion, optional layered z-unfold, overlap fusion, optional BVS protonation diagnostics, and optional MINFF typing
+- Import/export PDB, Gromacs GRO, XYZ, CIF/mmCIF, PQR, POSCAR, SDF, and trajectories
+- CIF/mmCIF to PDB conversion helper (`scripts/run_cif2pdb.py`) with symmetry expansion
 - Generation of GROMACS n2t (atom name to type) files for use with gmx x2top
-  - Neighbour distances honour periodic boundary conditions when the Box is provided
-  - Nearly identical environments are merged to avoid duplicate entries caused by floating-point noise
-  - All file formats need to contain system size information
-  - For .pdb files, system dimensions should be in the CRYST1 record
-  - For .gro files, Box dimensions should be in the last line
-  - For .xyz files, system dimensions should be on the second line after a # character
-- Generating topology files for MINFF and CLAYFF forcefields, for Gromacs (.itp), NAMD (.psf, compatible with OpenMM) and LAMMPS (.data)
-- High-performance X-ray diffraction pattern simulation and plotting via `diffraction.xrd`, with optional CLI helper `scripts/run_xrd_example.py`
-- Handle both orthogonal and triclinic simulation cells with periodic boundary conditions
-- Calculate bond distances, angles, dihedrals, and 1–4 pairs (`bond_angle_dihedral`)
-- Bond valence analysis utilities (bond valence sums and Global Instability Index)
-- Ionic/crystal radii utilities from Revised Shannon radii, including bond-distance estimates
-- Element type assignment
-- Coordination number analysis
-- Distance matrices with PBC corrections:
-  - **Automatic Scalability**: Standardized $O(N)$ memory-efficient sparse algorithms for large systems.
-  - **Customizable Thresholds**: Global configuration for switching between Direct ($O(N^2)$) and Sparse ($O(N)$) methods.
+- High-performance X-ray diffraction pattern simulation and plotting
+- Distance matrices and neighbor lists with PBC corrections:
+  - **Extreme Scalability**: Optimized $O(N)$ cell-lists for systems with **>1,000,000 atoms**.
+  - **Memory Efficiency**: Sparse algorithms prevent RAM exhaustion on large-scale supercells.
+  - **Automatic Dispatch**: Smart switching between Direct ($O(N^2)$) and Sparse ($O(N)$) methods.
+- Advanced Structural Analysis:
+  - **RDF/g(r)**: Radial distribution functions for multi-million atom systems.
+  - **Coordination Numbers**: Fast atom-by-atom environment analysis.
+  - **Unwrap**: Restore molecular continuity for systems split by PBC.
 - Progress tracking for computationally intensive calculations
 - Consolidated charge module with support for formal, MINFF, and CLAYFF charge assignments
 - Unified coordinate transformation system:
@@ -222,17 +210,15 @@ PY
 
 ## Configuration & Performance
 
-atomipy is designed to handle systems ranging from small molecules to large mineral slabs with over 100,000 atoms. To balance speed and memory efficiency, it uses a centralized configuration and dispatching system to control distance calculation thresholds.
+atomipy is designed to handle systems ranging from small molecules to large mineral slabs with **over 1,000,000 atoms**. To balance speed and memory efficiency, it uses an $O(N)$ cell-list based configuration and dispatching system to control distance calculation thresholds.
 
-### Central Dispatcher: `get_neighbor_list()`
-
-The package features a central function, `ap.dist_matrix.get_neighbor_list()`, which acts as the decision-making "brain" for all distance-based calculations. Functions like `bond_angle`, `solvate`, and `substitute` all defer to this dispatcher.
+The package features a central function, `ap.distances.get_neighbor_list()`, which acts as the decision-making "brain" for all distance-based calculations. Functions like `bond_angle`, `solvate`, and `RDF` all defer to this dispatcher.
 
 ### Global Thresholds
 
 By default, the dispatcher uses a size-based switching logic:
-- **Systems < 5000 atoms**: Use the **Direct** $O(N^2)$ method (faster for small systems due to NumPy vectorization).
-- **Systems ≥ 5000 atoms**: Use the **Sparse Neighbor List** $O(N)$ method (memory-efficient and scalable).
+- **Systems < 5,000 atoms**: Use the **Direct** $O(N^2)$ method (faster for small systems due to NumPy vectorization).
+- **Systems ≥ 5,000 atoms**: Use the **Sparse Neighbor List** $O(N)$ method (memory-efficient and scalable to millions of atoms).
 
 ### Customizing Settings
 
@@ -242,7 +228,7 @@ You can easily customize this threshold or force a specific method at runtime:
 import atomipy as ap
 
 # Change the sparse method threshold globally
-ap.config.SPARSE_THRESHOLD = 2500
+ap.config.SPARSE_THRESHOLD = 5000
 
 # Or force a specific method for a single call
 atoms, bonds, angles = ap.bond_angle(atoms, Box=cell, dm_method='sparse')
@@ -465,15 +451,22 @@ What it supports:
 
 ### File I/O
 
-- `import_pdb(file_path)`: Import a PDB file, returning `(atoms, Cell)` - a list of atom dictionaries and Cell parameters
-- `import_gro(file_path)`: Import a Gromacs GRO file, returning `(atoms, Box_dim)` (1x3 orthogonal or 1x9 triclinic), including velocities if present
-- `import_xyz(file_path)`: Import an XYZ file, returning `(atoms, Cell)`
-- `import_cif(file_path, expand_symmetry=True)`: Import a CIF/mmCIF file, returning `(atoms, Cell)`. Handles fractional coordinates and expands symmetry-equivalent sites by default (`expand_symmetry=False` keeps the asymmetric-unit listing). *Requires the optional `gemmi` dependency (`pip install "atomipy[cif]"`).*
-- `import_auto(file_path)`: Auto-detect format and import, returning `(atoms, Cell)` or `(atoms, Box_dim)` depending on the file type.
-- `write_pdb(atoms, Box, file_path, write_conect=False)`: Write atoms to a PDB file. Automatically extracts the MINFF `fftype` for CrystalMaker compatibility if available, outputs exact `SCALE` orthogonal-to-fractional crystallographic coordinate transformation matrices if `Box` is provided, and calculates the exact full formal element oxidation state for the atom charge field at columns 79-80 (instead of standard partial forcefield charges). If `write_conect=True`, it will additionally write `CONECT` bonding topologies directly.
-- `write_gro(atoms, Box, file_path)`: Write atoms to a Gromacs GRO file, including velocities if present
-- `write_xyz(atoms, Box, file_path)`: Write atoms to an XYZ file
-- `write_cif(atoms, Box, file_path)`: Write atoms to a CIF file. Outputs both Cartesian coordinates and converted fractional geometries. *Requires `gemmi`.*
+- `import_pdb(file_path)`: Import a PDB file, returning `(atoms, Cell)`.
+- `import_gro(file_path)`: Import a Gromacs GRO file, returning `(atoms, Box_dim)`. Coordinates and box are converted from nm to Å.
+- `import_xyz(file_path)`: Import an XYZ file, returning `(atoms, Cell)`.
+- `import_cif(file_path, expand_symmetry=True)`: Import a CIF/mmCIF file using GEMMI, returning `(atoms, Cell)`. Standardizes symmetry expansion for minerals.
+- `import_pqr(file_path)`: Import a PQR file (charge and radius in place of occupancy/temp).
+- `import_poscar(file_path)`: Import VASP POSCAR/CONTCAR files (fractional or Cartesian).
+- `import_traj(file_path)`: Multi-frame importer for .pdb or .gro trajectory files.
+- `import_auto(file_path)`: Auto-detect format and import.
+- `write_pdb(atoms, Box, file_path, ...)`: Write atoms to a PDB file with formal charge and scale matrices.
+- `write_gro(atoms, Box, file_path)`: Write atoms to a Gromacs GRO file (coordinates in nm).
+- `write_xyz(atoms, Box, file_path)`: Write atoms to an XYZ file.
+- `write_cif(atoms, Box, file_path)`: Write atoms to a CIF file.
+- `write_pqr(atoms, Box, file_path)`: Write atoms to a PQR file.
+- `write_poscar(atoms, Box, file_path)`: Write atoms to a VASP POSCAR file.
+- `write_sdf(atoms, Box, file_path)`: Write atoms to an SDF file.
+- `write_traj(frames, file_path)`: Write multiple frames to a trajectory file.
 
 ### Force Field
 
@@ -498,24 +491,26 @@ What it supports:
 
 ### Structure Analysis
 
-- `bond_angle(atoms, Box, ...)`: Compute bonds and angles for a given atomic structure. Automatically scales between Direct and Sparse methods based on system size.
-- `dist_matrix(atoms, Box)`: Calculate a full distance matrix between all atoms with PBC.
-- `cell_list_dist_matrix(atoms, Box)`: Calculate a sparse distance matrix (Full Cell List) between all atoms with PBC.
-- `neighbor_list_fast(atoms, Box, cutoff)`: High-performance sparse neighbor list ($O(N)$ time and memory), used by default for systems $\ge$ 5000 atoms.
-- `find_H2O(atoms, Box_dim=None, rmin=1.25)`: Find water molecules in a system based on O-H bonding patterns. Returns water atoms, their 0-based indices, and unique molecule IDs.
-- `get_structure_stats(atoms, Box=None, total_charge=0, log_file='output.log', ffname='minff')`: Generate and log statistics about atom types, coordination environments, charges, bond distances, and angles. Returns a formatted report string and optionally writes to a log file. Works with both 'minff' and 'clayff' forcefields.
+- `bond_angle(atoms, Box, ...)`: Compute bonds and angles. Automatically scales between Direct and Sparse methods based on system size.
+- `dist_matrix(atoms, Box)`: Calculate a full distance matrix (N x N) for small systems.
+- `cell_list_dist_matrix(atoms, Box)`: Full cell-list based distance analysis returning sparse arrays.
+- `neighbor_list_fast(atoms, Box, cutoff)`: Extreme-performance sparse neighbor list ($O(N)$), capable of handling > 1,000,000 atoms.
+- `calculate_rdf(atoms, Box, rmax, dr)`: High-performance radial distribution function calculation.
+- `coordination_number(atoms, Box, cutoff)`: Efficient per-atom coordination analysis via sparse indexing.
+- `closest_atom(atoms, reference, Box)`: Find the neighbor closest to a target point or atom.
+- `find_H2O(atoms, Box_dim=None, rmin=1.25)`: Automated water discovery and molecule ID assignment.
+- `get_structure_stats(atoms, Box, ...)`: Comprehensive geometry and topology diagnostics.
 
 ### Coordinate Transformations
 
-- `orthogonal_to_triclinic(ortho_coords, Box, atoms=None)`: Convert coordinates from orthogonal to triclinic space
-- `triclinic_to_orthogonal(atoms=None, coords=None, Box)`: Convert coordinates from triclinic to orthogonal space
-- `cartesian_to_fractional(atoms=None, cart_coords=None, Box)`: Convert Cartesian coordinates to fractional coordinates
-- `fractional_to_cartesian(atoms=None, frac_coords=None, Box)`: Convert fractional coordinates to Cartesian
-- `direct_cartesian_to_fractional(atoms=None, cart_coords=None, Box)`: Direct conversion using crystallographic matrices
-- `direct_fractional_to_cartesian(atoms=None, frac_coords=None, Box)`: Direct conversion using crystallographic matrices
-- `wrap(atoms, Box, return_type='cartesian')`: Wrap atom coordinates into the primary simulation cell. Simple interface supporting orthogonal (1x3), triclinic (1x9), and Cell parameter (1x6) formats. Returns atoms with updated coordinates and fractional coordinates
-- `wrap_coordinates(atoms=None, coords=None, frac_coords=None, Box=None, add_to_atoms=True, return_type='fractional')`: Advanced wrapping function with more control over input/output formats
-- `get_cell_vectors(Box)`: Calculate Cell vectors from Box parameters
+- `orthogonal_to_triclinic(...)`: Convert coordinates between basis sets.
+- `triclinic_to_orthogonal(...)`: Restore orthogonal coordinates from triclinic boxes.
+- `cartesian_to_fractional(...)`: Project atoms into unit-cell fractional space.
+- `fractional_to_cartesian(...)`: Restore absolute coordinates in Angstroms.
+- `wrap(atoms, Box)`: Wrap all atoms into the primary simulation cell.
+- `unwrap_coordinates(atoms, Box)`: Reconstruct split molecules across periodic boundaries.
+- `get_cell_vectors(Box)`: Derives absolute lattice vectors (H matrix).
+- `scale(atoms, scale_factor)`: Rescale coordinates and box dimensions.
 
 ### Diffraction
 
@@ -612,6 +607,43 @@ atoms, bonds, angles = ap.bond_angle(atoms, Box=Box_cell)
 # Using triclinic Box format
 Box_triclinic = [30.0, 30.0, 30.0, 0.0, 0.0, 5.0, 0.0, 5.0, 2.0]  # GROMACS format
 atoms, bonds, angles = ap.bond_angle(atoms, Box=Box_triclinic)
+```
+
+### High-Performance Structural Analysis
+
+For large systems (>100,000 atoms), use the optimized analysis functions which leverage sparse neighbor lists.
+
+```python
+import atomipy as ap
+import matplotlib.pyplot as plt
+
+# Load a large mineral-water system
+atoms, Box = ap.import_gro("large_system.gro")
+
+# 1. Calculate Radial Distribution Function g(r)
+# Only compute for Si-O pairs up to 15 Å
+r, g_r = ap.calculate_rdf(
+    atoms, Box, rmax=15.0, dr=0.1, 
+    pair_types=(['Si'], ['O'])
+)
+
+plt.plot(r, g_r)
+plt.xlabel("r (Å)")
+plt.ylabel("g(r)")
+plt.show()
+
+# 2. Calculate coordination numbers
+# Count how many Oxygen atoms are within 2.5 Å of each Silicon atom
+counts = ap.coordination_number(
+    atoms, Box, cutoff=2.5, 
+    atom_types=['Si'], neighbor_types=['O']
+)
+print(f"Average Si-O coordination: {sum(counts)/len(counts):.2f}")
+
+# 3. Fix split molecules (Unwrapping)
+# If molecules are broken across periodic boundaries, cluster them back together
+unwrapped = ap.unwrap_coordinates(atoms, Box)
+ap.write_pdb(unwrapped, Box, "unwrapped.pdb")
 ```
 
 ### Basic Structure Processing
