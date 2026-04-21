@@ -720,6 +720,180 @@ def slice(atoms, limits, remove_partial_molecules=True):
     return selected_atoms
 
 
+def _parse_coord_filter(filter_value, axis_name):
+    """Parse one coordinate filter specification."""
+    allowed_ops = {'<', '<=', '>', '>=', '==', '!='}
+
+    if isinstance(filter_value, (int, float)):
+        return '==', float(filter_value)
+
+    if isinstance(filter_value, dict):
+        op = str(filter_value.get('op', '==')).strip()
+        value = float(filter_value.get('value'))
+        if op not in allowed_ops:
+            raise ValueError(f"Unsupported operator '{op}' for axis '{axis_name}'")
+        return op, value
+
+    if isinstance(filter_value, (tuple, list)) and len(filter_value) == 2:
+        op = str(filter_value[0]).strip()
+        value = float(filter_value[1])
+        if op not in allowed_ops:
+            raise ValueError(f"Unsupported operator '{op}' for axis '{axis_name}'")
+        return op, value
+
+    raise ValueError(
+        f"Invalid filter for axis '{axis_name}'. Use a number, "
+        f"(operator, value), or {{'op': ..., 'value': ...}}."
+    )
+
+
+def _compare_numeric(value, op, threshold):
+    """Evaluate a numeric comparison."""
+    if op == '<':
+        return value < threshold
+    if op == '<=':
+        return value <= threshold
+    if op == '>':
+        return value > threshold
+    if op == '>=':
+        return value >= threshold
+    if op == '==':
+        return value == threshold
+    if op == '!=':
+        return value != threshold
+    return False
+
+
+def delete_sites(atoms, atom_type=None, index=None, molid=None, x=None, y=None, z=None,
+                 logic='and', reindex=True):
+    """
+    Delete atom sites that match one or more selection rules.
+
+    Parameters
+    ----------
+    atoms : list of dict
+        List of atom dictionaries.
+    atom_type : str or list of str, optional
+        Atom type label(s) to match. Matches against atom['type'] and atom['element'].
+    index : int or list of int, optional
+        Atom index value(s) to match (atom['index']).
+    molid : int or list of int, optional
+        Molecule index value(s) to match (atom['molid']).
+    x, y, z : number, tuple, list, or dict, optional
+        Coordinate filters. Supported formats:
+        - number: exact match (==)
+        - ('<', 10.0), ('>=', 5.5), etc.
+        - {'op': '<', 'value': 10.0}
+    logic : str, optional
+        How to combine criteria: 'and' (default) or 'or'.
+    reindex : bool, optional
+        If True, reset atom['index'] to consecutive values from 1 (default: True).
+
+    Returns
+    -------
+    list of dict
+        Updated atom list with selected sites removed.
+
+    Examples
+    --------
+    # Remove all atoms with molid 3
+    atoms = ap.delete_sites(atoms, molid=3)
+
+    # Remove atom indices 1, 2, 3
+    atoms = ap.delete_sites(atoms, index=[1, 2, 3])
+
+    # Remove Al sites below z = 10 Angstrom
+    atoms = ap.delete_sites(atoms, atom_type='Al', z=('<', 10))
+    """
+    atoms = copy.deepcopy(atoms)
+
+    logic = str(logic).strip().lower()
+    if logic not in {'and', 'or'}:
+        raise ValueError("logic must be 'and' or 'or'")
+
+    criteria = []
+
+    if atom_type is not None:
+        if isinstance(atom_type, str):
+            atom_types = {atom_type}
+        else:
+            atom_types = {str(v) for v in atom_type}
+
+        criteria.append(
+            lambda atom: str(atom.get('type', '')) in atom_types
+            or str(atom.get('element', '')) in atom_types
+        )
+
+    if index is not None:
+        if isinstance(index, (int, np.integer)):
+            index_set = {int(index)}
+        else:
+            index_set = {int(v) for v in index}
+        criteria.append(lambda atom: int(atom.get('index', -1)) in index_set)
+
+    if molid is not None:
+        if isinstance(molid, (int, np.integer)):
+            molid_set = {int(molid)}
+        else:
+            molid_set = {int(v) for v in molid}
+        criteria.append(lambda atom: int(atom.get('molid', -1)) in molid_set)
+
+    coord_filters = {}
+    for axis_name, axis_filter in [('x', x), ('y', y), ('z', z)]:
+        if axis_filter is not None:
+            coord_filters[axis_name] = _parse_coord_filter(axis_filter, axis_name)
+
+    if coord_filters:
+        def _coord_match(atom):
+            for axis_name, (op, threshold) in coord_filters.items():
+                axis_value = float(atom.get(axis_name, 0.0))
+                if not _compare_numeric(axis_value, op, threshold):
+                    return False
+            return True
+        criteria.append(_coord_match)
+
+    if not criteria:
+        raise ValueError("No deletion criteria were provided.")
+
+    kept_atoms = []
+    removed_count = 0
+    for atom in atoms:
+        matches = [fn(atom) for fn in criteria]
+        remove_atom = all(matches) if logic == 'and' else any(matches)
+        if remove_atom:
+            removed_count += 1
+            continue
+        kept_atoms.append(atom)
+
+    if reindex:
+        for i, atom in enumerate(kept_atoms, start=1):
+            atom['index'] = i
+
+    print(f"Removed {removed_count} atom sites. Remaining atoms: {len(kept_atoms)}")
+    return kept_atoms
+
+
+def remove(atoms, atom_type=None, index=None, molid=None, x=None, y=None, z=None,
+           logic='and', reindex=True):
+    """
+    Alias for delete_sites.
+
+    Use this for concise calls such as:
+    atoms = ap.remove(atoms, atom_type='Al', z=('<', 10))
+    """
+    return delete_sites(
+        atoms,
+        atom_type=atom_type,
+        index=index,
+        molid=molid,
+        x=x,
+        y=y,
+        z=z,
+        logic=logic,
+        reindex=reindex,
+    )
+
+
 def _get_surface_atoms(atoms, distance_threshold=2.5):
     """
     Identify atoms at the surface of a structure.
