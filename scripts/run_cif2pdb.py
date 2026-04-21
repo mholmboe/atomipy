@@ -271,57 +271,6 @@ def maybe_unfold_layered_z(
     return atoms
 
 
-def run_bvs_protonation_check(
-    atoms: list[dict],
-    Box: list[float],
-    args: argparse.Namespace,
-) -> None:
-    """
-    Run BVS analysis and print protonation diagnostics.
-
-    Notes
-    -----
-    ``analyze_bvs`` calls ``element()``, which can overwrite atom ``type`` fields.
-    To preserve CIF atom names when MINFF is disabled, this analysis runs on a deep copy.
-    """
-    bvs_atoms = copy.deepcopy(atoms)
-    print("Running BVS analysis for protonation check ...")
-    bvs_report = ap.analyze_bvs(bvs_atoms, Box, top_n=args.protonation_top_n)
-
-    has_h = any((atom.get("element") or "").upper() == "H" for atom in atoms)
-    underbonded_oxygen = [
-        row
-        for row in bvs_report["results"]
-        if (row.get("element") or "").upper() == "O"
-        and row.get("delta") is not None
-        and row["delta"] < args.protonation_delta_threshold
-    ]
-
-    print(
-        f"BVS protonation check: GII={bvs_report['gii']:.5f}, "
-        f"GII_noH={bvs_report['gii_no_h']:.5f}, "
-        f"underbonded_O={len(underbonded_oxygen)} "
-        f"(delta < {args.protonation_delta_threshold:.3f}), has_H={has_h}"
-    )
-
-    if underbonded_oxygen and not has_h:
-        print("Protonation likely needed: yes (underbonded O found and no H present).")
-    elif underbonded_oxygen and has_h:
-        print("Protonation may still be needed: underbonded O found despite existing H.")
-    else:
-        print("Protonation likely needed: no underbonded O below threshold.")
-
-    if underbonded_oxygen:
-        top_n = min(len(underbonded_oxygen), args.protonation_top_n)
-        print(f"Top {top_n} underbonded O sites:")
-        ranked = sorted(underbonded_oxygen, key=lambda row: row["delta"])[:top_n]
-        for row in ranked:
-            print(
-                f"  #{row.get('index'):>4} O "
-                f"BVS={row.get('bvs', 0.0):6.3f} "
-                f"delta={row.get('delta', 0.0):+6.3f} "
-                f"cn={row.get('cn')}"
-            )
 
 
 def main() -> int:
@@ -350,7 +299,17 @@ def main() -> int:
     print(f"Fuse step: {num_atoms_before_fuse} -> {num_atoms_after_fuse} atoms")
 
     if args.check_protonation:
-        run_bvs_protonation_check(atoms, Box, args)
+        print("\nAdding Hydrogen atoms to undersaturated Oxygen sites (BVS-guided)...")
+        n_before_h = len(atoms)
+        atoms = ap.add_hydrogens_bvs(
+            atoms,
+            Box,
+            delta_threshold=args.protonation_delta_threshold,
+            max_additions=args.protonation_top_n,
+            coordination=3,
+        )
+        added_h = len(atoms) - n_before_h
+        print(f"BVS Protonation: Added {added_h} new 'H' atoms.")
 
     if args.assign_minff:
         print("Assigning MINFF atom types and charges ...")
