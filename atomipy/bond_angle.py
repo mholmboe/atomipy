@@ -1,5 +1,5 @@
 import numpy as np
-from .dist_matrix import get_neighbor_list
+from .distances import get_neighbor_list
 from . import config
 
 def bond_angle(atoms, Box, rmaxH=1.2, rmaxM=2.45, same_element_bonds=False, same_molecule_only=True, calculate_coordination=True, neighbor_element=None, dm_method=None):
@@ -266,7 +266,7 @@ def bond_angle_dihedral(atoms, Box, rmaxH=1.2, rmaxM=2.45, same_element_bonds=Fa
 
     # Build oriented list using the same sparse/dense logic
     if len(atoms) >= config.SPARSE_THRESHOLD:
-        from .cell_list_dist_matrix import neighbor_list_fast
+        from .distances import neighbor_list_fast
         i_idx, j_idx, dists, dx_s, dy_s, dz_s = neighbor_list_fast(atoms, Box, cutoff=max(rmaxH, rmaxM), rmaxH=rmaxH)
         # Create mapping for quick lookup: (i, j) -> (dx, dy, dz)
         # For dihedrals, we only care about bonded neighbors
@@ -295,7 +295,7 @@ def bond_angle_dihedral(atoms, Box, rmaxH=1.2, rmaxM=2.45, same_element_bonds=Fa
                     oriented_angles.append((n1, center, n2, angle, v1[0], v1[1], v1[2], v2[0], v2[1], v2[2]))
     else:
         # Standard dense approach for smaller systems
-        from .dist_matrix import dist_matrix
+        from .distances import dist_matrix
         _, dx, dy, dz = dist_matrix(atoms, Box)
         oriented_angles = []
         for center, neighs in enumerate(adjacency):

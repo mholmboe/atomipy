@@ -80,7 +80,7 @@ two_theta, intensity, fig = xrd(
 
 import numpy as np
 from atomipy.transform import direct_cartesian_to_fractional, direct_fractional_to_cartesian
-from atomipy.dist_matrix import dist_matrix
+from .distances import dist_matrix
 from atomipy.cell_utils import Box_dim2Cell, Cell2Box_dim, normalize_box
 
 # matplotlib and scipy are now lazy-loaded inside xrd() to save memory

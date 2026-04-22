@@ -102,7 +102,7 @@ def itp(atoms, Box=None, file_path=None, molecule_name=None, nrexcl=1, comment=N
                 [int(i)+1, int(j)+1, dist] for i, j, dist in Bond_index
             ])
             print("Converted Bond_index from numpy array to 1-based indexing")
-    elif Bond_index and len(Bond_index) > 0:
+    elif Bond_index is not None and len(Bond_index) > 0:
         # For Python lists
         if min(int(bond[0]) for bond in Bond_index) == 0:
             Bond_index = [[int(i)+1, int(j)+1, dist] for i, j, dist in Bond_index]
@@ -125,7 +125,7 @@ def itp(atoms, Box=None, file_path=None, molecule_name=None, nrexcl=1, comment=N
                 new_angles.append(new_angle)
             Angle_index = np.array(new_angles)
             print(f"Converted Angle_index from numpy array to 1-based indexing (shape: {Angle_index.shape})")
-    elif Angle_index and len(Angle_index) > 0:
+    elif Angle_index is not None and len(Angle_index) > 0:
         # For Python lists
         if min(int(angle[0]) for angle in Angle_index) == 0:
             new_angles = []

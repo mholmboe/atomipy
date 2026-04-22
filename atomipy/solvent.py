@@ -60,7 +60,7 @@ def find_H2O(atoms, Box_dim=None, rmin=1.30):
     --------
     assign_resname : Assign residue names including 'SOL' for water
     """
-    from .cell_list_dist_matrix import neighbor_list_fast
+    from .distances import neighbor_list_fast
     
     if not atoms:
         return [], []
@@ -93,7 +93,7 @@ def find_H2O(atoms, Box_dim=None, rmin=1.30):
     
     # 2. Use the central dispatcher to find all pairs within rmin
     # It automatically selects between Direct and Sparse based on config.SPARSE_THRESHOLD
-    from .dist_matrix import get_neighbor_list
+    from .distances import get_neighbor_list
     i_idx, j_idx, dists, _, _, _ = get_neighbor_list(atoms, Box_dim, cutoff=rmin, rmaxH=rmin)
     
     # 3. Filter for O-H pairs
@@ -232,7 +232,7 @@ def solvate(limits, density=1000.0, min_distance=2.0, max_solvent='max',
     """
     # Import functions here to avoid circular imports
     from .build import merge, slice as build_slice
-    from .dist_matrix import dist_matrix, get_neighbor_list
+    from .distances import dist_matrix, get_neighbor_list
     from .cell_utils import Cell2Box_dim
     from . import import_conf
     
@@ -451,4 +451,117 @@ def _load_solvent(solvent_type='spce'):
     box_dim = Cell2Box_dim(Cell)
     
     return atoms, box_dim
+
+def spc2tip4p(atoms, Box=None, om_dist=0.15):
+    """
+    Convert SPC water molecules to TIP4P model by adding an M dummy site.
+    
+    Parameters
+    ----------
+    atoms : list of dict
+        List of atom dictionaries (should already be identified as water).
+    Box : list of float, optional
+        Box dimensions for PBC handling.
+    om_dist : float, optional
+        Distance from oxygen to the M site along the bisector (default 0.15 A).
+        
+    Returns
+    -------
+    list of dict
+        New list of atoms with M sites added.
+    """
+    # Group by molid
+    molids = np.array([a['molid'] for a in atoms])
+    unique_molids = np.unique(molids)
+    
+    new_atoms = []
+    
+    for mid in unique_molids:
+        mol_indices = np.where(molids == mid)[0]
+        if len(mol_indices) != 3:
+            # Not a 3-site water molecule, copy as is
+            for idx in mol_indices:
+                new_atoms.append(copy.deepcopy(atoms[idx]))
+            continue
+            
+        # Find O and Hs
+        o_idx = -1
+        h_indices = []
+        for idx in mol_indices:
+            atom = atoms[idx]
+            atype = atom.get('type', '').upper()
+            element = atom.get('element', '').upper()
+            if 'O' in atype or element == 'O':
+                o_idx = idx
+            elif 'H' in atype or element == 'H':
+                h_indices.append(idx)
+        
+        if o_idx == -1 or len(h_indices) != 2:
+            # Not a standard water structure
+            for idx in mol_indices:
+                new_atoms.append(copy.deepcopy(atoms[idx]))
+            continue
+            
+        o_atom = copy.deepcopy(atoms[o_idx])
+        h1_atom = copy.deepcopy(atoms[h_indices[0]])
+        h2_atom = copy.deepcopy(atoms[h_indices[1]])
+        
+        # Add O and Hs to new list
+        new_atoms.extend([o_atom, h1_atom, h2_atom])
+        
+        # Calculation of M site
+        o_pos = np.array([o_atom['x'], o_atom['y'], o_atom['z']])
+        h1_pos = np.array([h1_atom['x'], h1_atom['y'], h1_atom['z']])
+        h2_pos = np.array([h2_atom['x'], h2_atom['y'], h2_atom['z']])
+        
+        v1 = h1_pos - o_pos
+        v2 = h2_pos - o_pos
+        
+        if Box is not None:
+            # PBC correction for vectors
+            if len(Box) == 3:
+                v1 -= np.round(v1 / np.array(Box)) * np.array(Box)
+                v2 -= np.round(v2 / np.array(Box)) * np.array(Box)
+            elif len(Box) == 9:
+                lx, ly, lz = Box[0], Box[1], Box[2]
+                v1[0] -= lx * np.round(v1[0] / lx)
+                v1[1] -= ly * np.round(v1[1] / ly)
+                v1[2] -= lz * np.round(v1[2] / lz)
+                v2[0] -= lx * np.round(v2[0] / lx)
+                v2[1] -= ly * np.round(v2[1] / ly)
+                v2[2] -= lz * np.round(v2[2] / lz)
+
+        # Normalized vectors
+        v1_u = v1 / np.linalg.norm(v1)
+        v2_u = v2 / np.linalg.norm(v2)
+        
+        # Bisector
+        bisector = v1_u + v2_u
+        bisector_u = bisector / np.linalg.norm(bisector)
+        
+        m_pos = o_pos + om_dist * bisector_u
+        
+        # Create M atom
+        m_atom = copy.deepcopy(o_atom)
+        m_atom['x'], m_atom['y'], m_atom['z'] = m_pos
+        m_atom['type'] = 'MW'
+        m_atom['element'] = 'M'
+        m_atom['charge'] = -1.0484  # Example charge for TIP4P
+        m_atom['index'] = 0 # Will be updated by update()
+        
+        # Adjust O and H charges for TIP4P if needed, 
+        # but usually the user handles forcefield assignment separately.
+        # However, for convenience we can set some defaults.
+        o_atom['charge'] = 0.0
+        h1_atom['charge'] = 0.5242
+        h2_atom['charge'] = 0.5242
+        
+        new_atoms.append(m_atom)
+        
+    from .build import update
+    return update(new_atoms)
+
+def tip3p2tip4p(atoms, Box=None):
+    """Alias for spc2tip4p using default TIP4P distance."""
+    return spc2tip4p(atoms, Box, om_dist=0.15)
 

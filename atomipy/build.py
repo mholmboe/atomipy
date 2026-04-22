@@ -8,7 +8,7 @@ import copy
 import os
 import random
 import numpy as np
-from .dist_matrix import dist_matrix, get_neighbor_list
+from .distances import dist_matrix, get_neighbor_list
 from . import config
 from .move import translate
 from .transform import cartesian_to_fractional, fractional_to_cartesian
@@ -161,7 +161,7 @@ def substitute(atoms, Box, num_oct_subst, o1_type, o2_type, min_o2o2_dist,
     if hi_limit is None:
         hi_limit = 1e9
     
-    from .dist_matrix import get_neighbor_list
+    from .distances import get_neighbor_list
     
     # Map dimension name to index (support both MATLAB-style 1-3 and Python-style 0-2)
     if dimension == 1:
@@ -448,7 +448,7 @@ def substitute(atoms, Box, num_oct_subst, o1_type, o2_type, min_o2o2_dist,
         # Check minimum O2-O2 distance
         o2_atoms_final = [atom for atom in atoms if atom['type'] == o2_type]
         if len(o2_atoms_final) > 1:
-            from .dist_matrix import get_neighbor_list
+            from .distances import get_neighbor_list
             _, _, dists_v, _, _, _ = get_neighbor_list(o2_atoms_final, Box, cutoff=min_o2o2_dist)
             min_o2_dist = np.min(dists_v) if len(dists_v) > 0 else min_o2o2_dist
             print(f"Minimum {o2_type}-{o2_type} distance: {min_o2_dist:.3f} Å")
@@ -457,7 +457,7 @@ def substitute(atoms, Box, num_oct_subst, o1_type, o2_type, min_o2o2_dist,
         # Check minimum T2-T2 distance
         t2_atoms_final = [atom for atom in atoms if atom['type'] == t2_type]
         if len(t2_atoms_final) > 1:
-            from .dist_matrix import get_neighbor_list
+            from .distances import get_neighbor_list
             _, _, dists_v, _, _, _ = get_neighbor_list(t2_atoms_final, Box, cutoff=min_t2t2_dist)
             min_t2_dist = np.min(dists_v) if len(dists_v) > 0 else min_t2t2_dist
             print(f"Minimum {t2_type}-{t2_type} distance: {min_t2_dist:.3f} Å")
@@ -465,7 +465,7 @@ def substitute(atoms, Box, num_oct_subst, o1_type, o2_type, min_o2o2_dist,
         # Check minimum T2-O2 distance if both substitutions were done
         if num_oct_subst > 0 and len(t2_atoms_final) > 0:
             combined_atoms = t2_atoms_final + o2_atoms_final
-            from .dist_matrix import get_neighbor_list
+            from .distances import get_neighbor_list
             i_idx_v, j_idx_v, dists_v, _, _, _ = get_neighbor_list(combined_atoms, Box, cutoff=min_t2t2_dist)
             # Filter for T2-O2 pairs
             mask = (i_idx_v < len(t2_atoms_final)) & (j_idx_v >= len(t2_atoms_final))
@@ -533,7 +533,7 @@ def merge(atoms1, atoms2, Box, type_mode='molid', atom_label=None, min_distance=
     
     # Use sparse neighbor list for all systems to save memory
     # Use central dispatcher (O(N) approach)
-    from .dist_matrix import get_neighbor_list
+    from .distances import get_neighbor_list
     
     # The maximum distance we care about
     max_dist = standard_dist if standard_dist > small_dist else small_dist
@@ -929,7 +929,7 @@ def _get_surface_atoms(atoms, distance_threshold=2.5):
         
         # Use selection logic based on threshold
         # Use central dispatcher (O(N) approach)
-        from .dist_matrix import get_neighbor_list
+        from .distances import get_neighbor_list
         i_idx, j_idx, _, _, _, _ = get_neighbor_list(atoms, [1000, 1000, 1000], cutoff=distance_threshold)
         counts = np.zeros(len(atoms))
         if len(i_idx) > 0:
@@ -985,7 +985,7 @@ def fuse_atoms(atoms, Box, rmax=0.5, criteria='average'):
     --------
     merge : Merges two different atom lists (e.g., solute and solvent)
     """
-    from .dist_matrix import get_neighbor_list
+    from .distances import get_neighbor_list
     
     n_original = len(atoms)
     if n_original <= 1:
@@ -1313,7 +1313,7 @@ def insert(molecule_atoms, limits, Box=None, rotate='random', min_distance=2.0,
     """
     from .move import rotate as rotate_atoms
     from .move import place
-    from .dist_matrix import get_neighbor_list
+    from .distances import get_neighbor_list
     
     # Standardize limits to [xlo, ylo, zlo, xhi, yhi, zhi] format
     if len(limits) == 3:
@@ -1931,7 +1931,6 @@ def reorder(atoms, neworder, by=None):
     atoms = ap.reorder(atoms, ['Na', 'Ow', 'Hw'], by='type')
     """
     import copy
-    from .add import update
     
     if not isinstance(neworder, (list, tuple)):
         raise ValueError("neworder must be a list or tuple")
@@ -1992,3 +1991,314 @@ def reorder(atoms, neworder, by=None):
         return []
         
     return update(ordered_atoms, force=True)
+
+def update(*atoms_list, molid=None, use_resname=True, force=False):
+    """
+    Update atom indices and optionally combine multiple atom structures.
+    
+    This function serves several purposes:
+    1. When called with a single atoms structure, it updates all indices to be consecutive
+       and assigns molecule IDs based on both molid and resname boundaries
+    2. When called with multiple atoms structures, it combines them into one structure 
+       with consecutive indices and molecule IDs
+    3. It maintains field/attribute consistency across all atom dictionaries
+    
+    Parameters
+    ----------
+    *atoms_list : variable length argument list of atom structures
+        One or more lists of atom dictionaries
+    molid : int, optional
+        If provided, sets all molecule IDs to this value
+    use_resname : bool, optional
+        If True, molecule boundaries are also determined by changes in residue name.
+        Default is True.
+    force : bool, optional
+        If True, forces re-enumeration of molecule IDs even if they already exist.
+        Default is False.
+        
+    Returns
+    -------
+    atoms : list of dict
+        Combined atoms list with updated indices and molecule IDs, and consistently 
+        ordered attributes
+        
+    Examples
+    --------
+    # Update indices of a single structure:
+    new_atoms = ap.update(atoms)
+    
+    # Combine multiple structures:
+    new_atoms = ap.update(atoms1, atoms2, atoms3)
+    
+    # Combine structures and set specific molecule ID:
+    new_atoms = ap.update(atoms1, atoms2, molid=5)
+    
+    # Update structure without using residue names for molecule boundaries:
+    new_atoms = ap.update(atoms, use_resname=False)
+
+    # Force re-enumeration of molids:
+    new_atoms = ap.update(atoms, force=True)
+    """
+    # Make deep copies to avoid modifying originals
+    atoms_copies = [copy.deepcopy(atoms) for atoms in atoms_list if atoms]
+    
+    # Handle case with no input or all empty inputs
+    if not atoms_copies:
+        return []
+    
+    # Normalize field consistency across all structures:
+    # Use the union of all fields and fill missing ones with None to avoid dropping keys
+    all_fields = set()
+    for atoms in atoms_copies:
+        if atoms:
+            all_fields.update(atoms[0].keys())
+    for i, atoms in enumerate(atoms_copies):
+        if not atoms:
+            continue
+        for j, atom in enumerate(atoms):
+            atoms_copies[i][j] = {k: atom.get(k) for k in all_fields}
+    
+    # If only one structure, just update indices/molids as requested
+    if len(atoms_copies) == 1:
+        return _update_single_structure(atoms_copies[0], molid, use_resname, force)
+
+    result_atoms = []
+    current_molid = 1
+
+    for atoms in atoms_copies:
+        if not atoms:
+            continue
+
+        # For appended structures, re-enumerate only if necessary (preserve internal molid structure)
+        updated_atoms = _update_single_structure(atoms, None, use_resname, force=False)
+
+        min_molid = min(atom['molid'] for atom in updated_atoms)
+        offset = current_molid - min_molid
+        for atom in updated_atoms:
+            atom['molid'] += offset
+
+        result_atoms.extend(updated_atoms)
+        current_molid = max(atom['molid'] for atom in result_atoms) + 1
+
+    # Update indices to be consecutive
+    for i, atom in enumerate(result_atoms):
+        atom['index'] = i + 1
+
+    # If a specific molid was provided, set all to that value
+    if molid is not None:
+        for atom in result_atoms:
+            atom['molid'] = molid
+
+    result_atoms = order_attributes(result_atoms)
+    return result_atoms
+
+
+def _update_single_structure(atoms, molid=None, use_resname=True, force=False):
+    """
+    Helper function to update a single atom structure.
+    
+    Parameters
+    ----------
+    atoms : list of dict
+        List of atom dictionaries to update
+    molid : int, optional
+        If provided, sets all molecule IDs to this value
+    use_resname : bool, optional
+        If True, molecule boundaries are also determined by changes in residue name
+    force : bool, optional
+        If True, forces re-enumeration of molecule IDs even if they already exist.
+        Default is False.
+        
+    Returns
+    -------
+    atoms : list of dict
+        Updated atoms list
+    """
+    if not atoms:
+        return []
+    
+    # Make a deep copy to avoid modifying the original
+    atoms = copy.deepcopy(atoms)
+    
+    # Update indices
+    for i, atom in enumerate(atoms):
+        atom['index'] = i + 1
+    
+    # If a specific molid was provided, just set all to that value
+    if molid is not None:
+        for atom in atoms:
+            atom['molid'] = molid
+        return atoms
+
+    # If all atoms already have a molid and not forcing, preserve them as-is (no regrouping)
+    if not force and all('molid' in atom for atom in atoms):
+        return atoms
+
+    # Make sure all atoms have a molid
+    for i, atom in enumerate(atoms):
+        if 'molid' not in atom:
+            atom['molid'] = i + 1
+    
+    # Update molids based on boundaries, starting from the first atom's molid
+    current_molid = atoms[0].get('molid', 1)
+    atoms[0]['molid'] = current_molid
+    
+    for i in range(1, len(atoms)):
+        new_molecule = False
+        if atoms[i]['molid'] != atoms[i-1]['molid']:
+            new_molecule = True
+        if use_resname and 'resname' in atoms[i] and 'resname' in atoms[i-1]:
+            if atoms[i]['resname'] != atoms[i-1]['resname']:
+                new_molecule = True
+        if new_molecule:
+            current_molid += 1
+        atoms[i]['molid'] = current_molid
+    
+    return atoms
+
+
+def order_attributes(atoms):
+    """
+    Order all attributes alphabetically in each atom dictionary.
+    
+    Parameters
+    ----------
+    atoms : list of dict
+        List of atom dictionaries.
+        
+    Returns
+    -------
+    atoms : list of dict
+        The atoms list with attributes ordered.
+    """
+    ordered_atoms = []
+    
+    for atom in atoms:
+        # Create a new ordered dictionary by sorting keys
+        ordered_dict = {key: atom[key] for key in sorted(atom.keys())}
+        ordered_atoms.append(ordered_dict)
+        
+    return ordered_atoms
+
+def condense(atoms, Box=None):
+    """
+    Minimize the box size and center atoms to remove vacuum gaps.
+    
+    Parameters
+    ----------
+    atoms : list of dict
+        List of atom dictionaries.
+    Box : list of float, optional
+        Current box dimensions.
+    
+    Returns
+    -------
+    tuple
+        (atoms, new_box) - Atoms with updated coordinates and new orthogonal box dimensions.
+    """
+    if not atoms:
+        return [], [0, 0, 0]
+        
+    pos = np.array([[a['x'], a['y'], a['z']] for a in atoms])
+    min_xyz = np.min(pos, axis=0)
+    max_xyz = np.max(pos, axis=0)
+    
+    # Calculate geometric center
+    center = (min_xyz + max_xyz) / 2
+    
+    # Calculate tight box dimensions
+    new_box = max_xyz - min_xyz
+    
+    # Center atoms in the new box
+    atoms_copy = copy.deepcopy(atoms)
+    for a in atoms_copy:
+        a['x'] = a['x'] - center[0] + new_box[0] / 2
+        a['y'] = a['y'] - center[1] + new_box[1] / 2
+        a['z'] = a['z'] - center[2] + new_box[2] / 2
+        
+    return atoms_copy, new_box.tolist()
+
+def create_grid(atom_type, density, limits, resname='ION', molid=None):
+    """
+    Create a grid of atoms within specified limits based on a target density.
+    
+    Parameters
+    ----------
+    atom_type : str
+        The type/element of the grid atoms.
+    density : float
+        Target density in atoms/Å³.
+    limits : list of float
+        [xlo, ylo, zlo, xhi, yhi, zhi] limits for the grid.
+    resname : str, optional
+        Residue name for the grid atoms. Default is 'ION'.
+    molid : int, optional
+        Molecule ID for the grid atoms. If None, each atom gets a new molid.
+        
+    Returns
+    -------
+    list of dict
+        List of grid atoms.
+    """
+    if len(limits) == 3:
+        xlo, ylo, zlo = 0, 0, 0
+        xhi, yhi, zhi = limits
+    else:
+        xlo, ylo, zlo, xhi, yhi, zhi = limits
+        
+    lx = xhi - xlo
+    ly = yhi - ylo
+    lz = zhi - zlo
+    
+    vol = lx * ly * lz
+    num_total = int(vol * density)
+    
+    if num_total == 0:
+        return []
+        
+    # Calculate grid spacing assuming cubic grid
+    spacing = (1.0 / density)**(1/3.0)
+    
+    nx = int(np.ceil(lx / spacing))
+    ny = int(np.ceil(ly / spacing))
+    nz = int(np.ceil(lz / spacing))
+    
+    # Adjust spacing to fit exactly in limits
+    dx = lx / nx if nx > 1 else lx
+    dy = ly / ny if ny > 1 else ly
+    dz = lz / nz if nz > 1 else lz
+    
+    atoms = []
+    idx = 1
+    for i in range(nx):
+        for j in range(ny):
+            for k in range(nz):
+                if len(atoms) >= num_total:
+                    break
+                
+                atom = {
+                    'molid': molid if molid is not None else idx,
+                    'index': idx,
+                    'resname': resname,
+                    'type': atom_type,
+                    'element': atom_type,
+                    'x': xlo + (i + 0.5) * dx,
+                    'y': ylo + (j + 0.5) * dy,
+                    'z': zlo + (k + 0.5) * dz,
+                    'neigh': [],
+                    'bonds': [],
+                    'angles': []
+                }
+                atoms.append(atom)
+                idx += 1
+    
+    from .element import element
+    element(atoms)
+    
+    # Calculate box from limits
+    lx = xhi - xlo
+    ly = yhi - ylo
+    lz = zhi - zlo
+    box = [lx, ly, lz]
+    
+    return atoms, box

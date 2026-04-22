@@ -597,6 +597,10 @@ def auto(file_path):
         return xyz(file_path)
     elif ext in ('.cif', '.mmcif', '.mcif'):
         return cif(file_path)
+    elif ext == '.pqr':
+        return pqr(file_path)
+    elif ext in ('.poscar', '.contcar') or os.path.basename(file_path).upper() in ('POSCAR', 'CONTCAR'):
+        return poscar(file_path)
     else:
         # Try to detect the format by checking file contents
         with open(file_path, 'r') as f:
@@ -611,3 +615,188 @@ def auto(file_path):
                 except ValueError:
                     # Default to GRO if can't determine
                     return gro(file_path)
+
+def pqr(file_path):
+    """Import atoms from a PQR file.
+    
+    PQR is a modified PDB format where the occupancy and temperature factor
+    columns are replaced by charge and radius.
+    
+    Returns:
+       atoms: list of dictionaries.
+       Cell: a 1x6 list [a, b, c, alpha, beta, gamma].
+    """
+    atoms, Cell = pdb(file_path)
+    # The pdb function already maps occupancy and charge if they look like floats.
+    # For PQR, we ensure charge and radius are correctly mapped.
+    with open(file_path, 'r') as f:
+        idx = 0
+        for line in f:
+            if line.startswith("ATOM") or line.startswith("HETATM"):
+                if idx < len(atoms):
+                    try:
+                        # PQR uses columns 55-62 for charge and 63-70 for radius
+                        charge = float(line[54:62].strip())
+                        radius = float(line[62:70].strip())
+                        atoms[idx]['charge'] = charge
+                        atoms[idx]['radius'] = radius
+                    except (ValueError, IndexError):
+                        pass
+                    idx += 1
+    return atoms, Cell
+
+def poscar(file_path):
+    """Import atoms from a VASP POSCAR/CONTCAR file.
+    
+    Returns:
+       atoms: list of dictionaries.
+       Cell: a 1x6 list [a, b, c, alpha, beta, gamma].
+    """
+    with open(file_path, 'r') as f:
+        lines = f.readlines()
+    
+    title = lines[0].strip()
+    scale = float(lines[1].strip())
+    
+    # 3x3 lattice matrix
+    lattice = np.array([
+        [float(x) for x in lines[2].split()],
+        [float(x) for x in lines[3].split()],
+        [float(x) for x in lines[4].split()]
+    ]) * scale
+    
+    from .cell_utils import Box_dim2Cell
+    # Convert matrix to a, b, c, alpha, beta, gamma
+    a = np.linalg.norm(lattice[0])
+    b = np.linalg.norm(lattice[1])
+    c = np.linalg.norm(lattice[2])
+    alpha = np.degrees(np.arccos(np.dot(lattice[1], lattice[2]) / (b * c)))
+    beta = np.degrees(np.arccos(np.dot(lattice[0], lattice[2]) / (a * c)))
+    gamma = np.degrees(np.arccos(np.dot(lattice[0], lattice[1]) / (a * b)))
+    Cell = [a, b, c, alpha, beta, gamma]
+    
+    # Determine if it's VASP 5 (has element names)
+    line5 = lines[5].split()
+    if line5[0].isalpha():
+        element_names = line5
+        counts = [int(x) for x in lines[6].split()]
+        coord_line_idx = 7
+    else:
+        element_names = ['X'] * len(line5) # Should probably ask or infer
+        counts = [int(x) for x in line5]
+        coord_line_idx = 6
+        
+    if lines[coord_line_idx].strip().lower().startswith('sel'):
+        coord_line_idx += 1
+        
+    mode = lines[coord_line_idx].strip().lower()
+    is_fractional = mode.startswith('d') # Direct
+    coord_line_idx += 1
+    
+    atoms = []
+    idx = 1
+    for el_idx, count in enumerate(counts):
+        element = element_names[el_idx] if el_idx < len(element_names) else 'X'
+        for _ in range(count):
+            parts = lines[coord_line_idx].split()
+            pos = np.array([float(x) for x in parts[:3]])
+            
+            if is_fractional:
+                # Convert to Cartesian
+                pos = pos @ lattice
+            else:
+                pos = pos * scale
+                
+            atom = {
+                'index': idx,
+                'molid': 1,
+                'resname': 'MIN',
+                'type': element,
+                'element': element,
+                'x': pos[0],
+                'y': pos[1],
+                'z': pos[2],
+                'neigh': [],
+                'bonds': [],
+                'angles': []
+            }
+            atoms.append(atom)
+            idx += 1
+            coord_line_idx += 1
+            
+    from .element import element as element_func
+    element_func(atoms)
+    
+    return atoms, Cell
+
+def import_traj(file_path):
+    """Import a trajectory file (multi-frame).
+    
+    Supports .pdb (MODEL/ENDMDL) and .gro (consecutive frames).
+    
+    Returns:
+       list of (atoms, Box) tuples.
+    """
+    ext = os.path.splitext(file_path)[1].lower()
+    frames = []
+    
+    if ext == '.pdb':
+        current_atoms = []
+        current_cell = None
+        with open(file_path, 'r') as f:
+            for line in f:
+                if line.startswith("CRYST1"):
+                    # Common across models
+                    a = float(line[6:15].strip())
+                    b = float(line[15:24].strip())
+                    c = float(line[24:33].strip())
+                    current_cell = [a, b, c, float(line[33:40]), float(line[40:47]), float(line[47:54])]
+                elif line.startswith("ATOM") or line.startswith("HETATM"):
+                    # Mini parser for speed
+                    atom = {
+                        'x': float(line[30:38]),
+                        'y': float(line[38:46]),
+                        'z': float(line[46:54]),
+                        'type': line[12:16].strip(),
+                        'resname': line[17:20].strip(),
+                        'molid': int(line[22:26]) if line[22:26].strip() else 1,
+                        'index': int(line[6:11])
+                    }
+                    current_atoms.append(atom)
+                elif line.startswith("ENDMDL"):
+                    frames.append((current_atoms, current_cell))
+                    current_atoms = []
+        if current_atoms: # Case with no ENDMDL at the end
+            frames.append((current_atoms, current_cell))
+            
+    elif ext == '.gro':
+        with open(file_path, 'r') as f:
+            lines = f.readlines()
+        i = 0
+        while i < len(lines):
+            try:
+                title = lines[i].strip()
+                n_atoms = int(lines[i+1].strip())
+                atom_lines = lines[i+2 : i+2+n_atoms]
+                box_line = lines[i+2+n_atoms].strip()
+                
+                atoms = []
+                for al in atom_lines:
+                    atoms.append({
+                        'x': float(al[20:28]) * 10,
+                        'y': float(al[28:36]) * 10,
+                        'z': float(al[36:44]) * 10,
+                        'type': al[10:15].strip(),
+                        'resname': al[5:10].strip(),
+                        'molid': int(al[0:5].strip()),
+                        'index': int(al[15:20].strip())
+                    })
+                
+                box = [float(x) * 10 for x in box_line.split()]
+                frames.append((atoms, box))
+                
+                i += 2 + n_atoms + 1
+            except (ValueError, IndexError):
+                break
+                
+    return frames
