@@ -286,3 +286,53 @@ def center(atoms, Box=None, resname="all", dim="xyz"):
                 atom['z'] += trans_z
     
     return atoms_copy
+
+def bend(atoms, radius, axis='y', center_z=None):
+    """
+    Bend a planar structure into a cylinder.
+    
+    This function transforms flat coordinates into cylindrical ones. 
+    Assuming the slab is in the XY plane, it bends it around the specified axis.
+    
+    Parameters
+    ----------
+    atoms : list of dict
+        List of atom dictionaries.
+    radius : float
+        Radius of the cylinder to bend into.
+    axis : str, optional
+        The axis to bend around ('x' or 'y'). Default is 'y'.
+    center_z : float, optional
+        The z-coordinate that will be exactly at the specified radius.
+        If None, the average z of atoms is used.
+        
+    Returns
+    -------
+    list of dict
+        Atoms with bent coordinates.
+    """
+    atoms_copy = copy.deepcopy(atoms)
+    
+    z_coords = np.array([a['z'] for a in atoms_copy])
+    if center_z is None:
+        center_z = np.mean(z_coords)
+        
+    for atom in atoms_copy:
+        # Distance from the bending center in the z-direction
+        z_offset = atom['z'] - center_z
+        r = radius + z_offset
+        
+        if axis.lower() == 'y':
+            # Bend X into theta
+            theta = atom['x'] / radius
+            atom['x'] = r * np.sin(theta)
+            atom['z'] = r * np.cos(theta)
+            # Y remains same
+        elif axis.lower() == 'x':
+            # Bend Y into theta
+            theta = atom['y'] / radius
+            atom['y'] = r * np.sin(theta)
+            atom['z'] = r * np.cos(theta)
+            # X remains same
+            
+    return atoms_copy
