@@ -868,7 +868,7 @@ def lmp(atoms, Box=None, file_path=None, forcefield=None, rmaxH=1.2, rmaxM=2.45,
     # Calculate total charge
     total_charge = sum(safe_charge(atom) for atom in atoms)
     total_charge = round(total_charge, 6)
-    print(f"write_lmp: Total charge: {total_charge}")
+    print(f"write_lmp: Total charge: {total_charge:.6f}")
     
     # Get unique atom types
     atom_types = sorted(list(set(atom.get('type', '') for atom in atoms)))
