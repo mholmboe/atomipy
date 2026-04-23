@@ -220,12 +220,12 @@ def get_structure_stats(atoms, Box=None, total_charge=None, log_file='output.log
         output.append("")
     
     total_charge = float(total_charge) if total_charge is not None else 0.0
-    output.append(f"Total charge: {total_charge:.8f}\n")
+    output.append(f"Total charge: {total_charge:.6f}\n")
     
     if abs(round(total_charge) - total_charge) > 1e-10:
         output.append("Warning: Non-integer total charge. Adjusting to nearest integer.")
         target_charge = round(total_charge)
-        output.append(f"Final total charge: {sum(atom.get('charge', 0) for atom in atoms):.8f} (target was {target_charge})")
+        output.append(f"Final total charge: {sum(atom.get('charge', 0) for atom in atoms):.6f} (target was {target_charge})")
     
     output.append("\nUnique Atom Types and Their Coordination Environment")
     output.append("-" * 80)
@@ -253,10 +253,10 @@ def get_structure_stats(atoms, Box=None, total_charge=None, log_file='output.log
         
         # If there's only one unique charge, display it as before
         if len(unique_charges) == 1:
-            charge_str = f"{unique_charges[0]:.8f}"
+            charge_str = f"{unique_charges[0]:.6f}"
         else:
             # Otherwise, display all unique charges separated by commas
-            charge_str = ', '.join([f"{c:.8f}" for c in sorted(unique_charges)])
+            charge_str = ', '.join([f"{c:.6f}" for c in sorted(unique_charges)])
         
         output.append(f"{atom_type:<10} {count:<6} {neighbor_pattern:<20} {charge_str:>15}")
     
@@ -960,7 +960,7 @@ def minff(atoms, Box, ffname='minff', rmaxlong=2.45, rmaxH=1.2, log=False, log_f
         atom_type, neighbor_pattern = key
         count = unique_patterns[key]['count']
         charges = unique_patterns[key]['charges']
-        charge_str = ', '.join([f"{c:.8f}" if isinstance(c, float) else str(c) for c in charges])
+        charge_str = ', '.join([f"{c:.6f}" if isinstance(c, float) else str(c) for c in charges])
         print(f"{atom_type:<10} {count:<6} {neighbor_pattern:<25} {charge_str:>15}")
     print("-" * 70)
     
@@ -1543,7 +1543,7 @@ def clayff(atoms, Box, ffname='clayff', rmaxlong=2.45, rmaxH=1.2, log=False, log
         atom_type, neighbor_pattern = key
         count = unique_patterns[key]['count']
         charges = unique_patterns[key]['charges']
-        charge_str = ', '.join([f"{c:.8f}" if isinstance(c, float) else str(c) for c in charges])
+        charge_str = ', '.join([f"{c:.6f}" if isinstance(c, float) else str(c) for c in charges])
         print(f"{atom_type:<10} {count:<6} {neighbor_pattern:<25} {charge_str:>15}")
     print("-" * 70)
     
@@ -1733,7 +1733,7 @@ def write_n2t(atoms, Box=None, n2t_file=None, verbose=True):
         # Sort neighbors by element then by formatted distance for stable ordering
         def neighbor_sort_key(item):
             el, dist = item
-            dist_key = f"{dist:12.8f}" if dist is not None and math.isfinite(dist) else ""
+            dist_key = f"{dist:12.6f}" if dist is not None and math.isfinite(dist) else ""
             return (el, dist_key)
 
         neighbor_data.sort(key=neighbor_sort_key)
@@ -1871,7 +1871,7 @@ def write_n2t(atoms, Box=None, n2t_file=None, verbose=True):
 
     lines = []
     for record in records:
-        line = f"{record['element']:<2} {record['atom_type']:<16} {record['charge']: .8f} {record['mass']:10.5f} {record['cn']:2d}"
+        line = f"{record['element']:<2} {record['atom_type']:<16} {record['charge']: .6f} {record['mass']:10.5f} {record['cn']:2d}"
         for neigh_el, dist_nm in record['neighbors']:
             line += f"  {neigh_el:<2} {dist_nm:6.3f}"
         lines.append(line.rstrip())
