@@ -285,7 +285,7 @@ def charge_minff(atoms, Box, atom_labels=None, charges=None, resname=None):
         atoms[i]['charge'] = -0.89517
 
     total_charge = sum(atoms[i].get('charge', 0) for i in target_atoms) if resname is not None else sum(atom.get('charge', 0) for atom in atoms)
-    print(f"Total charge (MINFF): {total_charge:.6f}")
+    print(f"Total charge (MINFF): {total_charge:.8f}")
     if round(total_charge) != total_charge:
         print("Warning: Non-integer total charge. Adjusting to nearest integer.")
         atoms = balance_charges(atoms, round(total_charge))
@@ -387,7 +387,7 @@ def charge_clayff(atoms, Box, atom_labels=None, charges=None, resname=None):
         atoms[i]['charge'] = -0.8476
 
     total_charge = sum(atoms[i].get('charge', 0) for i in target_atoms) if resname is not None else sum(atom.get('charge', 0) for atom in atoms)
-    print(f"Total charge (CLAYFF): {total_charge:.6f}")
+    print(f"Total charge (CLAYFF): {total_charge:.8f}")
     if round(total_charge) != total_charge:
         print("Warning: Non-integer total charge. Adjusting to nearest integer.")
         atoms = balance_charges(atoms, round(total_charge))
@@ -418,7 +418,7 @@ def balance_charges(atoms, target_total_charge=None):
         for i in ox_indices:
             atoms[i]['charge'] += charge_adjust
         final_total = sum(atom.get('charge', 0) for atom in atoms)
-        print(f"Final total charge: {final_total:.6f} (target was {target_total_charge})")
+        print(f"Final total charge: {final_total:.8f} (target was {target_total_charge})")
     else:
         print("Warning: No oxygen atoms found for charge balancing.")
     return atoms
