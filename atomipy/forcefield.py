@@ -220,12 +220,12 @@ def get_structure_stats(atoms, Box=None, total_charge=None, log_file='output.log
         output.append("")
     
     total_charge = float(total_charge) if total_charge is not None else 0.0
-    output.append(f"Total charge: {total_charge:.7f}\n")
+    output.append(f"Total charge: {total_charge:.6f}\n")
     
     if abs(round(total_charge) - total_charge) > 1e-10:
         output.append("Warning: Non-integer total charge. Adjusting to nearest integer.")
         target_charge = round(total_charge)
-        output.append(f"Final total charge: {sum(atom.get('charge', 0) for atom in atoms):.7f} (target was {target_charge})")
+        output.append(f"Final total charge: {sum(atom.get('charge', 0) for atom in atoms):.6f} (target was {target_charge})")
     
     output.append("\nUnique Atom Types and Their Coordination Environment")
     output.append("-" * 80)
