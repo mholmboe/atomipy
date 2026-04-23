@@ -256,8 +256,8 @@ def itp(atoms, Box=None, file_path=None, molecule_name=None, nrexcl=1, comment=N
             if at_name is None:
                 at_name = at_type
                 
-            charge = round(_to_float(atom.get('charge', 0.0)), 6)
-            mass = round(_to_float(atom.get('mass', 0.0)), 6)
+            charge = round(_to_float(atom.get('charge', 0.0)), 8)
+            mass = round(_to_float(atom.get('mass', 0.0)), 8)
             
             # Write the atom line
             f.write(f"{i:<7} {at_type:<7} {res_nr:<7} {res_name:<7} {at_name:<7} {i:<7}  {charge:>10.8f}    {mass:>7.4f}\n")
