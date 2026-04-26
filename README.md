@@ -333,7 +333,7 @@ This script auto-detects the input format, forwards the Box dimensions, and writ
 
 ### MINFF atom typing & topology generation
 
-Assign MINFF atom types/charges and write topology files directly from a structure:
+Assign [**MINFF**](https://github.com/mholmboe/minff) atom types/charges and write topology files directly from a structure:
 
 ```python
 import atomipy as ap

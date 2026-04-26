@@ -7,7 +7,7 @@ This directory provides force field data in two distinct formats:
 1.  **GROMACS Format (`min.ff/`)**: The `min.ff` directory contains the original force field files (`.itp`, `.atp`) in GROMACS format. These are the source files used by GROMACS directly.
 2.  **Generic JSON Format**: The `.json` files in the root of this directory (`GMINFF/` and `TMINFF/`) are generic, structured exports of the force field data. These are designed to be software-agnostic and are used by `atomipy` to generate input files for other simulation engines, such as **LAMMPS** (via `ap.write_lmp`).
 
-The JSON files include atomtype definitions, non-bonded parameters (sigma, epsilon), and bonded parameters (bondtypes, angletypes) for GMINFF, TMINFF, ion parameters, and water models.
+The JSON files include atomtype definitions, non-bonded parameters (sigma, epsilon), and bonded parameters (bondtypes, angletypes) for the [**MINFF**](https://github.com/mholmboe/minff) forcefield, TMINFF, ion parameters, and water models.
 
 ## Usage with atomipy
 
