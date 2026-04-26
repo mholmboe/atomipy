@@ -356,7 +356,7 @@ def minff(atoms, Box, ffname='minff', rmaxlong=2.45, rmaxH=1.2, log=False, log_f
     Water molecules (residue 'SOL') and Ions (residue 'ION') are treated specially: their atom types
     are standardized (e.g., 'Ow', 'Hw', 'Na') and preserved, skipping the structural type assignment.
     
-    For details, see the MINFF forcefield documentation at github.com/mholmboe/minff.
+    For details, see the MINFF forcefield documentation at https://github.com/mholmboe/minff.
     
     Args:
         atoms: A list of atom dictionaries, each atom is expected to have position coordinates
