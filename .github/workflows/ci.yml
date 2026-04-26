@@ -1,0 +1,124 @@
+name: CI
+
+on:
+  push:
+    branches: [ "main", "dev" ]
+  pull_request:
+    branches: [ "main", "dev" ]
+
+jobs:
+  test:
+    name: Test (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.9", "3.11", "3.12"]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install atomipy (core + optional extras)
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[cif,xrd]"
+
+      - name: Verify import and version
+        run: |
+          python -c "import atomipy as ap; print('atomipy imported OK, version:', ap.__version__)"
+
+      - name: Smoke test — import all submodules
+        run: |
+          python -c "
+          import atomipy as ap
+          import atomipy.distances
+          import atomipy.bond_angle
+          import atomipy.forcefield
+          import atomipy.cell_utils
+          import atomipy.transform
+          import atomipy.build
+          print('All submodule imports OK')
+          "
+
+      - name: Smoke test — bond_angle dispatch (direct + sparse)
+        run: python scripts/test_threshold_logic.py
+
+      - name: Smoke test — import PDB structures
+        run: |
+          python -c "
+          import atomipy as ap
+          for pdb in ['Kaolinite_GII_0.0487.pdb', 'Pyrophyllite_GII_0.071.pdb']:
+              atoms, box = ap.import_pdb(pdb)
+              print(f'{pdb}: {len(atoms)} atoms, box={box}')
+          print('PDB import OK')
+          "
+
+      - name: Smoke test — import GRO structures
+        run: |
+          python -c "
+          import atomipy as ap
+          for gro in ['Kaolinite_GII_0.0487.gro', 'Pyrophyllite_GII_0.071.gro']:
+              atoms, box = ap.import_gro(gro)
+              print(f'{gro}: {len(atoms)} atoms')
+          print('GRO import OK')
+          "
+
+      - name: Smoke test — MINFF atom typing (Kaolinite)
+        run: |
+          python -c "
+          import atomipy as ap
+          atoms, box = ap.import_pdb('Kaolinite_GII_0.0487.pdb')
+          typed = ap.minff(atoms, Box=box)
+          fftypes = set(a.get('fftype', '') for a in typed)
+          print(f'MINFF typed {len(typed)} atoms, fftypes: {sorted(fftypes)}')
+          assert len(typed) > 0, 'No atoms typed'
+          print('MINFF OK')
+          "
+
+      - name: Smoke test — CLAYFF atom typing (Kaolinite)
+        run: |
+          python -c "
+          import atomipy as ap
+          atoms, box = ap.import_pdb('Kaolinite_GII_0.0487.pdb')
+          typed = ap.clayff(atoms, Box=box)
+          fftypes = set(a.get('fftype', '') for a in typed)
+          print(f'CLAYFF typed {len(typed)} atoms, fftypes: {sorted(fftypes)}')
+          assert len(typed) > 0, 'No atoms typed'
+          print('CLAYFF OK')
+          "
+
+      - name: Smoke test — write topology files (ITP, GRO, PDB)
+        run: |
+          python -c "
+          import atomipy as ap, tempfile, os
+          atoms, box = ap.import_pdb('Kaolinite_GII_0.0487.pdb')
+          typed = ap.minff(atoms, Box=box)
+          with tempfile.TemporaryDirectory() as d:
+              ap.write_itp(typed, Box=box, file_path=os.path.join(d, 'out.itp'))
+              ap.write_gro(typed, Box=box, file_path=os.path.join(d, 'out.gro'))
+              ap.write_pdb(typed, Box=box, file_path=os.path.join(d, 'out.pdb'))
+              for f in ['out.itp', 'out.gro', 'out.pdb']:
+                  size = os.path.getsize(os.path.join(d, f))
+                  assert size > 0, f'{f} is empty'
+                  print(f'{f}: {size} bytes OK')
+          print('Write topology OK')
+          "
+
+      - name: Smoke test — cell_utils round-trip (Cell <-> Box_dim)
+        run: |
+          python -c "
+          import atomipy as ap
+          Cell = [5.154, 8.942, 7.391, 90.0, 104.86, 90.0]
+          Box_dim = ap.Cell2Box_dim(Cell)
+          Cell2 = ap.Box_dim2Cell(Box_dim)
+          for a, b in zip(Cell, Cell2):
+              assert abs(a - b) < 1e-4, f'Round-trip mismatch: {a} != {b}'
+          print('Cell <-> Box_dim round-trip OK')
+          "
