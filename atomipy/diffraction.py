@@ -82,6 +82,7 @@ import numpy as np
 from atomipy.transform import direct_cartesian_to_fractional, direct_fractional_to_cartesian
 from .distances import dist_matrix
 from atomipy.cell_utils import Box_dim2Cell, Cell2Box_dim, normalize_box
+from atomipy.element import element
 
 # matplotlib and scipy are now lazy-loaded inside xrd() to save memory
 
@@ -375,11 +376,21 @@ def atomic_scattering_factors(atom_label, wavelength, two_theta, b_iso=0.0):
                 else:
                     break
             
-            # Special cases
-            if element_symbol == 'Sit':
+            # Special cases for common forcefield-specific atom types (e.g. CLAYFF, MINFF)
+            if element_symbol in ['Sit', 'St']:
                 element_symbol = 'Si'
-            elif element_symbol == 'Op' or element_symbol == 'Oh' or element_symbol == 'Ob':
+            elif element_symbol in ['Op', 'Oh', 'Ob', 'Od', 'Oe', 'Ow', 'Owc', 'Owh']:
                 element_symbol = 'O'
+            elif element_symbol in ['Alo', 'Alt', 'Alr', 'Am']:
+                element_symbol = 'Al'
+            elif element_symbol in ['Mgo', 'Mgt']:
+                element_symbol = 'Mg'
+            elif element_symbol in ['Fet', 'Feo']:
+                element_symbol = 'Fe'
+            elif element_symbol in ['Hw', 'Ho', 'He']:
+                element_symbol = 'H'
+            elif element_symbol in ['Cao', 'Cat']:
+                element_symbol = 'Ca'
             
             # Search again with just the element symbol
             for i, row in enumerate(WAASMAIER_KIRFEL_DATA):
@@ -672,6 +683,12 @@ def xrd(atoms, Box, wavelength=1.54187, angle_step=0.02,
     )
     """
     print("Starting XRD calculation...")
+    
+    # Standardize atom types/elements using atomipy.element
+    # We do this on a shallow copy of the list to avoid modifying the original list
+    # but the atom dicts themselves might still be modified. 
+    # For XRD, this is generally desired to ensure correct scattering factors.
+    atoms = element(list(atoms))
 
     if plot:
         try:
@@ -1138,15 +1155,14 @@ def xrd(atoms, Box, wavelength=1.54187, angle_step=0.02,
         
         ax.set_xlim(np.min(exp_twotheta), np.max(exp_twotheta))  # Start from minimum 2θ
         ax.set_ylim(0, 1.15)  # Start from 0 instead of -0.1
-        ax.set_xlabel('Two-theta (degrees)', fontsize=14, fontfamily='Arial')
-        ax.set_ylabel('Normalized intensity', fontsize=14, fontfamily='Arial')
+        ax.set_xlabel('Two-theta (degrees)', fontsize=14)
+        ax.set_ylabel('Normalized intensity', fontsize=14)
         ax.tick_params(labelsize=12)
         ax.grid(True, alpha=0.3)
         ax.axhline(y=0, color='white', linewidth=0)  # Hide the zero line
         
-        # Set Arial font for all text elements
-        plt.rcParams['font.family'] = 'Arial'
-        plt.title('Calculated XRD Pattern', fontsize=16, fontfamily='Arial')
+        # Set font for all text elements
+        plt.title('Calculated XRD Pattern', fontsize=16)
         plt.tight_layout()
         
         if save_output:
