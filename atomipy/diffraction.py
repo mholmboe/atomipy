@@ -749,10 +749,10 @@ def xrd(atoms, Box, wavelength=1.54187, angle_step=0.02,
     # Get atom types
     atom_types = []
     for atom in atoms:
-        if 'type' in atom:
-            atom_types.append(atom['type'])
-        elif 'element' in atom:
+        if 'element' in atom and atom['element']:
             atom_types.append(atom['element'])
+        elif 'type' in atom:
+            atom_types.append(atom['type'])
         else:
             atom_types.append('O')  # Default to oxygen
     
