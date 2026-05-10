@@ -443,40 +443,34 @@ def cif(file_path, expand_symmetry=True):
     Cell = [a, b, c, alpha, beta, gamma]
 
     # ---- Atom sites (fractional coordinates) ----
-    # Try the standard CIF tags; fall back to alternatives
-    label_tag   = '_atom_site_label'
-    symbol_tag  = '_atom_site_type_symbol'
-    fx_tag      = '_atom_site_fract_x'
-    fy_tag      = '_atom_site_fract_y'
-    fz_tag      = '_atom_site_fract_z'
-    occ_tag     = '_atom_site_occupancy'
+    labels  = list(block.find_loop('_atom_site_label'))
+    symbols = list(block.find_loop('_atom_site_type_symbol'))
+    fxs     = list(block.find_loop('_atom_site_fract_x'))
+    fys     = list(block.find_loop('_atom_site_fract_y'))
+    fzs     = list(block.find_loop('_atom_site_fract_z'))
+    occs    = list(block.find_loop('_atom_site_occupancy'))
 
-    # Build a Table from the block for the tags we need
-    tags_wanted = [label_tag, symbol_tag, fx_tag, fy_tag, fz_tag, occ_tag]
-    # Not all CIF files have all fields; figure out which exist
-    tags_present = [t for t in tags_wanted if block.find_value(t) is not None
-                    or block.find([t]) is not None]
+    if not labels or not fxs or not fys or not fzs:
+        raise ValueError(f"CIF file {file_path} is missing essential atom coordinates or labels")
 
-    # Use GEMMI's loop search
-    loop = block.find(tags_wanted[:5])  # At least label + coords
-
+    n_atoms_file = len(labels)
     raw_atoms = []
-    for row in loop:
-        label  = str(row[0]).strip() if row[0] else 'X'
-        symbol = str(row[1]).strip() if len(row) > 1 and row[1] else label
+    for i in range(n_atoms_file):
+        label = labels[i].strip() if labels[i] else 'X'
+        symbol = symbols[i].strip() if symbols and i < len(symbols) and symbols[i] else label
+        
         # Strip charge suffixes like '2+', '3-', digits from symbol
         clean_symbol = ''.join(c for c in symbol if c.isalpha())
         if not clean_symbol:
             clean_symbol = ''.join(c for c in label if c.isalpha())
 
-        fx = _cifval(row[2]) if len(row) > 2 else 0.0
-        fy = _cifval(row[3]) if len(row) > 3 else 0.0
-        fz = _cifval(row[4]) if len(row) > 4 else 0.0
+        fx = _cifval(fxs[i]) if i < len(fxs) else 0.0
+        fy = _cifval(fys[i]) if i < len(fys) else 0.0
+        fz = _cifval(fzs[i]) if i < len(fzs) else 0.0
 
-        # Try to get occupancy from the loop or as a separate column
         occ = 1.0
-        if loop.width() > 5:
-            occ_val = _cifval(row[5])
+        if occs and i < len(occs):
+            occ_val = _cifval(occs[i])
             if occ_val is not None:
                 occ = occ_val
 
