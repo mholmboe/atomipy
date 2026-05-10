@@ -289,19 +289,25 @@ def get_neighbor_list(atoms, Box, cutoff, rmaxH=None, dm_method=None):
     max_cutoff = max(cutoff, rmaxH)
     
     if Box is not None:
+        from .cell_utils import Cell2Box_dim
+        Box_dim = Cell2Box_dim(Box)
         _, Hinv = _images_needed(Box, max_cutoff)
         needs_multiple_images = any(1.0 / np.linalg.norm(Hinv[i]) < 2 * max_cutoff for i in range(3))
+        # Skewed boxes cannot use the sequential MIC of the direct method reliably
+        is_skewed = len(Box_dim) == 9 and any(abs(Box_dim[idx]) > 1e-6 for idx in [5, 7, 8])
     else:
         needs_multiple_images = False
+        is_skewed = False
 
     if dm_method == 'sparse':
         is_sparse = True
     elif dm_method == 'direct':
         is_sparse = False
-        if needs_multiple_images:
+        if needs_multiple_images or is_skewed:
             # Force sparse if we need multiple images (dense NxN matrix can't hold them)
+            # or if the box is skewed (MIC approximations fail)
             is_sparse = True
-    elif n_atoms >= config.SPARSE_THRESHOLD or needs_multiple_images:
+    elif n_atoms >= config.SPARSE_THRESHOLD or needs_multiple_images or is_skewed:
         is_sparse = True
 
     if is_sparse:
