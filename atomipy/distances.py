@@ -14,19 +14,28 @@ def _images_needed(Cell, cutoff):
     """Return (nx, ny, nz) image counts needed to capture all neighbours
     within `cutoff` Angstrom of an atom in the home cell."""
     from .cell_utils import Cell2Box_dim
-    # We need the 3x3 lattice matrix H where rows are a, b, c vectors
-    # Box_dim = [lx, ly, lz, 0, 0, xy, 0, xz, yz]
-    Box_dim = Cell2Box_dim(Cell)
-    lx, ly, lz = Box_dim[0], Box_dim[1], Box_dim[2]
-    xy, xz, yz = Box_dim[5], Box_dim[7], Box_dim[8]
+    
+    Box_dim = np.asarray(Cell2Box_dim(Cell), dtype=float)
+    if len(Box_dim) == 3:
+        # Orthogonal cell: pad to 9 elements with zero off-diagonals
+        lx, ly, lz = Box_dim
+        xy = xz = yz = 0.0
+    elif len(Box_dim) == 9:
+        lx, ly, lz = Box_dim[0], Box_dim[1], Box_dim[2]
+        xy, xz, yz = Box_dim[5], Box_dim[7], Box_dim[8]
+    else:
+        raise ValueError(
+            f"Cell2Box_dim returned unexpected length {len(Box_dim)}; "
+            f"expected 3 or 9"
+        )
     
     H = np.array([
         [lx, 0,  0 ],
         [xy, ly, 0 ],
         [xz, yz, lz]
-    ], dtype=np.float32)
+    ], dtype=np.float64)
     Hinv = np.linalg.inv(H)
-    return tuple(max(1, int(np.ceil(cutoff * np.linalg.norm(Hinv[i])))) for i in range(3))
+    return tuple(max(1, int(np.ceil(cutoff * np.linalg.norm(Hinv[i])))) for i in range(3)), Hinv
 
 def dist_matrix(atoms, Box, cutoff=None):
     """Calculate the distance matrix between atoms following the MATLAB implementation approach.
@@ -40,6 +49,8 @@ def dist_matrix(atoms, Box, cutoff=None):
             - For orthogonal boxes, a 1x3 list [lx, ly, lz] where Box = Box_dim, and Cell would be [lx, ly, lz, 90, 90, 90]
             - For Cell parameters, a 1x6 list [a, b, c, alpha, beta, gamma] (Cell format)
             - For triclinic boxes, a 1x9 list [lx, ly, lz, 0, 0, xy, 0, xz, yz] (GROMACS Box_dim format)
+        cutoff: Optional maximum distance. If provided and Box is too small to hold all images, 
+            it is highly recommended to use get_neighbor_list with dm_method='sparse' instead.
        
     Returns:
         A tuple of four numpy arrays: 
@@ -48,7 +59,7 @@ def dist_matrix(atoms, Box, cutoff=None):
         
     Note:
         This implementation follows the approach in the MATLAB dist_matrix_MATLAB.m function,
-        using per-atom iteration.
+        using per-atom iteration. Dense matrices cannot represent multiple periodic images of the same atom pair.
     """
     
     if Box is None:
@@ -278,8 +289,8 @@ def get_neighbor_list(atoms, Box, cutoff, rmaxH=None, dm_method=None):
     max_cutoff = max(cutoff, rmaxH)
     
     if Box is not None:
-        nx, ny, nz = _images_needed(Box, max_cutoff)
-        needs_multiple_images = (nx > 1 or ny > 1 or nz > 1)
+        _, Hinv = _images_needed(Box, max_cutoff)
+        needs_multiple_images = any(1.0 / np.linalg.norm(Hinv[i]) < 2 * max_cutoff for i in range(3))
     else:
         needs_multiple_images = False
 
@@ -388,6 +399,7 @@ def cell_list_dist_matrix(atoms, Box, cutoff=2.45, rmaxH=1.2, H_type='H'):
     # We use fractional coordinates for easy binning in triclinic systems
     frac_coords = (Hinv @ positions.T).T
     frac_coords = frac_coords % 1.0
+    positions = (H @ frac_coords.T).T  # Wrap positions to principal box
     
     # Cell size should be at least the cutoff
     max_cutoff = max(cutoff, rmaxH)
@@ -428,7 +440,7 @@ def cell_list_dist_matrix(atoms, Box, cutoff=2.45, rmaxH=1.2, H_type='H'):
     
     # 27 neighbors including self by default, but expand if needed
     if len(Box_dim) > 0:  # is_periodic
-        nx_img, ny_img, nz_img = _images_needed(Cell, max_cutoff)
+        (nx_img, ny_img, nz_img), _ = _images_needed(Cell, max_cutoff)
     else:
         nx_img, ny_img, nz_img = 1, 1, 1
         
@@ -586,6 +598,7 @@ def neighbor_list_fast(atoms, Box, cutoff=2.45, rmaxH=None, H_type='H'):
         Hinv = np.linalg.inv(H)
         frac_coords = (Hinv @ positions.T).T
         frac_coords = frac_coords % 1.0
+        positions = (H @ frac_coords.T).T  # Wrap positions to principal box
         is_periodic = True
 
     max_cutoff = max(cutoff, rmaxH)
@@ -615,7 +628,7 @@ def neighbor_list_fast(atoms, Box, cutoff=2.45, rmaxH=None, H_type='H'):
     dz_list = []
     
     if is_periodic:
-        nx_img, ny_img, nz_img = _images_needed(Box, max_cutoff)
+        (nx_img, ny_img, nz_img), _ = _images_needed(Box, max_cutoff)
     else:
         nx_img, ny_img, nz_img = 1, 1, 1
         
