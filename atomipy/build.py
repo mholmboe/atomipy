@@ -991,6 +991,8 @@ def fuse_atoms(atoms, Box, rmax=0.5, criteria='average'):
     if n_original <= 1:
         return [dict(a) for a in atoms]
 
+    fused_atoms = copy.deepcopy(atoms)
+
     # Use sparse neighbor list for efficiency
     # Use dispatcher
     i_idx, j_idx, dists_sparse, dx_s, dy_s, dz_s = get_neighbor_list(atoms, Box, cutoff=rmax)
