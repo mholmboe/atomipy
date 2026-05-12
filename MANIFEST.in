@@ -1,0 +1,4 @@
+recursive-include atomipy/data *.cif *.json *.csv *.txt
+recursive-include atomipy/ffparams *.json *.itp *.md
+recursive-include atomipy/structures *.cif *.pdb *.gro
+include atomipy/data/bvparm2020.cif
