@@ -363,7 +363,7 @@ def substitute(atoms, Box, num_oct_subst, o1_type, o2_type, min_o2o2_dist,
         rand_t1_index = np.random.permutation(len(t1_atoms))
         
         # Get sparse neighbor list for T1 sites
-        i_idx_t1, j_idx_t1, dists_t1, _, _, _ = neighbor_list_fast(t1_atoms, Box, cutoff=min_t2t2_dist)
+        i_idx_t1, j_idx_t1, dists_t1, _, _, _ = get_neighbor_list(t1_atoms, Box, cutoff=min_t2t2_dist)
         t1_neighbors = [set() for _ in range(len(t1_atoms))]
         for k in range(len(i_idx_t1)):
             idx1, idx2 = i_idx_t1[k], j_idx_t1[k]

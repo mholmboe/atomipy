@@ -13,9 +13,9 @@ except ImportError:
 def _images_needed(Cell, cutoff):
     """Return (nx, ny, nz) image counts needed to capture all neighbours
     within `cutoff` Angstrom of an atom in the home cell."""
-    from .cell_utils import Cell2Box_dim
+    from .cell_utils import normalize_box
     
-    Box_dim = np.asarray(Cell2Box_dim(Cell), dtype=float)
+    Box_dim, _ = normalize_box(Cell)
     if len(Box_dim) == 3:
         # Orthogonal cell: pad to 9 elements with zero off-diagonals
         lx, ly, lz = Box_dim
@@ -25,7 +25,7 @@ def _images_needed(Cell, cutoff):
         xy, xz, yz = Box_dim[5], Box_dim[7], Box_dim[8]
     else:
         raise ValueError(
-            f"Cell2Box_dim returned unexpected length {len(Box_dim)}; "
+            f"normalize_box returned unexpected length {len(Box_dim)}; "
             f"expected 3 or 9"
         )
     
@@ -289,8 +289,8 @@ def get_neighbor_list(atoms, Box, cutoff, rmaxH=None, dm_method=None):
     max_cutoff = max(cutoff, rmaxH)
     
     if Box is not None:
-        from .cell_utils import Cell2Box_dim
-        Box_dim = Cell2Box_dim(Box)
+        from .cell_utils import normalize_box
+        Box_dim, _ = normalize_box(Box)
         _, Hinv = _images_needed(Box, max_cutoff)
         needs_multiple_images = any(1.0 / np.linalg.norm(Hinv[i]) < 2 * max_cutoff for i in range(3))
         # Skewed boxes cannot use the sequential MIC of the direct method reliably
