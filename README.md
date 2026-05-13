@@ -1,4 +1,4 @@
-# atomipy: The atom library in Python
+# atomipy: the atom library in Python
 
 A modular Python toolbox for handling and analyzing molecular structures, particularly for mineral slabs with periodic boundary conditions, PBC. This toolbox is a light version of the MATLAB [**atom**](https://github.com/mholmboe/atom) library and can in particular be used to generate molecular topology files for the [**MINFF**](https://github.com/mholmboe/minff) forcefield with a streamlined Python interface. An online molecular system and topology builder running [**www.atomipy.io**](https://www.atomipy.io) is now available. Test cases for hydrated montmorillonite using the general and tailored MINFF parameters (angle force constant 500 kJ/mol/rad²) can be found in the [**example cases of the atom Toolbox**](https://github.com/mholmboe/atom/tree/master/ATOM_scripts_lecture/MINFF).
 
