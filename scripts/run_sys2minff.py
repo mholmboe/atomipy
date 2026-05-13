@@ -41,8 +41,8 @@ if MIN:
     MIN = ap.update(MIN, molid=1)
 
 # Assemble system robustly (preserve all atoms)
-# Order: Ions/Other first, then Mineral, then Water
-System = ap.update(OTHER, MIN, SOL)
+# Order: Mineral first, then Ions/Other, then Water
+System = ap.update(MIN, OTHER, SOL)
 
 # Assign MINFF atom types to the entire system
 System = ap.minff(System, Box_dim)
