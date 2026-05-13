@@ -28,6 +28,10 @@ atoms, Box_dim = ap.import_auto(sys.argv[1])
 atoms = ap.element(atoms)
 
 # Separate water, ions, and minerals
+# Tag with original indices to preserve the user's custom layout order
+for idx, a in enumerate(atoms):
+    a['_orig_index'] = idx
+
 SOL, noSOL = ap.find_H2O(atoms, Box_dim)
 # Standardize resnames
 noSOL = ap.assign_resname(noSOL)
@@ -41,8 +45,13 @@ if MIN:
     MIN = ap.update(MIN, molid=1)
 
 # Assemble system robustly (preserve all atoms)
-# Order: Mineral first, then Ions/Other, then Water
 System = ap.update(MIN, OTHER, SOL)
+
+# Restore original layout order
+System = sorted(System, key=lambda a: a.get('_orig_index', 0))
+for a in System:
+    a.pop('_orig_index', None)
+System = ap.update(System)
 
 # Assign MINFF atom types to the entire system
 System = ap.minff(System, Box_dim)
