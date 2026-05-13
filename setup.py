@@ -5,6 +5,21 @@ setup(
     name="atomipy",
     version="0.95",
     packages=find_packages(),
+    include_package_data=True,
+    package_data={
+        "atomipy": [
+            "data/*.cif",
+            "data/*.json",
+            "data/*.csv",
+            "data/*.txt",
+            "ffparams/**/*.json",
+            "ffparams/**/*.itp",
+            "ffparams/**/*.md",
+            "structures/**/*.cif",
+            "structures/**/*.pdb",
+            "structures/**/*.gro",
+        ],
+    },
     install_requires=[
         "numpy>=1.18.0",
         "tqdm>=4.45.0",

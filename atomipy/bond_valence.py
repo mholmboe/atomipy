@@ -357,12 +357,74 @@ def compute_bvs(
             continue
         bonds.append((i, j, dist))
 
-    # Precompute expected oxidation states
+    # Initial guess for expected oxidation states
     expected: List[Optional[int]] = []
     for atom in atoms_with_bonds:
         el = atom.get("element")
         ox_hint = oxidation_states.get(el) if el else None
         expected.append(_infer_oxidation(atom, ox_hint))
+
+    ALLOWED_STATES = {
+        "Fe": [2, 3], "Mn": [2, 3, 4], "Ti": [2, 3, 4],
+        "V": [2, 3, 4, 5], "Cr": [2, 3, 6], "Cu": [1, 2],
+        "Ni": [2, 3], "Co": [2, 3], "Sn": [2, 4], "Pb": [2, 4],
+        "O": [-2], "F": [-1], "Cl": [-1], "S": [-2, 4, 6],
+        "Al": [3], "Si": [4], "Mg": [2], "Ca": [2], "Na": [1],
+        "K": [1], "Li": [1], "H": [1, -1],
+    }
+
+    # Build a quick adjacency lookup for the refinement pass
+    atom_bonds = [[] for _ in range(n_atoms)]
+    for i, j, dist in bonds:
+        if i >= n_atoms or j >= n_atoms:
+            continue
+        atom_bonds[i].append((j, dist))
+        atom_bonds[j].append((i, dist))
+
+    # Refine oxidation states based on BVS
+    for i in range(n_atoms):
+        atom_i = atoms_with_bonds[i]
+        el_i = atom_i.get("element") or atom_i.get("type") or "X"
+        ox_hint = oxidation_states.get(el_i) if el_i else None
+
+        # Do not overwrite if the user explicitly provided the state
+        if ox_hint is not None or "ox" in atom_i:
+            continue
+
+        candidates = ALLOWED_STATES.get(el_i)
+        if not candidates:
+            c_set = set()
+            for (el1, ox1, el2, ox2) in params.keys():
+                if el1 == el_i and ox1 != 9: c_set.add(ox1)
+                if el2 == el_i and ox2 != 9: c_set.add(ox2)
+            if c_set:
+                candidates = sorted(list(c_set))
+            else:
+                candidates = [expected[i]]
+
+        best_ox = expected[i]
+        best_delta = float('inf')
+
+        for ox_i in candidates:
+            bvs_i = 0.0
+            for j, dist in atom_bonds[i]:
+                atom_j = atoms_with_bonds[j]
+                el_j = atom_j.get("element") or atom_j.get("type") or "X"
+                ox_j = expected[j]
+                
+                param = _lookup_param(params, el_i, ox_i, el_j, ox_j)
+                if param:
+                    bvs_i += bond_valence(dist, param[0], param[1])
+                else:
+                    # fallback if parameter doesn't exist
+                    bvs_i += bond_valence(dist, 0.0, default_b)
+
+            delta = abs(bvs_i - abs(ox_i)) if ox_i is not None else float('inf')
+            if delta < best_delta:
+                best_delta = delta
+                best_ox = ox_i
+
+        expected[i] = best_ox
 
     # Accumulate bond valences
     for i, j, dist in bonds:
