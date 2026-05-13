@@ -8,10 +8,36 @@ try:
     from tqdm import tqdm
     has_tqdm = True
 except ImportError:
-    print("Note: Install tqdm package for progress bars (pip install tqdm)")
     has_tqdm = False
 
-def dist_matrix(atoms, Box):
+def _images_needed(Cell, cutoff):
+    """Return (nx, ny, nz) image counts needed to capture all neighbours
+    within `cutoff` Angstrom of an atom in the home cell."""
+    from .cell_utils import normalize_box
+    
+    Box_dim, _ = normalize_box(Cell)
+    if len(Box_dim) == 3:
+        # Orthogonal cell: pad to 9 elements with zero off-diagonals
+        lx, ly, lz = Box_dim
+        xy = xz = yz = 0.0
+    elif len(Box_dim) == 9:
+        lx, ly, lz = Box_dim[0], Box_dim[1], Box_dim[2]
+        xy, xz, yz = Box_dim[5], Box_dim[7], Box_dim[8]
+    else:
+        raise ValueError(
+            f"normalize_box returned unexpected length {len(Box_dim)}; "
+            f"expected 3 or 9"
+        )
+    
+    H = np.array([
+        [lx, 0,  0 ],
+        [xy, ly, 0 ],
+        [xz, yz, lz]
+    ], dtype=np.float64)
+    Hinv = np.linalg.inv(H)
+    return tuple(max(1, int(np.ceil(cutoff * np.linalg.norm(Hinv[i])))) for i in range(3)), Hinv
+
+def dist_matrix(atoms, Box, cutoff=None):
     """Calculate the distance matrix between atoms following the MATLAB implementation approach.
     
     This function closely mimics the behavior of the MATLAB dist_matrix_MATLAB.m function,
@@ -23,6 +49,8 @@ def dist_matrix(atoms, Box):
             - For orthogonal boxes, a 1x3 list [lx, ly, lz] where Box = Box_dim, and Cell would be [lx, ly, lz, 90, 90, 90]
             - For Cell parameters, a 1x6 list [a, b, c, alpha, beta, gamma] (Cell format)
             - For triclinic boxes, a 1x9 list [lx, ly, lz, 0, 0, xy, 0, xz, yz] (GROMACS Box_dim format)
+        cutoff: Optional maximum distance. If provided and Box is too small to hold all images, 
+            it is highly recommended to use get_neighbor_list with dm_method='sparse' instead.
        
     Returns:
         A tuple of four numpy arrays: 
@@ -31,7 +59,7 @@ def dist_matrix(atoms, Box):
         
     Note:
         This implementation follows the approach in the MATLAB dist_matrix_MATLAB.m function,
-        using per-atom iteration.
+        using per-atom iteration. Dense matrices cannot represent multiple periodic images of the same atom pair.
     """
     
     if Box is None:
@@ -258,11 +286,28 @@ def get_neighbor_list(atoms, Box, cutoff, rmaxH=None, dm_method=None):
     
     # Decision logic
     is_sparse = False
+    max_cutoff = max(cutoff, rmaxH)
+    
+    if Box is not None:
+        from .cell_utils import normalize_box
+        Box_dim, _ = normalize_box(Box)
+        _, Hinv = _images_needed(Box, max_cutoff)
+        needs_multiple_images = any(1.0 / np.linalg.norm(Hinv[i]) < 2 * max_cutoff for i in range(3))
+        # Skewed boxes cannot use the sequential MIC of the direct method reliably
+        is_skewed = len(Box_dim) == 9 and any(abs(Box_dim[idx]) > 1e-6 for idx in [5, 7, 8])
+    else:
+        needs_multiple_images = False
+        is_skewed = False
+
     if dm_method == 'sparse':
         is_sparse = True
     elif dm_method == 'direct':
         is_sparse = False
-    elif n_atoms >= config.SPARSE_THRESHOLD:
+        if needs_multiple_images or is_skewed:
+            # Force sparse if we need multiple images (dense NxN matrix can't hold them)
+            # or if the box is skewed (MIC approximations fail)
+            is_sparse = True
+    elif n_atoms >= config.SPARSE_THRESHOLD or needs_multiple_images or is_skewed:
         is_sparse = True
 
     if is_sparse:
@@ -360,6 +405,7 @@ def cell_list_dist_matrix(atoms, Box, cutoff=2.45, rmaxH=1.2, H_type='H'):
     # We use fractional coordinates for easy binning in triclinic systems
     frac_coords = (Hinv @ positions.T).T
     frac_coords = frac_coords % 1.0
+    positions = (H @ frac_coords.T).T  # Wrap positions to principal box
     
     # Cell size should be at least the cutoff
     max_cutoff = max(cutoff, rmaxH)
@@ -398,8 +444,16 @@ def cell_list_dist_matrix(atoms, Box, cutoff=2.45, rmaxH=1.2, H_type='H'):
     bond_list = []
     dist_list = []
     
-    # 27 neighbors including self
-    offsets = np.array(np.meshgrid([-1, 0, 1], [-1, 0, 1], [-1, 0, 1])).T.reshape(-1, 3)
+    # 27 neighbors including self by default, but expand if needed
+    if len(Box_dim) > 0:  # is_periodic
+        (nx_img, ny_img, nz_img), _ = _images_needed(Cell, max_cutoff)
+    else:
+        nx_img, ny_img, nz_img = 1, 1, 1
+        
+    rx = np.arange(-nx_img, nx_img + 1)
+    ry = np.arange(-ny_img, ny_img + 1)
+    rz = np.arange(-nz_img, nz_img + 1)
+    offsets = np.array(np.meshgrid(rx, ry, rz)).T.reshape(-1, 3)
     
     # We only need to check half the neighbors to avoid double counting, 
     # but with PBC it's safer to check all or use a specific subset.
@@ -420,15 +474,20 @@ def cell_list_dist_matrix(atoms, Box, cutoff=2.45, rmaxH=1.2, H_type='H'):
                     i = next_atom[i]
                 atoms1 = np.array(atoms1, dtype=np.int32)
                 
-                # Check unique neighbor cells (avoid redundant images if n_cells is small)
-                neighbor_cells = set()
                 for off in offsets:
-                    nx = (cx + off[0]) % n_cells[0]
-                    ny = (cy + off[1]) % n_cells[1]
-                    nz = (cz_idx + off[2]) % n_cells[2]
-                    neighbor_cells.add(nx * (n_cells[1] * n_cells[2]) + ny * n_cells[2] + nz)
-                
-                for c2 in neighbor_cells:
+                    nx_unwrapped = (cx + off[0])
+                    ny_unwrapped = (cy + off[1])
+                    nz_unwrapped = (cz_idx + off[2])
+                    
+                    nx_wrapped = nx_unwrapped % n_cells[0]
+                    ny_wrapped = ny_unwrapped % n_cells[1]
+                    nz_wrapped = nz_unwrapped % n_cells[2]
+                    
+                    shift_x = np.floor(nx_unwrapped / n_cells[0])
+                    shift_y = np.floor(ny_unwrapped / n_cells[1])
+                    shift_z = np.floor(nz_unwrapped / n_cells[2])
+                    
+                    c2 = nx_wrapped * (n_cells[1] * n_cells[2]) + ny_wrapped * n_cells[2] + nz_wrapped
                     j = head[c2]
                     if j == -1: continue
                     
@@ -447,11 +506,9 @@ def cell_list_dist_matrix(atoms, Box, cutoff=2.45, rmaxH=1.2, H_type='H'):
                     # p1: (N1, 3), p2: (N2, 3) -> diff: (N1, N2, 3)
                     diff = p2[np.newaxis, :, :] - p1[:, np.newaxis, :]
                     
-                    # Periodic wrap in Cartesian using H matrix
-                    # Easiest way to wrap is in fractional space
-                    diff_frac = (Hinv @ diff.reshape(-1, 3).T).T
-                    diff_frac = diff_frac - np.round(diff_frac)
-                    diff_cart = (H @ diff_frac.T).T.reshape(len(atoms1), len(atoms2), 3)
+                    shift_frac = np.array([shift_x, shift_y, shift_z], dtype=np.float32)
+                    shift_cart = H @ shift_frac
+                    diff_cart = diff + shift_cart
                     
                     d2 = np.sum(diff_cart**2, axis=2)
                     d = np.sqrt(d2)
@@ -547,6 +604,7 @@ def neighbor_list_fast(atoms, Box, cutoff=2.45, rmaxH=None, H_type='H'):
         Hinv = np.linalg.inv(H)
         frac_coords = (Hinv @ positions.T).T
         frac_coords = frac_coords % 1.0
+        positions = (H @ frac_coords.T).T  # Wrap positions to principal box
         is_periodic = True
 
     max_cutoff = max(cutoff, rmaxH)
@@ -575,7 +633,15 @@ def neighbor_list_fast(atoms, Box, cutoff=2.45, rmaxH=None, H_type='H'):
     dy_list = []
     dz_list = []
     
-    offsets = np.array(np.meshgrid([-1, 0, 1], [-1, 0, 1], [-1, 0, 1])).T.reshape(-1, 3)
+    if is_periodic:
+        (nx_img, ny_img, nz_img), _ = _images_needed(Box, max_cutoff)
+    else:
+        nx_img, ny_img, nz_img = 1, 1, 1
+        
+    rx = np.arange(-nx_img, nx_img + 1)
+    ry = np.arange(-ny_img, ny_img + 1)
+    rz = np.arange(-nz_img, nz_img + 1)
+    offsets = np.array(np.meshgrid(rx, ry, rz)).T.reshape(-1, 3)
     
     # Use a progress iterator for the outer x-dimension loop
     for cx in get_progress_iterator(range(n_cells[0]), desc="Finding sparse dists", unit="CellX"):
@@ -592,24 +658,28 @@ def neighbor_list_fast(atoms, Box, cutoff=2.45, rmaxH=None, H_type='H'):
                     curr = next_atom[curr]
                 atoms1 = np.array(atoms1, dtype=np.int32)
                 
-                # Check unique neighbor cells (avoid redundant images if n_cells is small)
-                neighbor_cells = set()
+                # We iterate over offsets directly because multiple offsets might wrap 
+                # to the same cell but represent DIFFERENT periodic images.
                 for off in offsets:
-                    nx = (cx + off[0])
-                    ny = (cy + off[1])
-                    nz = (cz_idx + off[2])
+                    nx_unwrapped = (cx + off[0])
+                    ny_unwrapped = (cy + off[1])
+                    nz_unwrapped = (cz_idx + off[2])
                     
                     if is_periodic:
-                        nx %= n_cells[0]
-                        ny %= n_cells[1]
-                        nz %= n_cells[2]
+                        nx_wrapped = nx_unwrapped % n_cells[0]
+                        ny_wrapped = ny_unwrapped % n_cells[1]
+                        nz_wrapped = nz_unwrapped % n_cells[2]
+                        
+                        shift_x = np.floor(nx_unwrapped / n_cells[0])
+                        shift_y = np.floor(ny_unwrapped / n_cells[1])
+                        shift_z = np.floor(nz_unwrapped / n_cells[2])
                     else:
-                        if nx < 0 or nx >= n_cells[0] or ny < 0 or ny >= n_cells[1] or nz < 0 or nz >= n_cells[2]:
+                        if nx_unwrapped < 0 or nx_unwrapped >= n_cells[0] or ny_unwrapped < 0 or ny_unwrapped >= n_cells[1] or nz_unwrapped < 0 or nz_unwrapped >= n_cells[2]:
                             continue
+                        nx_wrapped, ny_wrapped, nz_wrapped = nx_unwrapped, ny_unwrapped, nz_unwrapped
+                        shift_x = shift_y = shift_z = 0.0
                     
-                    neighbor_cells.add(nx * (n_cells[1] * n_cells[2]) + ny * n_cells[2] + nz)
-                
-                for c2 in neighbor_cells:
+                    c2 = nx_wrapped * (n_cells[1] * n_cells[2]) + ny_wrapped * n_cells[2] + nz_wrapped
                     j_head = head[c2]
                     if j_head == -1: continue
                     
@@ -626,9 +696,9 @@ def neighbor_list_fast(atoms, Box, cutoff=2.45, rmaxH=None, H_type='H'):
                     diff = p2[np.newaxis, :, :] - p1[:, np.newaxis, :]
                     
                     if is_periodic:
-                        diff_frac = (Hinv @ diff.reshape(-1, 3).T).T
-                        diff_frac = diff_frac - np.round(diff_frac)
-                        diff_cart = (H @ diff_frac.T).T.reshape(len(atoms1), len(atoms2), 3)
+                        shift_frac = np.array([shift_x, shift_y, shift_z], dtype=np.float32)
+                        shift_cart = H @ shift_frac
+                        diff_cart = diff + shift_cart
                     else:
                         diff_cart = diff
 

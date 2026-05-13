@@ -315,6 +315,38 @@ def xyz(file_path):
     return atoms, Cell
 
 
+def _strip_duplicate_tags(text):
+    """Keep only the first occurrence of each single-value CIF tag in a block."""
+    lines = text.split('\n')
+    seen_tags = set()
+    cleaned = []
+    in_loop = False
+    for line in lines:
+        stripped = line.strip()
+        if stripped.lower() == 'loop_':
+            in_loop = True
+            cleaned.append(line)
+            continue
+            
+        if stripped.startswith('_'):
+            parts = stripped.split()
+            tag = parts[0]
+            
+            # If it's just `_tag` and we are in a loop, it's a loop header.
+            if len(parts) == 1 and in_loop:
+                cleaned.append(line)
+                continue
+                
+            in_loop = False
+            
+            if tag in seen_tags:
+                continue
+            seen_tags.add(tag)
+            cleaned.append(line)
+        else:
+            cleaned.append(line)
+    return '\n'.join(cleaned)
+
 def cif(file_path, expand_symmetry=True):
     """Import atoms from a CIF or mmCIF file using GEMMI.
 
@@ -425,149 +457,77 @@ def cif(file_path, expand_symmetry=True):
     # ------------------------------------------------------------------
     # Small-molecule / mineral CIF
     # ------------------------------------------------------------------
-    doc = gemmi.cif.read_file(file_path)
+    import pathlib
+    try:
+        doc = gemmi.cif.read_file(file_path)
+    except RuntimeError as e:
+        if "duplicate tag" in str(e).lower():
+            text = pathlib.Path(file_path).read_text(encoding="utf-8", errors="replace")
+            doc = gemmi.cif.read_string(_strip_duplicate_tags(text))
+        else:
+            raise
+
     block = doc.sole_block()
 
-    # ---- Cell parameters ----
-    a     = _cifval(block.find_value('_cell_length_a'))
-    b     = _cifval(block.find_value('_cell_length_b'))
-    c     = _cifval(block.find_value('_cell_length_c'))
-    alpha = _cifval(block.find_value('_cell_angle_alpha'))
-    beta  = _cifval(block.find_value('_cell_angle_beta'))
-    gamma = _cifval(block.find_value('_cell_angle_gamma'))
+    # Use gemmi's small-structure interface: it infers element from
+    # _atom_site_label when _atom_site_type_symbol is absent (common in
+    # AMCSD CIFs) and handles symmetry expansion natively.
+    ss = gemmi.make_small_structure_from_block(block)
 
-    if any(v is None for v in [a, b, c, alpha, beta, gamma]):
-        raise ValueError(
-            f"CIF file {file_path} is missing one or more _cell_* fields"
-        )
-    Cell = [a, b, c, alpha, beta, gamma]
+    # Some entries leave the element field empty; recover it from the
+    # label as a last resort.
+    for site in ss.sites:
+        if not site.element or site.element.name in ("X", ""):
+            letters = "".join(ch for ch in site.label if ch.isalpha())
+            if letters:
+                try:
+                    site.element = gemmi.Element(letters[:2].capitalize())
+                except Exception:
+                    try:
+                        site.element = gemmi.Element(letters[:1].upper())
+                    except Exception:
+                        pass
 
-    # ---- Atom sites (fractional coordinates) ----
-    # Try the standard CIF tags; fall back to alternatives
-    label_tag   = '_atom_site_label'
-    symbol_tag  = '_atom_site_type_symbol'
-    fx_tag      = '_atom_site_fract_x'
-    fy_tag      = '_atom_site_fract_y'
-    fz_tag      = '_atom_site_fract_z'
-    occ_tag     = '_atom_site_occupancy'
+    cell = ss.cell
+    Cell = [cell.a, cell.b, cell.c, cell.alpha, cell.beta, cell.gamma]
 
-    # Build a Table from the block for the tags we need
-    tags_wanted = [label_tag, symbol_tag, fx_tag, fy_tag, fz_tag, occ_tag]
-    # Not all CIF files have all fields; figure out which exist
-    tags_present = [t for t in tags_wanted if block.find_value(t) is not None
-                    or block.find([t]) is not None]
-
-    # Use GEMMI's loop search
-    loop = block.find(tags_wanted[:5])  # At least label + coords
-
-    raw_atoms = []
-    for row in loop:
-        label  = str(row[0]).strip() if row[0] else 'X'
-        symbol = str(row[1]).strip() if len(row) > 1 and row[1] else label
-        # Strip charge suffixes like '2+', '3-', digits from symbol
-        clean_symbol = ''.join(c for c in symbol if c.isalpha())
-        if not clean_symbol:
-            clean_symbol = ''.join(c for c in label if c.isalpha())
-
-        fx = _cifval(row[2]) if len(row) > 2 else 0.0
-        fy = _cifval(row[3]) if len(row) > 3 else 0.0
-        fz = _cifval(row[4]) if len(row) > 4 else 0.0
-
-        # Try to get occupancy from the loop or as a separate column
-        occ = 1.0
-        if loop.width() > 5:
-            occ_val = _cifval(row[5])
-            if occ_val is not None:
-                occ = occ_val
-
-        raw_atoms.append({
-            'label':   label,
-            'element': clean_symbol,
-            'xfrac':   fx,
-            'yfrac':   fy,
-            'zfrac':   fz,
-            'occupancy': occ,
-        })
-
-    n_asym = len(raw_atoms)
-
-    # ---- Symmetry expansion (asymmetric unit -> full unit cell) ----
+    # Expand to full unit cell when requested
     if expand_symmetry:
-        # Find space group
-        sg_str = (block.find_value('_symmetry_space_group_name_H-M')
-                  or block.find_value('_space_group_name_H-M_alt')
-                  or block.find_value('_symmetry_space_group_name_Hall'))
+        sites_iter = ss.get_all_unit_cell_sites()
+    else:
+        sites_iter = ss.sites
 
-        if sg_str and sg_str not in ('?', '.'):
-            sg_str = sg_str.strip("'\" ")
-            try:
-                sg = gemmi.SpaceGroup(sg_str)
-            except ValueError:
-                print(f"Warning: Could not recognise space group '{sg_str}', "
-                      f"assuming P 1 (no symmetry expansion)")
-                sg = gemmi.SpaceGroup('P 1')
-        else:
-            sg = gemmi.SpaceGroup('P 1')
-
-        ops = sg.operations()
-        expanded = []
-        seen = set()
-        for atom in raw_atoms:
-            for op in ops:
-                fxyz = op.apply_to_xyz(
-                    [atom['xfrac'], atom['yfrac'], atom['zfrac']]
-                )
-                # Wrap into [0, 1)
-                fxyz = [f % 1.0 for f in fxyz]
-                # De-duplicate within tolerance
-                key = (
-                    atom['element'],
-                    round(fxyz[0], 4),
-                    round(fxyz[1], 4),
-                    round(fxyz[2], 4),
-                )
-                if key not in seen:
-                    seen.add(key)
-                    new = dict(atom)
-                    new['xfrac'], new['yfrac'], new['zfrac'] = fxyz
-                    expanded.append(new)
-        raw_atoms = expanded
-
-    # ---- Build atomipy atom list ----
     atoms = []
-    for i, ra in enumerate(raw_atoms, 1):
+    for idx, site in enumerate(sites_iter, start=1):
+        # Cartesian coords from fractional via gemmi's orthogonalize
+        cart = cell.orthogonalize(gemmi.Fractional(
+            site.fract.x, site.fract.y, site.fract.z))
+        element_name = site.element.name if site.element else ""
+        label = site.label or element_name or "X"
         atom = {
-            'index':     i,
-            'molid':     1,
-            'resname':   'MIN',
-            'type':      ra['label'],
-            'fftype':    ra['label'],
-            'element':   ra['element'],
-            'xfrac':     ra['xfrac'],
-            'yfrac':     ra['yfrac'],
-            'zfrac':     ra['zfrac'],
-            'x':         0.0,
-            'y':         0.0,
-            'z':         0.0,
-            'occupancy': ra.get('occupancy', 1.0),
-            'neigh': [], 'bonds': [], 'angles': [],
+            "index":   idx,
+            "molid":   1,
+            "resname": "MIN",
+            "type":    label,
+            "fftype":  label,
+            "element": element_name,
+            "x":       cart.x,
+            "y":       cart.y,
+            "z":       cart.z,
+            "xfrac":   site.fract.x - np.floor(site.fract.x),
+            "yfrac":   site.fract.y - np.floor(site.fract.y),
+            "zfrac":   site.fract.z - np.floor(site.fract.z),
+            "occupancy": float(site.occ) if site.occ else 1.0,
+            "neigh": [], "bonds": [], "angles": [],
         }
         atoms.append(atom)
 
-    # Convert fractional -> Cartesian using existing transform module
-    fractional_to_cartesian(atoms=atoms, Box=Cell, add_to_atoms=True)
-
-    # Ensure element field is properly set
-    original_types = [atom.get('type') for atom in atoms]
+    # Fill in element field if missing (e.g. weird labels)
     element_module.element(atoms)
-    for atom, orig_type in zip(atoms, original_types):
-        if orig_type:
-            atom['type'] = orig_type
 
-    print(f"Imported {len(atoms)} atoms from CIF "
-          f"(asymmetric unit: {n_asym}, expand_symmetry={expand_symmetry}, "
-          f"Cell: {a:.3f} {b:.3f} {c:.3f} "
-          f"{alpha:.1f} {beta:.1f} {gamma:.1f})")
+    print(f"Imported {len(atoms)} atoms from CIF (asymmetric unit: {len(ss.sites)}, "
+          f"expand_symmetry={expand_symmetry}, Cell: {Cell[0]:.3f} {Cell[1]:.3f} "
+          f"{Cell[2]:.3f} {Cell[3]:.1f} {Cell[4]:.1f} {Cell[5]:.1f})")
 
     return atoms, Cell
 

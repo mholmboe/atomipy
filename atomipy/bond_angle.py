@@ -2,7 +2,7 @@ import numpy as np
 from .distances import get_neighbor_list
 from . import config
 
-def bond_angle(atoms, Box, rmaxH=1.2, rmaxM=2.45, same_element_bonds=False, same_molecule_only=True, calculate_coordination=True, neighbor_element=None, dm_method=None):
+def bond_angle(atoms, Box, rmaxH=1.2, rmaxM=2.45, same_element_bonds=False, same_molecule_only=True, calculate_coordination=True, neighbor_element=None, dm_method=None, verbose=True):
     """
     Parameters
     ----------
@@ -28,6 +28,8 @@ def bond_angle(atoms, Box, rmaxH=1.2, rmaxM=2.45, same_element_bonds=False, same
         - 'sparse': Force O(N) memory-efficient neighbor list.
         - 'fast_cl': Force O(N) memory-intensive Full Cell List.
         - None (default): Auto-select based on `config.SPARSE_THRESHOLD`.
+    verbose : bool, optional
+        If True, print the number of identified bonds (default: True).
 
     Performance Note
     ----------------
@@ -105,7 +107,8 @@ def bond_angle(atoms, Box, rmaxH=1.2, rmaxM=2.45, same_element_bonds=False, same
             neighbors_vecs[i].append((j, dx_ij, dy_ij, dz_ij))
             neighbors_vecs[j].append((i, -dx_ij, -dy_ij, -dz_ij))
 
-    print(f"  Identified {len(bond_pairs)} valid bonds")
+    if verbose:
+        print(f"  Identified {len(bond_pairs)} valid bonds")
 
     # Calculate angles
     angle_data = []
@@ -181,7 +184,7 @@ def bond_angle(atoms, Box, rmaxH=1.2, rmaxM=2.45, same_element_bonds=False, same
 
 
 def bond_angle_dihedral(atoms, Box, rmaxH=1.2, rmaxM=2.45, same_element_bonds=False,
-                        same_molecule_only=True, calculate_coordination=True, neighbor_element=None):
+                        same_molecule_only=True, calculate_coordination=True, neighbor_element=None, verbose=True):
     """
     Calculate bonds, angles, dihedrals, and 1-4 pair interactions.
 
@@ -211,6 +214,8 @@ def bond_angle_dihedral(atoms, Box, rmaxH=1.2, rmaxM=2.45, same_element_bonds=Fa
         If True, add coordination numbers to each atom dictionary (default: True).
     neighbor_element : str, optional
         If provided, coordination counts only neighbors of this element.
+    verbose : bool, optional
+        If True, print the number of identified bonds (default: True).
 
     Returns
     -------
@@ -245,6 +250,7 @@ def bond_angle_dihedral(atoms, Box, rmaxH=1.2, rmaxM=2.45, same_element_bonds=Fa
         same_molecule_only=same_molecule_only,
         calculate_coordination=calculate_coordination,
         neighbor_element=neighbor_element,
+        verbose=verbose,
     )
 
     Bond_index = np.atleast_2d(np.array(Bond_index))
