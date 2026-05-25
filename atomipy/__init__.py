@@ -48,10 +48,8 @@ write_traj = write_conf.write_traj
 write_auto = write_conf.auto
 
 # Topology file generation
-from . import write_top
-write_itp = write_top.itp
-write_psf = write_top.psf
-write_lmp = write_top.lmp
+from .write_top import itp as write_itp, psf as write_psf, lmp as write_lmp, top as write_top_func
+write_top = write_top_func
 # Itp file import helper
 from .import_top import import_itp as import_itp_topology
 
@@ -171,6 +169,12 @@ try:
 except ImportError:
     pass
 
+# ===== OpenMM Interface =====
+try:
+    from .openmm_interface import load_minff_into_openmm
+except ImportError:
+    pass
+
 # Version information
 __version__ = "0.95"
 
@@ -178,7 +182,7 @@ __version__ = "0.95"
 __all__ = [
     'import_pdb', 'import_gro', 'import_xyz', 'import_cif', 'import_mmcif', 'import_pqr', 'import_poscar', 'import_traj', 'import_auto',
     'write_pdb', 'write_gro', 'write_xyz', 'write_cif', 'write_pqr', 'write_poscar', 'write_sdf', 'write_traj', 'write_auto',
-    'write_itp', 'write_psf', 'write_lmp', 'import_itp_topology',
+    'write_itp', 'write_top', 'write_psf', 'write_lmp', 'import_itp_topology',
     'element', 'radius', 'mass', 'set_atomic_masses', 'com',
     'dist_matrix', 'cell_list_dist_matrix', 'config', 'bond_angle', 'bond_angle_dihedral', 'find_H2O',
     'normalize_box','Box_dim2Cell', 'Cell2Box_dim',
@@ -193,6 +197,7 @@ __all__ = [
     'minff', 'clayff', 'write_n2t', 'get_structure_stats',
     'load_forcefield', 'list_ff_blocks', 'get_ffparams_dir',
     'charge_minff', 'charge_clayff', 'balance_charges', 'assign_formal_charges', 'get_formal_charge', 'get_half_formal_charge',
+    'load_minff_into_openmm',
     'compute_bvs', 'global_instability_index', 'load_bv_params', 'load_shannon_radii', 'bond_valence', 'summarize_bvs',
     'analyze_bvs', 'conf2bvs', 'add_hydrogens_bvs',
     'get_radius', 'bond_distance',
