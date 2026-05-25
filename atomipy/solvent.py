@@ -10,6 +10,7 @@ import copy
 import os
 import random
 import numpy as np
+from typing import Union
 from . import config
 
 
@@ -170,7 +171,7 @@ def find_H2O(atoms, Box_dim=None, rmin=1.30):
     return water_atoms, non_water_atoms
 
 
-def solvate(limits, density=1000.0, min_distance=2.0, max_solvent='max', 
+def solvate(limits, density=1000.0, min_distance=2.0, max_solvent: Union[str, int] = 'max', 
            solute_atoms=None, Box=None, solvent_type='spce', custom_solvent=None, custom_box=None,
            include_solute=False):
     """
@@ -346,7 +347,7 @@ def solvate(limits, density=1000.0, min_distance=2.0, max_solvent='max',
             combined, 
             box_dim, 
             cutoff=shell_thickness, 
-            dm_method=dm_method if 'dm_method' in locals() else None
+            dm_method=None
         )
         
         # Filter for solute-solvent pairs

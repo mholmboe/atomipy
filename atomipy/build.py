@@ -5,14 +5,9 @@ and other structure building operations.
 
 
 import copy
-import os
 import random
 import numpy as np
-from .distances import dist_matrix, get_neighbor_list
-from . import config
 from .move import translate
-from .transform import cartesian_to_fractional, fractional_to_cartesian
-from .cell_utils import Cell2Box_dim
 
 
 def is_centrosymmetric_along_z(atoms, tolerance=0.1):
@@ -196,9 +191,6 @@ def substitute(atoms, Box, num_oct_subst, o1_type, o2_type, min_o2o2_dist,
         atoms = translate(atoms, [0, 0, -shift_z] if dim_index == 2 else 
                          ([-shift_z, 0, 0] if dim_index == 0 else [0, -shift_z, 0]))
         print(f"Translated structure by {-shift_z:.3f} Å along {dim_name} to center around 0")
-    
-    # Total number of substitutions
-    num_total_subst = num_oct_subst + num_tet_subst
     
     # Initialize list to store O2 atoms
     o2_atoms = []
@@ -443,6 +435,9 @@ def substitute(atoms, Box, num_oct_subst, o1_type, o2_type, min_o2o2_dist,
     
     # ========== FINAL DISTANCE CHECKS ==========
     print("\n=== Distance verification ===")
+    
+    o2_atoms_final = []
+    t2_atoms_final = []
     
     if num_oct_subst > 0:
         # Check minimum O2-O2 distance
@@ -729,7 +724,10 @@ def _parse_coord_filter(filter_value, axis_name):
 
     if isinstance(filter_value, dict):
         op = str(filter_value.get('op', '==')).strip()
-        value = float(filter_value.get('value'))
+        val = filter_value.get('value')
+        if val is None:
+            raise ValueError(f"Missing 'value' in filter dict for axis '{axis_name}'")
+        value = float(val)
         if op not in allowed_ops:
             raise ValueError(f"Unsupported operator '{op}' for axis '{axis_name}'")
         return op, value
@@ -911,6 +909,9 @@ def _get_surface_atoms(atoms, distance_threshold=2.5):
     list of dict
         List of surface atoms
     """
+    if not atoms:
+        return []
+
     # First compute the convex hull using atom coordinates
     coords = np.array([[atom['x'], atom['y'], atom['z']] for atom in atoms])
     
@@ -923,8 +924,8 @@ def _get_surface_atoms(atoms, distance_threshold=2.5):
         surface_atoms = [atoms[i] for i in surface_indices]
         
         return surface_atoms
-    except ImportError:
-        # If scipy is not available, use a distance-based approach
+    except (ImportError, Exception):
+        # If scipy is not available or convex hull calculation fails (e.g. coplanar structures), use a distance-based approach
         surface_atoms = []
         
         # Use selection logic based on threshold
@@ -1151,10 +1152,6 @@ def ionize(ion_type, resname, limits, num_ions, Box=None, min_distance=None, sol
     else:
         raise ValueError("Limits must be a list of length 3 [xhi, yhi, zhi] "
                          "or 6 [xlo, ylo, zlo, xhi, yhi, zhi]")
-    
-    # Calculate Box dimensions for the region
-    box_dim = [xhi - xlo, yhi - ylo, zhi - zlo]
-    
     # If minimum distance not specified, use ionic radii
     if min_distance is None:
         ion_radius = ionic_radius().get(ion_type, 1.0)  # Default to 1.0 if not found
@@ -1315,7 +1312,6 @@ def insert(molecule_atoms, limits, Box=None, rotate='random', min_distance=2.0,
     """
     from .move import rotate as rotate_atoms
     from .move import place
-    from .distances import get_neighbor_list
     
     # Standardize limits to [xlo, ylo, zlo, xhi, yhi, zhi] format
     if len(limits) == 3:

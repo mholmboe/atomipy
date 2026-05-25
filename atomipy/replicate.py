@@ -7,7 +7,6 @@ Box dimensions.
 """
 
 import copy
-import numpy as np
 from .transform import (
     cartesian_to_fractional, fractional_to_cartesian, get_cell_vectors,
     direct_fractional_to_cartesian
@@ -82,6 +81,8 @@ def replicate_system(atoms, Box, replicate=[1, 1, 1], keep_molid=True,
 
     if Box_dim is None and Cell is None:
         raise ValueError("Either Box_dim or Cell must be provided")
+    if Cell is None:
+        raise ValueError("Could not determine Cell parameters from Box")
     
     # Handle integer input for replicate
     if isinstance(replicate, int):

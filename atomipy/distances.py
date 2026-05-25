@@ -1,6 +1,6 @@
 import numpy as np
 
-from atomipy.cell_utils import Cell2Box_dim, Box_dim2Cell, normalize_box
+from .cell_utils import normalize_box
 from . import config
 
 # Try to import tqdm for progress bar
@@ -16,6 +16,8 @@ def _images_needed(Cell, cutoff):
     from .cell_utils import normalize_box
     
     Box_dim, _ = normalize_box(Cell)
+    if Box_dim is None:
+        raise ValueError("Cell parameter must not be None")
     if len(Box_dim) == 3:
         # Orthogonal cell: pad to 9 elements with zero off-diagonals
         lx, ly, lz = Box_dim
@@ -67,6 +69,7 @@ def dist_matrix(atoms, Box, cutoff=None):
     
     # Determine Box format and convert as needed
     Box_dim, Cell = normalize_box(Box)
+    assert Box_dim is not None  # Box is validated above
     
     # Extract Box dimensions
     if len(Box_dim) == 3:
@@ -77,6 +80,8 @@ def dist_matrix(atoms, Box, cutoff=None):
         # Triclinic Box in GROMACS format [lx, ly, lz, 0, 0, xy, 0, xz, yz]
         lx, ly, lz = Box_dim[0], Box_dim[1], Box_dim[2]
         xy, xz, yz = Box_dim[5], Box_dim[7], Box_dim[8]
+    else:
+        raise ValueError(f"Unexpected Box_dim length {len(Box_dim)}; expected 3 or 9")
     
     # Extract atomic positions
     n_atoms = len(atoms)
@@ -89,10 +94,8 @@ def dist_matrix(atoms, Box, cutoff=None):
     dy = np.zeros((n_atoms, n_atoms), dtype=np.float32)
     dz = np.zeros((n_atoms, n_atoms), dtype=np.float32)
 
-    # Setup progress tracking
-    total_distances_processed = 0
-    
     # Calculate distance matrix
+    last_percent = -1
     if len(Box_dim) == 3:
         # Orthogonal Box approach
         # Setup progress bar
@@ -101,7 +104,6 @@ def dist_matrix(atoms, Box, cutoff=None):
         else:
             print("Finding distances...")
             atom_iterator = range(n_atoms)
-            last_percent = -1
             
         for i in atom_iterator:
             # Update progress percentage for non-tqdm case
@@ -141,7 +143,6 @@ def dist_matrix(atoms, Box, cutoff=None):
         else:
             print("Finding distances...")
             atom_iterator = range(n_atoms)
-            last_percent = -1
             
         for i in atom_iterator:
             # Update progress percentage for non-tqdm case
@@ -291,6 +292,7 @@ def get_neighbor_list(atoms, Box, cutoff, rmaxH=None, dm_method=None):
     if Box is not None:
         from .cell_utils import normalize_box
         Box_dim, _ = normalize_box(Box)
+        assert Box_dim is not None  # Box is not None in this branch
         _, Hinv = _images_needed(Box, max_cutoff)
         needs_multiple_images = any(1.0 / np.linalg.norm(Hinv[i]) < 2 * max_cutoff for i in range(3))
         # Skewed boxes cannot use the sequential MIC of the direct method reliably
@@ -337,17 +339,6 @@ def get_neighbor_list(atoms, Box, cutoff, rmaxH=None, dm_method=None):
                 dy_mat[i_idx, j_idx].astype(np.float32), 
                 dz_mat[i_idx, j_idx].astype(np.float32))
 
-
-import numpy as np
-from .cell_utils import normalize_box
-
-# Try to import tqdm for progress bar
-try:
-    from tqdm import tqdm
-    has_tqdm = True
-except ImportError:
-    has_tqdm = False
-
 def get_progress_iterator(iterable, desc="Processing", unit="it"):
     if has_tqdm:
         return tqdm(iterable, desc=desc, unit=unit)
@@ -380,6 +371,7 @@ def cell_list_dist_matrix(atoms, Box, cutoff=2.45, rmaxH=1.2, H_type='H'):
         raise ValueError("Box parameter must be provided")
 
     Box_dim, Cell = normalize_box(Box)
+    assert Box_dim is not None and Cell is not None  # Box is validated above
     
     # Construct triclinic Box matrix H and its inverse Hinv
     a, b, c = Cell[0], Cell[1], Cell[2]
@@ -445,7 +437,7 @@ def cell_list_dist_matrix(atoms, Box, cutoff=2.45, rmaxH=1.2, H_type='H'):
     dist_list = []
     
     # 27 neighbors including self by default, but expand if needed
-    if len(Box_dim) > 0:  # is_periodic
+    if Box_dim is not None and len(Box_dim) > 0:  # is_periodic
         (nx_img, ny_img, nz_img), _ = _images_needed(Cell, max_cutoff)
     else:
         nx_img, ny_img, nz_img = 1, 1, 1
@@ -587,6 +579,7 @@ def neighbor_list_fast(atoms, Box, cutoff=2.45, rmaxH=None, H_type='H'):
         is_periodic = False
     else:
         Box_dim, Cell = normalize_box(Box)
+        assert Box_dim is not None and Cell is not None  # Box is not None in this branch
         # Construct triclinic Box matrix H and its inverse Hinv
         a, b, c = Cell[0], Cell[1], Cell[2]
         if len(Cell) == 3:
@@ -734,7 +727,6 @@ def neighbor_list_fast(atoms, Box, cutoff=2.45, rmaxH=None, H_type='H'):
 # Carry over helper functions from original file for full compatibility
 def convert_to_sparse_dict(dist_matrix, X_dist, Y_dist, Z_dist, cutoff):
     """Convert full distance matrices to a sparse dictionary format."""
-    N = dist_matrix.shape[0]
     distance_dict = {}
     i_indices, j_indices = np.where((dist_matrix > 0) & (dist_matrix <= cutoff) & (np.triu(np.ones(dist_matrix.shape), k=1) > 0))
     for idx in range(len(i_indices)):

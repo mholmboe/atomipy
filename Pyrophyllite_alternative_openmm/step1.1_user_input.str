@@ -1,0 +1,53 @@
+!
+! User settings
+!
+set material  = pp
+set milidx    = 001
+set pbc       = xyz ! no, x, y, z, xy, yz, yz, xyz
+set wulff     = off ! on, off
+set xbx       = 25
+set ybx       = 25
+set zbx       = 25
+
+set rwulff    = no
+
+set rsphere   = 0
+set rcylinder = 0
+set nanorod   = 0
+set l_pgon    = 0
+set nnn       = 0
+set l_edge    = 0
+set ionpnt    = 0
+set surfconc  = 0
+set envstate  = no
+set rdfct     = none
+set ion       = none
+set qhyd      = no
+set velectron = no
+
+!
+! solvation option
+!
+set crystal = no
+set solv = no
+
+!
+! Automatically-determined settings below; do not modify
+!
+
+set xpbc = no
+set ypbc = no
+set zpbc = no
+set xypbc = no
+set xzpbc = no
+set yzpbc = no
+set xyzpbc = no
+
+if pbc .eq. x   set   xpbc = yes
+if pbc .eq. y   set   ypbc = yes
+if pbc .eq. z   set   zpbc = yes
+if pbc .eq. xy  set  xypbc = yes
+if pbc .eq. xz  set  xzpbc = yes
+if pbc .eq. yz  set  yzpbc = yes
+if pbc .eq. xyz set xyzpbc = yes
+

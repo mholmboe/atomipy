@@ -1,0 +1,365 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<META http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<!--
+This HTML was auto-generated from MATLAB code.
+To make changes, update the MATLAB code and republish this document.
+      -->
+<title>import_atom_gro.m</title>
+<meta name="generator" content="MATLAB 24.2">
+<link rel="schema.DC" href="http://purl.org/dc/elements/1.1/">
+<meta name="DC.date" content="2025-05-23">
+<meta name="DC.source" content="import_atom_gro.m">
+<style type="text/css">
+html,body,div,span,applet,object,iframe,h1,h2,h3,h4,h5,h6,p,blockquote,pre,a,abbr,acronym,address,big,cite,code,del,dfn,em,font,img,ins,kbd,q,s,samp,small,strike,strong,tt,var,b,u,i,center,dl,dt,dd,ol,ul,li,fieldset,form,label,legend,table,caption,tbody,tfoot,thead,tr,th,td{margin:0;padding:0;border:0;outline:0;font-size:100%;vertical-align:baseline;background:transparent}body{line-height:1}ol,ul{list-style:none}blockquote,q{quotes:none}blockquote:before,blockquote:after,q:before,q:after{content:'';content:none}:focus{outine:0}ins{text-decoration:none}del{text-decoration:line-through}table{border-collapse:collapse;border-spacing:0}
+
+html { min-height:100%; margin-bottom:1px; }
+html body { height:100%; margin:0px; font-family:Arial, Helvetica, sans-serif; font-size:10px; color:#000; line-height:140%; background:#fff none; overflow-y:scroll; }
+html body td { vertical-align:top; text-align:left; }
+
+h1 { padding:0px; margin:0px 0px 25px; font-family:Arial, Helvetica, sans-serif; font-size:1.5em; color:#d55000; line-height:100%; font-weight:normal; }
+h2 { padding:0px; margin:0px 0px 8px; font-family:Arial, Helvetica, sans-serif; font-size:1.2em; color:#000; font-weight:bold; line-height:140%; border-bottom:1px solid #d6d4d4; display:block; }
+h3 { padding:0px; margin:0px 0px 5px; font-family:Arial, Helvetica, sans-serif; font-size:1.1em; color:#000; font-weight:bold; line-height:140%; }
+
+a { color:#005fce; text-decoration:none; }
+a:hover { color:#005fce; text-decoration:underline; }
+a:visited { color:#004aa0; text-decoration:none; }
+
+p { padding:0px; margin:0px 0px 20px; }
+img { padding:0px; margin:0px 0px 20px; border:none; }
+p img, pre img, tt img, li img, h1 img, h2 img { margin-bottom:0px; }
+
+ul { padding:0px; margin:0px 0px 20px 23px; list-style:square; }
+ul li { padding:0px; margin:0px 0px 7px 0px; }
+ul li ul { padding:5px 0px 0px; margin:0px 0px 7px 23px; }
+ul li ol li { list-style:decimal; }
+ol { padding:0px; margin:0px 0px 20px 0px; list-style:decimal; }
+ol li { padding:0px; margin:0px 0px 7px 23px; list-style-type:decimal; }
+ol li ol { padding:5px 0px 0px; margin:0px 0px 7px 0px; }
+ol li ol li { list-style-type:lower-alpha; }
+ol li ul { padding-top:7px; }
+ol li ul li { list-style:square; }
+
+.content { font-size:1.2em; line-height:140%; padding: 20px; }
+
+pre, code { font-size:12px; }
+tt { font-size: 1.2em; }
+pre { margin:0px 0px 20px; }
+pre.codeinput { padding:10px; border:1px solid #d3d3d3; background:#f7f7f7; }
+pre.codeoutput { padding:10px 11px; margin:0px 0px 20px; color:#4c4c4c; }
+pre.error { color:red; }
+
+@media print { pre.codeinput, pre.codeoutput { word-wrap:break-word; width:100%; } }
+
+span.keyword { color:#0000FF }
+span.comment { color:#228B22 }
+span.string { color:#A020F0 }
+span.untermstring { color:#B20000 }
+span.syscmd { color:#B28C00 }
+span.typesection { color:#A0522D }
+
+.footer { width:auto; padding:10px 0px; margin:25px 0px 0px; border-top:1px dotted #878787; font-size:0.8em; line-height:140%; font-style:italic; color:#878787; text-align:left; float:none; }
+.footer p { margin:0px; }
+.footer a { color:#878787; }
+.footer a:hover { color:#878787; text-decoration:underline; }
+.footer a:visited { color:#878787; }
+
+table th { padding:7px 5px; text-align:left; vertical-align:middle; border: 1px solid #d6d4d4; font-weight:bold; }
+table td { padding:7px 5px; text-align:left; vertical-align:top; border:1px solid #d6d4d4; }
+
+
+
+
+
+  </style>
+</head>
+<body>
+<div class="content">
+<h1>import_atom_gro.m</h1>
+<!--introduction-->
+<div>
+<ul>
+<li>This function import .gro files into an atom struct variable</li>
+<li>varargin can be used to translate, alt. center+translate the molecule</li>
+</ul>
+</div>
+<!--/introduction-->
+<h2>Contents</h2>
+<div>
+<ul>
+<li>
+<a href="#1">Version</a>
+</li>
+<li>
+<a href="#2">Contact</a>
+</li>
+<li>
+<a href="#3">Examples</a>
+</li>
+</ul>
+</div>
+<h2 id="1">Version</h2>
+<p>3.00</p>
+<h2 id="2">Contact</h2>
+<p>Please report problems/bugs to <a href="mailto:michael.holmboe@umu.se">michael.holmboe@umu.se</a>
+</p>
+<h2 id="3">Examples</h2>
+<div>
+<ol>
+<li>atom = import_atom_gro('molecule.gro')</li>
+<li>atom = import_atom_gro('molecule.gro',[10 5 2])</li>
+<li>atom = import_atom_gro('molecule.gro',[10 5 0],[35.24 24.23 52.23])</li>
+</ol>
+</div>
+<pre class="codeinput">
+<span class="keyword">function</span> [atom, Box_dim] = import_atom_gro(filename, varargin)
+
+fileID = fopen(filename, <span class="string">'r'</span>);
+
+<span class="comment">% Read header lines (Title and nAtoms)</span>
+fgetl(fileID); <span class="comment">% Skip Title line</span>
+Line2 = fgetl(fileID); <span class="comment">% Read the number of atoms</span>
+nAtoms = str2double(Line2);
+
+<span class="comment">% Preallocate arrays for atom attributes</span>
+MolID = zeros(nAtoms, 1);
+Resname = cell(nAtoms, 1);
+AtomType = cell(nAtoms, 1);
+X_coord = zeros(nAtoms, 1);
+Y_coord = zeros(nAtoms, 1);
+Z_coord = zeros(nAtoms, 1);
+VeloX = NaN(nAtoms, 1);  <span class="comment">% Default NaN for velocities if missing</span>
+VeloY = NaN(nAtoms, 1);
+VeloZ = NaN(nAtoms, 1);
+
+<span class="comment">% Initialize atom structure fields</span>
+atom = struct(<span class="string">'molid'</span>, {}, <span class="string">'resname'</span>, {}, <span class="string">'type'</span>, {}, <span class="string">'fftype'</span>, {}, <span class="string">'index'</span>, [], <span class="keyword">...</span>
+    <span class="string">'neigh'</span>, struct(<span class="string">'type'</span>, {{}}, <span class="string">'index'</span>, zeros(6, 1), <span class="string">'dist'</span>, zeros(6, 1)), <span class="keyword">...</span>
+    <span class="string">'bond'</span>, struct(<span class="string">'type'</span>, zeros(6, 1), <span class="string">'index'</span>, zeros(6, 1)), <span class="keyword">...</span>
+    <span class="string">'angle'</span>, struct(<span class="string">'type'</span>, zeros(6, 1), <span class="string">'index'</span>, zeros(6, 1)), <span class="keyword">...</span>
+    <span class="string">'x'</span>, [], <span class="string">'y'</span>, [], <span class="string">'z'</span>, [], <span class="string">'vx'</span>, [], <span class="string">'vy'</span>, [], <span class="string">'vz'</span>, []);
+
+nmol = 1; first_in = zeros(nAtoms, 1); last_in = zeros(nAtoms, 1);
+<span class="keyword">for</span> i = 1:nAtoms
+    line = fgetl(fileID);
+
+    <span class="comment">% Parse the current line using string indexing and convert to appropriate types</span>
+    MolID(i) = str2double(line(1:5));
+    Resname{i} = strtrim(line(6:10));
+    AtomType{i} = strtrim(line(11:15));
+    X_coord(i) = 10 * str2double(line(21:28));
+    Y_coord(i) = 10 * str2double(line(29:36));
+    Z_coord(i) = 10 * str2double(line(37:44));
+
+    <span class="comment">% Check if velocity is available, otherwise assign NaN</span>
+    <span class="keyword">if</span> numel(line) &gt; 45
+        VeloX(i) = str2double(line(45:52));
+        VeloY(i) = str2double(line(53:60));
+        VeloZ(i) = str2double(line(61:68));
+    <span class="keyword">end</span>
+
+    <span class="comment">% Assign molecule ID and structure</span>
+    <span class="keyword">if</span> i &gt; 1 &amp;&amp; MolID(i) ~= MolID(i - 1)
+        nmol = nmol + 1;
+        atom(i).molid = nmol;
+        first_in(nmol) = i;
+        last_in(nmol - 1) = i - 1;
+    <span class="keyword">else</span>
+        atom(i).molid = nmol;
+    <span class="keyword">end</span>
+
+    <span class="comment">% Update atom struct with parsed data</span>
+    atom(i).resname = Resname(i);
+    atom(i).type = AtomType(i);
+    atom(i).fftype = AtomType(i);  <span class="comment">% Assuming fftype is the same as type</span>
+    atom(i).index = mod(i, 100000);
+    atom(i).neigh.index = [0;0;0;0;0;0];
+    atom(i).neigh.dist = [0;0;0;0;0;0];
+    atom(i).bond.type = [0;0;0;0;0;0];
+    atom(i).bond.index = [0;0;0;0;0;0];
+    atom(i).angle.type = [0;0;0;0;0;0];
+    atom(i).angle.index = [0;0;0;0;0;0];
+    atom(i).x = X_coord(i);
+    atom(i).y = Y_coord(i);
+    atom(i).z = Z_coord(i);
+    atom(i).vx = VeloX(i);
+    atom(i).vy = VeloY(i);
+    atom(i).vz = VeloZ(i);
+<span class="keyword">end</span>
+last_in(nmol) = nAtoms;  <span class="comment">% Handle the last molecule</span>
+
+Box_string = fgetl(fileID);
+fclose(fileID);
+
+Box_dim = str2double(strsplit(char(Box_string))) * 10;
+Box_dim(isnan(Box_dim)) = [];  <span class="comment">% Clean up NaN values</span>
+
+<span class="comment">% If optional translation or centering is specified, apply it</span>
+<span class="keyword">if</span> nargin &gt;= 2
+    atom = translate_atom(atom, varargin{1} + [0 0 -median([atom.z])], <span class="string">'all'</span>);
+<span class="keyword">end</span>
+
+<span class="keyword">if</span> nargin &gt;= 3
+    atom = center_atom(atom, varargin{2}, <span class="string">'all'</span>, <span class="string">'xyz'</span>);
+    atom = translate_atom(atom, varargin{1} + [0 0 -median([atom.z])], <span class="string">'all'</span>);
+<span class="keyword">end</span>
+
+<span class="comment">% Prepare XYZ data and labels for output</span>
+XYZ_data = [[atom.x]' [atom.y]' [atom.z]'];
+XYZ_labels = {atom.type}';
+
+Cell = Box_dim2Cell(Box_dim);
+
+<span class="comment">% Assign variables to the caller workspace</span>
+assignin(<span class="string">'caller'</span>, <span class="string">'XYZ_labels'</span>, XYZ_labels);
+assignin(<span class="string">'caller'</span>, <span class="string">'XYZ_data'</span>, XYZ_data);
+assignin(<span class="string">'caller'</span>, <span class="string">'atom'</span>, atom);
+assignin(<span class="string">'caller'</span>, <span class="string">'nAtoms'</span>, nAtoms);
+assignin(<span class="string">'caller'</span>, <span class="string">'Box_dim'</span>, Box_dim);
+assignin(<span class="string">'caller'</span>, <span class="string">'Cell'</span>, Cell);
+assignin(<span class="string">'caller'</span>,<span class="string">'MolID'</span>,MolID)
+
+disp(<span class="string">'.gro file imported'</span>);
+
+<span class="keyword">end</span>
+</pre>
+<p class="footer">
+<br>
+<a href="https://www.mathworks.com/products/matlab/">Published with MATLAB&reg; R2024b</a>
+<br>
+</p>
+</div>
+<!--
+##### SOURCE BEGIN #####
+%% import_atom_gro.m
+% * This function import .gro files into an atom struct variable
+% * varargin can be used to translate, alt. center+translate the molecule
+%
+%% Version
+% 3.00
+%
+%% Contact
+% Please report problems/bugs to michael.holmboe@umu.se
+%
+%% Examples
+% # atom = import_atom_gro('molecule.gro')
+% # atom = import_atom_gro('molecule.gro',[10 5 2])
+% # atom = import_atom_gro('molecule.gro',[10 5 0],[35.24 24.23 52.23])
+
+
+function [atom, Box_dim] = import_atom_gro(filename, varargin)
+
+fileID = fopen(filename, 'r');
+
+% Read header lines (Title and nAtoms)
+fgetl(fileID); % Skip Title line
+Line2 = fgetl(fileID); % Read the number of atoms
+nAtoms = str2double(Line2);
+
+% Preallocate arrays for atom attributes
+MolID = zeros(nAtoms, 1);
+Resname = cell(nAtoms, 1);
+AtomType = cell(nAtoms, 1);
+X_coord = zeros(nAtoms, 1);
+Y_coord = zeros(nAtoms, 1);
+Z_coord = zeros(nAtoms, 1);
+VeloX = NaN(nAtoms, 1);  % Default NaN for velocities if missing
+VeloY = NaN(nAtoms, 1);
+VeloZ = NaN(nAtoms, 1);
+
+% Initialize atom structure fields
+atom = struct('molid', {}, 'resname', {}, 'type', {}, 'fftype', {}, 'index', [], ...
+    'neigh', struct('type', {{}}, 'index', zeros(6, 1), 'dist', zeros(6, 1)), ...
+    'bond', struct('type', zeros(6, 1), 'index', zeros(6, 1)), ...
+    'angle', struct('type', zeros(6, 1), 'index', zeros(6, 1)), ...
+    'x', [], 'y', [], 'z', [], 'vx', [], 'vy', [], 'vz', []);
+
+nmol = 1; first_in = zeros(nAtoms, 1); last_in = zeros(nAtoms, 1);
+for i = 1:nAtoms
+    line = fgetl(fileID);
+
+    % Parse the current line using string indexing and convert to appropriate types
+    MolID(i) = str2double(line(1:5));
+    Resname{i} = strtrim(line(6:10));
+    AtomType{i} = strtrim(line(11:15));
+    X_coord(i) = 10 * str2double(line(21:28));
+    Y_coord(i) = 10 * str2double(line(29:36));
+    Z_coord(i) = 10 * str2double(line(37:44));
+
+    % Check if velocity is available, otherwise assign NaN
+    if numel(line) > 45
+        VeloX(i) = str2double(line(45:52));
+        VeloY(i) = str2double(line(53:60));
+        VeloZ(i) = str2double(line(61:68));
+    end
+
+    % Assign molecule ID and structure
+    if i > 1 && MolID(i) ~= MolID(i - 1)
+        nmol = nmol + 1;
+        atom(i).molid = nmol;
+        first_in(nmol) = i;
+        last_in(nmol - 1) = i - 1;
+    else
+        atom(i).molid = nmol;
+    end
+
+    % Update atom struct with parsed data
+    atom(i).resname = Resname(i);
+    atom(i).type = AtomType(i);
+    atom(i).fftype = AtomType(i);  % Assuming fftype is the same as type
+    atom(i).index = mod(i, 100000);
+    atom(i).neigh.index = [0;0;0;0;0;0];
+    atom(i).neigh.dist = [0;0;0;0;0;0];
+    atom(i).bond.type = [0;0;0;0;0;0];
+    atom(i).bond.index = [0;0;0;0;0;0];
+    atom(i).angle.type = [0;0;0;0;0;0];
+    atom(i).angle.index = [0;0;0;0;0;0];
+    atom(i).x = X_coord(i);
+    atom(i).y = Y_coord(i);
+    atom(i).z = Z_coord(i);
+    atom(i).vx = VeloX(i);
+    atom(i).vy = VeloY(i);
+    atom(i).vz = VeloZ(i);
+end
+last_in(nmol) = nAtoms;  % Handle the last molecule
+
+Box_string = fgetl(fileID);
+fclose(fileID);
+
+Box_dim = str2double(strsplit(char(Box_string))) * 10;
+Box_dim(isnan(Box_dim)) = [];  % Clean up NaN values
+
+% If optional translation or centering is specified, apply it
+if nargin >= 2
+    atom = translate_atom(atom, varargin{1} + [0 0 -median([atom.z])], 'all');
+end
+
+if nargin >= 3
+    atom = center_atom(atom, varargin{2}, 'all', 'xyz');
+    atom = translate_atom(atom, varargin{1} + [0 0 -median([atom.z])], 'all');
+end
+
+% Prepare XYZ data and labels for output
+XYZ_data = [[atom.x]' [atom.y]' [atom.z]'];
+XYZ_labels = {atom.type}';
+
+Cell = Box_dim2Cell(Box_dim);
+
+% Assign variables to the caller workspace
+assignin('caller', 'XYZ_labels', XYZ_labels);
+assignin('caller', 'XYZ_data', XYZ_data);
+assignin('caller', 'atom', atom);
+assignin('caller', 'nAtoms', nAtoms);
+assignin('caller', 'Box_dim', Box_dim);
+assignin('caller', 'Cell', Cell);
+assignin('caller','MolID',MolID)
+
+disp('.gro file imported');
+
+end
+
+##### SOURCE END #####
+-->
+</body>
+</html>

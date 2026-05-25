@@ -891,6 +891,60 @@ ortho_atoms, _, _ = ap.triclinic_to_orthogonal(replicated_atoms, Box=new_Box)
 ap.write_gro(replicated_atoms, Box=new_Box, file_path="structure.gro")
 ```
 
+## Molecular Dynamics Simulations with OpenMM
+
+`atomipy` now supports setting up and running **Molecular Dynamics (MD) simulations** directly from Python using **OpenMM**! It automates the force field setup, system parameterization, platform selection, and execution of NVT/NPT molecular dynamics.
+
+### Key Features
+* **Automated Force Field Setup**: Directly converts your mineral slab and solvated systems to OpenMM topology and system objects using the MINFF or CLAYFF force fields.
+* **Automatic Platform Selector**: Intelligent GPU/CPU acceleration selector. It automatically detects and uses the fastest available platform on your machine (prioritizing **CUDA**, **OpenCL**, **Metal**, then falling back to **CPU** or **Reference**).
+* **Empty Box Safety**: The system has robust edge-case handling. If a box has no atoms, it instantiates a dummy atom at `(0, 0, 0)` with zero charge and mass to guarantee visualizer and MD engine compatibility without throwing errors.
+* **Seamless GROMACS Integration**: Generates top/itp files, validates bond/angle structures, handles periodic boundary wrapping, and executes the simulation without external dependencies.
+
+### Basic MD Simulation Example
+
+Here is how you can set up and run a 5,000-step NVT molecular dynamics simulation:
+
+```python
+import atomipy as ap
+from atomipy.openmm_interface import load_minff_into_openmm, run_openmm_simulation
+
+# 1. Load your mineral-water system
+atoms, Box = ap.import_gro("system.gro")
+
+# 2. Assign MINFF/CLAYFF force field types
+atoms = ap.minff(atoms, Box=Box)
+
+# 3. Write out files for GROMACS/OpenMM
+ap.write_itp(atoms, Box=Box, file_path="system_minff.top.itp")
+# write_top generates the main top file including the forcefield definition
+ap.write_top(atoms, Box=Box, file_path="system_minff.top")
+
+# 4. Initialize OpenMM Topology and System
+# This function automatically handles special parameters (e.g. flexible water models OPC3/SPC/TIP3P, 
+# dynamic mineral bond/angle parameters, and ion corrections)
+topology, system, positions = load_minff_into_openmm(
+    top_path="system_minff.top",
+    gro_path="system.gro"
+)
+
+# 5. Run NVT MD Simulation
+# This automatically selects the best available GPU/CPU acceleration platform (OpenCL, CUDA, etc.)
+# and outputs a standard PDB trajectory
+run_openmm_simulation(
+    topology=topology,
+    system=system,
+    positions=positions,
+    dt_fs=1.0,               # Time step (fs)
+    temperature_k=298.15,    # Temperature (K)
+    num_steps=5000,          # Steps
+    report_interval=1000,    # Output frequency
+    traj_pdb_path="trajectory.pdb",
+    result_pdb_path="final_nvt.pdb"
+)
+```
+
+---
 
 ## Differences from atom MATLAB library
 
