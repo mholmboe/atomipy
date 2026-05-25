@@ -137,7 +137,17 @@ def pdb(atoms, Box, file_path, write_conect=False, write_element=True):
             pdb_resname = f"{raw_resname[:3]:>3}"
             
             chain_id = atom.get('chain_id', 'A') # Column 22: Chain identifier
-            res_seq = atom.get('molid', 1) # Column 23-26: Residue sequence number (using 'molid' for consistency with import)
+            res_seq = atom.get('resnum')
+            if res_seq is None:
+                res_seq = atom.get('molid', 1)
+            
+            # If res_seq is constant (e.g. 1), OpenMM treats the entire mineral as a single residue
+            # and discards all atoms with duplicate names (resulting in only 6 atoms parsed!).
+            # Using the 1-based sequential index (i) ensures unique residues while keeping the PDB spec.
+            if res_seq == 1 or res_seq is None:
+                res_seq = i
+                
+            res_seq = (res_seq - 1) % 9999 + 1 # Columns 23-26: max 4 digits (1 to 9999)
             icode = atom.get('icode', ' ') # Column 27: Code for insertion of residues
             
             x = atom.get('x', 0.0)

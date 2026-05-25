@@ -15,6 +15,16 @@ def is_solvent_or_ion(atom):
         res = ''
     res = res.upper()
     
+    # If the residue is a mineral residue, it is never a solvent or ion
+    solvent_ion_resnames = {
+        'SOL', 'WAT', 'HOH', 'TIP3', 'OPC', 'OPC3', 'SPC', 'SPCE', 'TIP4', 'TIP5',
+        'ION', 'NA', 'CL', 'K', 'LI', 'CS', 'RB', 'F', 'BR', 'I', 'CA', 'MG', 'ZN',
+        'NA+', 'CL-', 'CL−', 'K+', 'LI+', 'CS+', 'RB+', 'F-', 'F−', 'BR-', 'BR−',
+        'I-', 'I−', 'CA2+', 'MG2+', 'ZN2+'
+    }
+    if res and res not in solvent_ion_resnames:
+        return False
+
     atype = atom.get('type', '')
     if atype is None:
         atype = ''
@@ -124,6 +134,25 @@ def itp(atoms, Box=None, file_path=None, molecule_name=None, nrexcl=1, comment=N
         # 1. Separate mineral and solvent/ion atoms
         mineral_atoms = [atom for atom in atoms if not is_solvent_or_ion(atom)]
         solvent_or_ion_atoms = [atom for atom in atoms if is_solvent_or_ion(atom)]
+        
+        # Dynamically assign correct contiguous molids to ensure they never lump together
+        for a in mineral_atoms:
+            a['molid'] = 1
+            
+        curr_molid = 2
+        prev_resname = None
+        prev_resnum = None
+        for a in solvent_or_ion_atoms:
+            resname = a.get('resname', 'SOL')
+            resnum = a.get('resnum', 1)
+            if resname != prev_resname or resnum != prev_resnum:
+                curr_molid += 1
+                prev_resname = resname
+                prev_resnum = resnum
+            a['molid'] = curr_molid
+            
+        # Re-construct atoms list in the exact reordered order (mineral first, then solvent/ions)
+        atoms = mineral_atoms + solvent_or_ion_atoms
         
         # Determine paths
         dir_name = os.path.dirname(file_path)
