@@ -81,7 +81,14 @@ def load_minff_into_openmm(
         nonbonded_method = app.PME
     defines_dict = _normalize_defines(defines)
 
-    gro = app.GromacsGroFile(gro_path)
+    if gro_path.lower().endswith('.pdb'):
+        coord_file = app.PDBFile(gro_path)
+        positions = coord_file.positions
+        box_vectors = coord_file.topology.getPeriodicBoxVectors()
+    else:
+        coord_file = app.GromacsGroFile(gro_path)
+        positions = coord_file.positions
+        box_vectors = coord_file.getPeriodicBoxVectors()
     water_o, water_h = 'OW_opc3', 'HW_opc3'
     for d in defines_dict:
         d_upper = d.upper()
@@ -195,7 +202,7 @@ HW_tip4p OW_tip4p HW_tip4p 1 104.52  628.02
     try:
         top = app.GromacsTopFile(
             top_path,
-            periodicBoxVectors=gro.getPeriodicBoxVectors(),
+            periodicBoxVectors=box_vectors,
             includeDir=include_dir,
             defines=defines_dict,
         )
@@ -209,4 +216,4 @@ HW_tip4p OW_tip4p HW_tip4p 1 104.52  628.02
         ewaldErrorTolerance=ewald_error_tolerance,
         useDispersionCorrection=use_dispersion_correction,
     )
-    return top.topology, system, gro.positions
+    return top.topology, system, positions
