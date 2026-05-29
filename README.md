@@ -108,6 +108,13 @@ Understanding the core containers and fields used in atomipy makes it easier to 
 
 ## Key Features
 
+- **Mixed Organic/Mineral Simulation Integration**:
+  - Parametrize organic molecules directly from SMILES using GAFF and CGenFF via `openmmforcefields` and ParmEd.
+  - Mix organic structures seamlessly with CLAYFF/MINFF mineral slabs, handling combination rules and topological scaling automatically.
+  - Dedicated Dockerized OpenFF worker microservice for SMIRNOFF-based (Sage, Parsley) parameterization.
+- **Robust Topology Merging & System Composition**:
+  - Merge multiple complex topology systems and linkages cleanly (`merge_top.py`).
+  - Perform residue-level composition counting and system-wide mass calculations (`composition.py`).
 - Support for multiple forcefields: MINFF and CLAYFF atom typing and parameter assignment
 - Import/export PDB, Gromacs GRO, XYZ, CIF/mmCIF, PQR, POSCAR, SDF, and trajectories
 - CIF/mmCIF to PDB conversion helper (`scripts/run_cif2pdb.py`) with symmetry expansion

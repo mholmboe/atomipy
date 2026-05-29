@@ -56,7 +56,17 @@ def Box_dim2Cell(Box_dim):
         Box: A 3×3 numpy array representing the Box matrix
         Cell: A 1×6 numpy array with [a, b, c, alfa, beta, gamma]
     """
+    if Box_dim is None:
+        return np.array([50.0, 50.0, 50.0, 90.0, 90.0, 90.0])
+        
+    if isinstance(Box_dim, (int, float)) or (isinstance(Box_dim, np.ndarray) and Box_dim.ndim == 0):
+        print(f"Warning: Box_dim2Cell received unsized value '{Box_dim}'. Using default orthogonal box.")
+        return np.array([50.0, 50.0, 50.0, 90.0, 90.0, 90.0])
+        
     Box_dim = np.array(Box_dim, dtype=float)
+    if Box_dim.ndim == 0 or len(Box_dim.shape) == 0 or len(Box_dim) == 0:
+        print("Warning: Box_dim2Cell received empty/unsized shape. Using default orthogonal box.")
+        return np.array([50.0, 50.0, 50.0, 90.0, 90.0, 90.0])
     
     if len(Box_dim) == 3:
         # Orthogonal Box: [Lx, Ly, Lz]

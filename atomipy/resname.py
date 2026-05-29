@@ -78,21 +78,79 @@ def assign_resname(atoms, default_resname='MIN'):
     sol_indices.sort()
     ion_indices.sort()
     
+    # Map specific ion types to their canonical GROMACS resname
+    def get_canonical_ion_resname(atom):
+        raw_type = str(atom.get('type') or '').strip().upper()
+        raw_res = str(atom.get('resname') or '').strip().upper()
+        raw_elem = str(atom.get('element') or '').strip().upper()
+        
+        # Check all sources of element/type information
+        for src in [raw_type, raw_elem, raw_res]:
+            clean = src.rstrip('+-0123456789')
+            if clean in ['NA', 'SOD']: return 'Na'
+            if clean in ['CL', 'CLA']: return 'Cl'
+            if clean in ['LI']: return 'Li'
+            if clean in ['K', 'POT']: return 'K'
+            if clean in ['CA', 'CAL']: return 'Ca'
+            if clean in ['MG']: return 'Mg'
+            if clean in ['ZN']: return 'Zn'
+            if clean in ['CS']: return 'Cs'
+            if clean in ['RB']: return 'Rb'
+            if clean in ['F']: return 'F'
+            if clean in ['BR']: return 'Br'
+            if clean in ['I']: return 'I'
+            if clean in ['CU']: return 'Cu'
+            if clean in ['NI']: return 'Ni'
+            if clean in ['SR']: return 'Sr'
+            if clean in ['BA']: return 'Ba'
+            
+        return 'ION'
+
     # Assign 'SOL' to water atoms
     for i in sol_indices:
         atoms[i]['resname'] = 'SOL'
     
-    # Assign 'ION' to ion atoms
+    # Assign specific element resnames to ion atoms
     for i in ion_indices:
-        atoms[i]['resname'] = 'ION'
+        atoms[i]['resname'] = get_canonical_ion_resname(atoms[i])
     
     # Assign default resname to remaining atoms (always assign, overwriting existing)
     other_indices = [i for i in range(len(atoms)) if i not in sol_indices and i not in ion_indices]
     for i in other_indices:
         atoms[i]['resname'] = default_resname
     
+    # Do a last check of resnum/molid assignment:
+    # Ensure all atoms have 'resnum' and 'molid' consistent with their molecule boundaries
+    current_molid = 1
+    if len(atoms) > 0:
+        atoms[0]['molid'] = current_molid
+        atoms[0]['resnum'] = current_molid
+        
+        for i in range(1, len(atoms)):
+            # If the resname changes, or if they had different original molids, they are different molecules.
+            # Water molecules ('SOL') should have at most 3 atoms per molecule (O + 2H), so we group them in 3s or by type.
+            # Actually, standard water has OW, HW1, HW2. If we see a new OW/Hw, or if resname changes, start a new molecule.
+            new_mol = False
+            if atoms[i]['resname'] != atoms[i-1]['resname']:
+                new_mol = True
+            elif atoms[i]['resname'] == 'SOL':
+                # Water: start a new molecule when we see an Oxygen atom
+                atype = str(atoms[i].get('type') or '').upper()
+                if atype.startswith('O') or atype.startswith('OW'):
+                    new_mol = True
+            elif atoms[i]['resname'] in ['Na', 'Cl', 'Li', 'K', 'Ca', 'Mg', 'Zn', 'Cs', 'Rb', 'F', 'Br', 'I', 'ION']:
+                # Ions: each ion is its own molecule
+                new_mol = True
+            elif atoms[i].get('molid') != atoms[i-1].get('molid'):
+                new_mol = True
+                
+            if new_mol:
+                current_molid += 1
+            atoms[i]['molid'] = current_molid
+            atoms[i]['resnum'] = current_molid
+
     # Print summary
-    print(f"Assigned resnames: {len(sol_indices)} water (SOL), {len(ion_indices)} ions (ION), "
+    print(f"Assigned resnames: {len(sol_indices)} water (SOL), {len(ion_indices)} ions, "
           f"{len(other_indices)} other atoms ({default_resname})")
     
     return atoms

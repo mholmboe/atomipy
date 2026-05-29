@@ -83,9 +83,14 @@ def get_gromacs_molname(resname, atom_type, element, water_model='spce'):
 def itp(atoms, Box=None, file_path=None, molecule_name=None, nrexcl=1, comment=None, 
           rmaxH=1.2, rmaxM=2.45, explicit_bonds=0, explicit_angles=1, KANGLE=500,
           detect_bimodal=False, bimodal_threshold=30.0, max_angle=None,
+          harmonize_angles=False,
           as_top=False, prm_path=None, split_system=False, water_model='spce'):
     """
     Write atoms to a Gromacs molecular topology (.itp) file or a full system topology (.top) file.
+    
+    WARNING: This function is designed for mineral and solvent systems only.
+    For N-way topology merges or mixed organic/mineral systems (GAFF + MINFF),
+    use `atomipy.write_merged_top` from `merge_top.py` instead.
     
     This function takes a list of atom dictionaries from atomipy and outputs a formatted
     Gromacs topology file. If as_top=True (or file_path ends with .top), it emits a complete,
@@ -107,6 +112,13 @@ def itp(atoms, Box=None, file_path=None, molecule_name=None, nrexcl=1, comment=N
         bimodal_threshold: Threshold for bimodal detection in degrees (default: 30.0).
         max_angle: Optional maximum angle threshold in degrees (default: None = include all).
                    Angles above this value will be excluded.
+        harmonize_angles: If True (with explicit_angles=1), replace the raw per-angle value
+                   with the cluster mean for its atom-type triplet.  For bimodal triplets the
+                   cluster sub-mean is used (cis or trans), so each angle row still gets a
+                   physically meaningful equilibrium value without averaging across the bimodal
+                   gap.  Requires detect_bimodal=True to get the bimodal sub-cluster means;
+                   if detect_bimodal is False a single mean per triplet is used regardless.
+                   Default: False (preserves previous per-angle raw value behaviour).
         as_top: If True, write a full system .top file instead of include .itp (default: False).
         prm_path: Path to forcefield parameter file (optional, used to parse nonbonded parameters for [ atomtypes ]).
         split_system: If True, split system into a mineral .itp and include statements in .top (default: False).
@@ -175,6 +187,7 @@ def itp(atoms, Box=None, file_path=None, molecule_name=None, nrexcl=1, comment=N
                 nrexcl=nrexcl, comment=comment, rmaxH=rmaxH, rmaxM=rmaxM,
                 explicit_bonds=explicit_bonds, explicit_angles=explicit_angles, KANGLE=KANGLE,
                 detect_bimodal=detect_bimodal, bimodal_threshold=bimodal_threshold, max_angle=max_angle,
+                harmonize_angles=harmonize_angles,
                 as_top=False, prm_path=prm_path, split_system=False)
                 
         # 3. Write full system .top file with includes
@@ -381,7 +394,11 @@ def itp(atoms, Box=None, file_path=None, molecule_name=None, nrexcl=1, comment=N
     
     # Detect bimodal angle distributions if requested
     bimodal_info = []
-    if detect_bimodal and Angle_index is not None and len(Angle_index) > 0:
+    # triplet_cluster_means: dict mapping canonical triplet str -> list of cluster (avg, values) tuples
+    # Used by harmonize_angles to look up the cluster-mean for each angle row.
+    triplet_cluster_means = {}  # only populated when harmonize_angles=True
+
+    if (detect_bimodal or harmonize_angles) and Angle_index is not None and len(Angle_index) > 0:
         from collections import defaultdict
         angle_by_type = defaultdict(list)
         for angle in Angle_index:
@@ -396,6 +413,10 @@ def itp(atoms, Box=None, file_path=None, molecule_name=None, nrexcl=1, comment=N
                 angle_by_type[triplet].append(float(angle[3]))
         
         for triplet, values in angle_by_type.items():
+            # Always compute cluster means so harmonize_angles can use them
+            clusters = cluster_angles(values, threshold=bimodal_threshold)
+            triplet_cluster_means[triplet] = clusters
+
             if len(values) >= 4:
                 sorted_vals = sorted(values)
                 spread = sorted_vals[-1] - sorted_vals[0]
@@ -412,6 +433,8 @@ def itp(atoms, Box=None, file_path=None, molecule_name=None, nrexcl=1, comment=N
             print(f"write_itp: WARNING - Detected {len(bimodal_info)} bimodal angle distributions!")
             for triplet, avg_low, avg_high, count in bimodal_info:
                 print(f"  {triplet}: ~{avg_low:.0f}° (cis) and ~{avg_high:.0f}° (trans), n={count}")
+        if harmonize_angles:
+            print(f"write_itp: harmonize_angles=True — angle values in [ angles ] will use cluster means.")
     
     # Calculate total charge
     total_charge = sum(_to_float(atom.get('charge', 0.0)) for atom in atoms)
@@ -453,34 +476,39 @@ def itp(atoms, Box=None, file_path=None, molecule_name=None, nrexcl=1, comment=N
         f.write("; id   attype  resnr resname  atname   cgnr        charge      mass\n")
         
         for i, atom in enumerate(atoms, 1):
-            at_type = atom.get('fftype', atom.get('type', ''))
-            if at_type is None:
-                at_type = 'X'  # Default type if none exists
+            at_type = atom.get('fftype') or atom.get('type') or 'X'
             
             # Map ion types for GROMACS min.ff compatibility
             res_name = atom.get('resname', molecule_name)
-            if res_name == 'ION' or (res_name and res_name.upper() == 'ION'):
-                if at_type == 'Na':
+            res_name_upper = str(res_name).strip().upper()
+            
+            ion_resnames = {
+                'ION', 'NA', 'CL', 'K', 'LI', 'CS', 'RB', 'F', 'BR', 'I', 'CA', 'MG', 'ZN',
+                'NA+', 'CL-', 'K+', 'CA2+', 'MG2+', 'ZN2+', 'SOD', 'POT', 'CLA', 'CAL'
+            }
+            if res_name_upper in ion_resnames or at_type.upper() in ion_resnames:
+                at_type_clean = at_type.rstrip('+-0123456789')
+                if at_type_clean in ['Na', 'NA', 'SOD']:
                     at_type = 'Na+'
-                elif at_type == 'Cl':
+                elif at_type_clean in ['Cl', 'CL', 'CLA']:
                     at_type = 'Cl−' # Unicode minus U+2212
-                elif at_type == 'K':
+                elif at_type_clean in ['K', 'POT']:
                     at_type = 'K+'
-                elif at_type == 'Li':
+                elif at_type_clean in ['Li', 'LI']:
                     at_type = 'Li+'
-                elif at_type == 'Cs':
+                elif at_type_clean in ['Cs', 'CS']:
                     at_type = 'Cs+'
-                elif at_type == 'Rb':
+                elif at_type_clean in ['Rb', 'RB']:
                     at_type = 'Rb+'
-                elif at_type == 'F':
+                elif at_type_clean in ['F']:
                     at_type = 'F−' # Unicode minus U+2212
-                elif at_type == 'Br':
+                elif at_type_clean in ['Br', 'BR']:
                     at_type = 'Br−' # Unicode minus U+2212
-                elif at_type == 'I':
+                elif at_type_clean in ['I']:
                     at_type = 'I−' # Unicode minus U+2212
-                elif at_type == 'Ca':
+                elif at_type_clean in ['Ca', 'CA', 'CAL']:
                     at_type = 'Ca2+'
-                elif at_type == 'Mg':
+                elif at_type_clean in ['Mg', 'MG']:
                     at_type = 'Mg2+'
                 
             res_nr = atom.get('molid', atom.get('resid', 1))
@@ -566,14 +594,30 @@ def itp(atoms, Box=None, file_path=None, molecule_name=None, nrexcl=1, comment=N
                         adeg = 109.47  # SPC water
                         ktheta = 383.0
                     else:
-                        adeg = angle_val
+                        if harmonize_angles and triplet_cluster_means:
+                            # Resolve canonical triplet key
+                            at1_t = atoms[a1-1].get('type', 'X')
+                            at2_t = atoms[a2-1].get('type', 'X')
+                            at3_t = atoms[a3-1].get('type', 'X')
+                            key = f"{min(at1_t, at3_t)}-{at2_t}-{max(at1_t, at3_t)}"
+                            clusters = triplet_cluster_means.get(key)
+                            if clusters and len(clusters) > 1:
+                                # Bimodal: assign to nearest cluster mean
+                                adeg = min(clusters, key=lambda c: abs(c[0] - angle_val))[0]
+                            elif clusters:
+                                adeg = clusters[0][0]  # single cluster mean
+                            else:
+                                adeg = angle_val
+                        else:
+                            adeg = angle_val
                         ktheta = KANGLE
                     
                     # Write angle with parameters
                     at1_type = atoms[a1-1].get('type', '')
                     at2_type = atoms[a2-1].get('type', '')
                     at3_type = atoms[a3-1].get('type', '')
-                    f.write(f"{a1:<5} {a2:<5} {a3:<5} {1:<5} {adeg:<6.2f}   {ktheta:<8.2f} ; {at1_type}-{at2_type}-{at3_type}\n")
+                    harmonize_tag = " [harmonized]" if harmonize_angles and h_count == 0 else ""
+                    f.write(f"{a1:<5} {a2:<5} {a3:<5} {1:<5} {adeg:<6.2f}   {ktheta:<8.2f} ; {at1_type}-{at2_type}-{at3_type}{harmonize_tag}\n")
                 else:
                     # Write angle without parameters
                     at1_type = atoms[a1-1].get('fftype', atoms[a1-1].get('type', ''))
@@ -622,10 +666,104 @@ def itp(atoms, Box=None, file_path=None, molecule_name=None, nrexcl=1, comment=N
         # We'll skip processing of 'angles' attribute on atoms - this is handled by Angle_index
         # Getting angles from the Angle_index is more reliable and consistent
 
+    # ------------------------------------------------------------------
+    # Always write a companion harmonized_ffbonded.itp alongside the
+    # main .itp/.top output.  The file follows the same format as
+    # min.ff/ffbonded.itp: it starts with all static bondtypes and
+    # M-O-H angletypes from the original ffbonded.itp, then appends
+    # structure-specific [ angletypes ] entries with cluster-mean theta0
+    # values for every unique M-O-M / O-M-O triplet found in the
+    # structure.  Bimodal triplets get two rows (cis then trans).
+    # ------------------------------------------------------------------
+    if Angle_index is not None and len(Angle_index) > 0 and file_path is not None:
+        import os as _os
+        _base = file_path
+        for _ext in ('.itp', '.top'):
+            if _base.endswith(_ext):
+                _base = _base[:-len(_ext)]
+                break
+        ffbonded_path = _base + '_harmonized_ffbonded.itp'
+
+        # Locate the original min.ff/ffbonded.itp (relative to this file)
+        _this_dir = _os.path.dirname(_os.path.abspath(__file__))
+        _orig_ffbonded = _os.path.join(_this_dir, 'ffparams', 'min.ff', 'ffbonded.itp')
+        _orig_lines = []
+        if _os.path.exists(_orig_ffbonded):
+            with open(_orig_ffbonded, 'r', encoding='utf-8') as _fforig:
+                _orig_lines = _fforig.readlines()
+
+        # Collect unique non-H angle triplets and their raw values from the structure
+        from collections import defaultdict as _defaultdict
+        _angle_vals = _defaultdict(list)
+        for _angle in Angle_index:
+            if len(_angle) > 3:
+                _a1a, _a2a, _a3a = int(_angle[0]), int(_angle[1]), int(_angle[2])
+                _t1a = atoms[_a1a-1].get('fftype') or atoms[_a1a-1].get('type') or 'X'
+                _t2a = atoms[_a2a-1].get('fftype') or atoms[_a2a-1].get('type') or 'X'
+                _t3a = atoms[_a3a-1].get('fftype') or atoms[_a3a-1].get('type') or 'X'
+                # skip H-containing triplets (covered by static entries in original)
+                if _t1a.upper().startswith('H') or _t2a.upper().startswith('H') or _t3a.upper().startswith('H'):
+                    continue
+                if _t1a > _t3a:
+                    _t1a, _t3a = _t3a, _t1a
+                _angle_vals[(_t1a, _t2a, _t3a)].append(float(_angle[3]))
+
+        with open(ffbonded_path, 'w', encoding='utf-8') as _ff:
+            # Header
+            _ff.write('; Harmonized force-field bonded parameters\n')
+            _ff.write(f'; Generated by atomipy.write_itp on {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}\n')
+            _ff.write(f'; Source topology: {_os.path.basename(file_path)}\n')
+            _ff.write(';\n')
+            _ff.write('; This file extends min.ff/ffbonded.itp with structure-specific\n')
+            _ff.write('; cluster-mean theta0 values for M-O-M / O-M-O angle triplets.\n')
+            _ff.write('; Bimodal triplets appear as two consecutive rows (cis then trans).\n')
+            _ff.write(';\n\n')
+
+            # Copy the original ffbonded.itp content verbatim (if found)
+            if _orig_lines:
+                _ff.write('; === Original min.ff/ffbonded.itp entries ===\n')
+                for _oline in _orig_lines:
+                    _ff.write(_oline)
+            else:
+                # Fallback: write minimal bondtypes / H-angle entries
+                _ff.write('[ bondtypes ]\n')
+                _ff.write(';i      j\t   func     b0\t    kb\n')
+                _ff.write('Oh      H\t\t1   \t0.09572\t441050\n')
+                _ff.write('Ob      H\t\t1   \t0.09572\t441050\n')
+                _ff.write('\n')
+                _ff.write('[ angletypes ]\n')
+                _ff.write(';i      j       k\tfunc\tth0\tcth\n')
+                _ff.write('H       Oh      Alo     1       110.0   125.52  ; Al(oct)-O-H\n')
+                _ff.write('H       Oh      Mgo     1       110.0   125.52  ; Mg(oct)-O-H\n')
+                _ff.write('Hw      Ow      Hw      1       109.47  383.0   ; H-O-H water\n')
+                _ff.write('\n')
+
+            # Append structure-specific cluster-mean angle entries
+            if _angle_vals:
+                _ff.write('\n')
+                _ff.write('; === Structure-specific cluster-mean angles (from ' + _os.path.basename(file_path) + ') ===\n')
+                _ff.write('; Bimodal triplets listed as cis then trans.\n')
+                _ff.write(';i       j       k\tfunc\tth0\t\tcth\n')
+                for _triplet_key in sorted(_angle_vals.keys()):
+                    _vals = _angle_vals[_triplet_key]
+                    _t1a, _t2a, _t3a = _triplet_key
+                    _clusters = cluster_angles(_vals, threshold=bimodal_threshold)
+                    if len(_clusters) == 1:
+                        _cm = _clusters[0][0]
+                        _ff.write(f'{_t1a:<8}{_t2a:<8}{_t3a:<4}\t1\t{_cm:<8.2f}\t{KANGLE:<8.2f}; {_t1a}-{_t2a}-{_t3a} [mean n={len(_vals)}]\n')
+                    else:
+                        for _ci, (_cm, _cv) in enumerate(_clusters):
+                            _lbl = 'cis' if _ci == 0 else 'trans'
+                            _ff.write(f'{_t1a:<8}{_t2a:<8}{_t3a:<4}\t1\t{_cm:<8.2f}\t{KANGLE:<8.2f}; {_t1a}-{_t2a}-{_t3a} [{_lbl} n={len(_cv)}]\n')
+                _ff.write('\n')
+
+        print(f'write_itp: Wrote harmonized ffbonded -> {_os.path.basename(ffbonded_path)}')
+
 
 def top(atoms, Box=None, file_path=None, molecule_name=None, nrexcl=1, comment=None, 
         rmaxH=1.2, rmaxM=2.45, explicit_bonds=0, explicit_angles=1, KANGLE=500,
         detect_bimodal=False, bimodal_threshold=30.0, max_angle=None, prm_path=None,
+        harmonize_angles=False,
         split_system=False, water_model='spce'):
     """
     Write atoms to a complete, self-contained Gromacs system topology (.top) file.
@@ -773,9 +911,9 @@ def psf(atoms, Box=None, file_path=None, segid=None, rmaxH=1.2, rmaxM=2.45,
             filtered_angles = []
             for angle in Angle_index:
                 a1, a2, a3 = int(angle[0]), int(angle[1]), int(angle[2])
-                type1 = atoms[a1].get('fftype', atoms[a1].get('type', 'X')).upper()
-                type2 = atoms[a2].get('fftype', atoms[a2].get('type', 'X')).upper()
-                type3 = atoms[a3].get('fftype', atoms[a3].get('type', 'X')).upper()
+                type1 = (atoms[a1].get('fftype') or atoms[a1].get('type') or 'X').upper()
+                type2 = (atoms[a2].get('fftype') or atoms[a2].get('type') or 'X').upper()
+                type3 = (atoms[a3].get('fftype') or atoms[a3].get('type') or 'X').upper()
                 if (type1, type2, type3) in valid_angles:
                     filtered_angles.append(angle)
             Angle_index = filtered_angles

@@ -438,7 +438,9 @@ def _load_solvent(solvent_type='spce'):
         'spce': '864_spce.pdb',
         'spc': '864_spce.pdb',  # Alias
         'tip3p': '864_tip3p.pdb',
+        'opc3': '864_tip3p.pdb',  # OPC3 shares TIP3P 3-site structure template
         'tip4p': '864_tip4p.pdb',
+        'opc': '864_tip4p.pdb',   # OPC shares TIP4P 4-site structure template
     }
     
     # Get the appropriate solvent file

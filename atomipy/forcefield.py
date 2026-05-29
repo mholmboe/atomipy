@@ -1024,6 +1024,11 @@ def clayff(atoms, Box, ffname='clayff', rmaxlong=2.45, rmaxH=1.2, log=False, log
     atoms = set_atomic_masses(atoms)
 
     # Determine Box format and convert as needed
+    if Box is None:
+        raise ValueError(
+            "clayff requires a simulation Box; received None. "
+            "Make sure a mineral/box source is connected upstream."
+        )
     if len(Box) == 9:
         # Triclinic Box in GROMACS format [lx, ly, lz, 0, 0, xy, 0, xz, yz]
         Box_dim = Box

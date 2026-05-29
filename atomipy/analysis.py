@@ -310,3 +310,119 @@ def closest_atom(atoms, reference, Box=None):
     min_idx = np.argmin(dists_sq)
     
     return atoms[min_idx]
+
+
+def min_distances(atoms, Box, group_by='molid', n_pairs=10, cutoff=None):
+    """
+    Calculate the minimum distances between different molecules/residues.
+
+    For each pair of distinct groups (molecules or residues), finds the
+    single closest atom–atom contact, then returns the `n_pairs` shortest
+    contacts sorted by distance.  Useful for detecting clashes after
+    solvation or verifying inter-molecular separation.
+
+    Parameters
+    ----------
+    atoms : list of dict
+        List of atom dictionaries, each with at least 'x', 'y', 'z',
+        'molid' (int), and 'resname' (str) keys.
+    Box : list of float
+        Box dimensions (1×3, 1×6, or 1×9).
+    group_by : str
+        'molid' (default) — group atoms by their molid integer.
+        'resname' — group atoms by their residue name.
+    n_pairs : int
+        Maximum number of closest inter-group pairs to return (default 10).
+    cutoff : float or None
+        If given, only consider pairs whose minimum distance is ≤ cutoff Å.
+
+    Returns
+    -------
+    list of dict
+        Sorted list (ascending distance) of inter-group contacts.  Each
+        entry has keys:
+          'group_a'   – label of the first group
+          'group_b'   – label of the second group
+          'atom_a'    – index of the closest atom in group A
+          'atom_b'    – index of the closest atom in group B
+          'type_a'    – atom type of the closest atom in group A
+          'type_b'    – atom type of the closest atom in group B
+          'distance'  – minimum distance in Å (float, 2 d.p.)
+    """
+    if not atoms:
+        return []
+
+    # Determine box vectors for PBC
+    if len(Box) == 3:
+        lx, ly, lz = float(Box[0]), float(Box[1]), float(Box[2])
+        box_vec = np.array([lx, ly, lz])
+    elif len(Box) >= 9:
+        lx, ly, lz = float(Box[0]), float(Box[1]), float(Box[2])
+        box_vec = np.array([lx, ly, lz])
+    elif len(Box) == 6:
+        from .cell_utils import Cell2Box_dim
+        bdim = Cell2Box_dim(Box)
+        lx, ly, lz = float(bdim[0]), float(bdim[1]), float(bdim[2])
+        box_vec = np.array([lx, ly, lz])
+    else:
+        lx, ly, lz = 1e9, 1e9, 1e9
+        box_vec = None
+
+    # Build groups
+    key_func = (lambda a: a.get('molid', 0)) if group_by == 'molid' else (lambda a: a.get('resname', '?'))
+    groups = {}
+    for idx, atom in enumerate(atoms):
+        key = key_func(atom)
+        if key not in groups:
+            groups[key] = []
+        groups[key].append(idx)
+
+    group_keys = list(groups.keys())
+    n_groups = len(group_keys)
+    if n_groups < 2:
+        return []
+
+    # Pre-build position array
+    pos = np.array([[a['x'], a['y'], a['z']] for a in atoms], dtype=float)
+
+    results = []
+    for gi in range(n_groups):
+        for gj in range(gi + 1, n_groups):
+            key_a = group_keys[gi]
+            key_b = group_keys[gj]
+            idx_a = groups[key_a]
+            idx_b = groups[key_b]
+
+            pos_a = pos[idx_a]   # shape (Na, 3)
+            pos_b = pos[idx_b]   # shape (Nb, 3)
+
+            # Broadcast pairwise difference
+            diff = pos_a[:, None, :] - pos_b[None, :, :]   # (Na, Nb, 3)
+
+            # Minimum image convention (orthogonal approximation)
+            if box_vec is not None:
+                diff -= np.round(diff / box_vec) * box_vec
+
+            dists = np.sqrt(np.sum(diff ** 2, axis=2))  # (Na, Nb)
+            flat_min = np.argmin(dists)
+            ia_local, ib_local = np.unravel_index(flat_min, dists.shape)
+            d_min = float(dists[ia_local, ib_local])
+
+            if cutoff is not None and d_min > cutoff:
+                continue
+
+            atom_a_idx = idx_a[ia_local]
+            atom_b_idx = idx_b[ib_local]
+            results.append({
+                'group_a': key_a,
+                'group_b': key_b,
+                'atom_a': atom_a_idx,
+                'atom_b': atom_b_idx,
+                'type_a': atoms[atom_a_idx].get('type', '?'),
+                'type_b': atoms[atom_b_idx].get('type', '?'),
+                'distance': round(d_min, 2),
+            })
+
+    results.sort(key=lambda r: r['distance'])
+    return results[:n_pairs]
+

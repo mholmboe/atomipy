@@ -340,9 +340,9 @@ def gro(atoms, Box, file_path):
                 vx *= angstrom_to_nm
                 vy *= angstrom_to_nm
                 vz *= angstrom_to_nm
-                line = f"{resnum:5d}{resname:<5s}{atomname:>5s}{index:5d}{x:8.3f}{y:8.3f}{z:8.3f}{vx:8.4f}{vy:8.4f}{vz:8.4f}\n"
+                line = f"{resnum:5d}{resname[:5]:<5s}{atomname:>5s}{index:5d}{x:8.3f}{y:8.3f}{z:8.3f}{vx:8.4f}{vy:8.4f}{vz:8.4f}\n"
             else:
-                line = f"{resnum:5d}{resname:<5s}{atomname:>5s}{index:5d}{x:8.3f}{y:8.3f}{z:8.3f}\n"
+                line = f"{resnum:5d}{resname[:5]:<5s}{atomname:>5s}{index:5d}{x:8.3f}{y:8.3f}{z:8.3f}\n"
                 
             f.write(line)
             
