@@ -177,18 +177,19 @@ def composition(atoms: list, Box=None, verbose: bool = True) -> dict:
     if Box is not None:
         from .cell_utils import normalize_box
         Box_dim, Cell = normalize_box(Box)
-        a, b, c = Cell[0], Cell[1], Cell[2]
-        alpha, beta, gamma = Cell[3], Cell[4], Cell[5]
-        if abs(alpha - 90) < 1e-6 and abs(beta - 90) < 1e-6 and abs(gamma - 90) < 1e-6:
-            volume = a * b * c
-        else:
-            ar = math.radians(alpha)
-            br = math.radians(beta)
-            gr = math.radians(gamma)
-            volume = a * b * c * math.sqrt(
-                1 - math.cos(ar)**2 - math.cos(br)**2 - math.cos(gr)**2
-                + 2 * math.cos(ar) * math.cos(br) * math.cos(gr)
-            )
+        if Cell is not None:
+            a, b, c = Cell[0], Cell[1], Cell[2]
+            alpha, beta, gamma = Cell[3], Cell[4], Cell[5]
+            if abs(alpha - 90) < 1e-6 and abs(beta - 90) < 1e-6 and abs(gamma - 90) < 1e-6:
+                volume = a * b * c
+            else:
+                ar = math.radians(alpha)
+                br = math.radians(beta)
+                gr = math.radians(gamma)
+                volume = a * b * c * math.sqrt(
+                    1 - math.cos(ar)**2 - math.cos(br)**2 - math.cos(gr)**2
+                    + 2 * math.cos(ar) * math.cos(br) * math.cos(gr)
+                )
 
     if has_mass:
         total_mass = sum(float(a.get('mass') or 0.0) for a in atoms)
@@ -245,7 +246,7 @@ def composition(atoms: list, Box=None, verbose: bool = True) -> dict:
     atom_avg_q    = (
         [round(sum(type_charges[t]) / len(type_charges[t]), 6) if type_charges[t] else 0.0
          for t in sorted_types]
-        if has_charge else None
+        if has_charge else []
     )
     total_charge  = sum(float(a.get('charge') or 0.0) for a in atoms) if has_charge else 0.0
 
