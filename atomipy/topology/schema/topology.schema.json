@@ -1,0 +1,122 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://atomipy.io/schemas/topology.schema.json",
+  "title": "atomipy Topology",
+  "description": "Per-instance-first canonical topology. Units: nm, kJ/mol, degrees, e, amu.",
+  "type": "object",
+  "required": ["schema_version", "atoms"],
+  "properties": {
+    "schema_version": {"type": "string"},
+    "meta": {
+      "type": "object",
+      "properties": {
+        "name": {"type": "string"},
+        "source_format": {"type": "string"},
+        "source_file": {"type": "string"},
+        "generator": {"type": "string"},
+        "comment": {"type": "string"}
+      },
+      "additionalProperties": true
+    },
+    "units": {"type": "string", "default": "canonical"},
+    "defaults": {
+      "type": "object",
+      "properties": {
+        "nb_func": {"type": "integer"},
+        "comb_rule": {"type": "integer"},
+        "gen_pairs": {"type": "string"},
+        "fudgeLJ": {"type": "number"},
+        "fudgeQQ": {"type": "number"}
+      }
+    },
+    "box": {
+      "type": ["object", "null"],
+      "properties": {
+        "matrix": {
+          "type": "array", "minItems": 3, "maxItems": 3,
+          "items": {"type": "array", "minItems": 3, "maxItems": 3,
+                    "items": {"type": "number"}}
+        }
+      },
+      "required": ["matrix"]
+    },
+    "atom_types": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {
+          "name": {"type": "string"},
+          "element": {"type": ["string", "null"]},
+          "atomic_number": {"type": ["integer", "null"]},
+          "mass": {"type": ["number", "null"]},
+          "charge": {"type": ["number", "null"]},
+          "ptype": {"type": "string"},
+          "lj": {"type": "object", "additionalProperties": {"type": "number"}},
+          "comment": {"type": "string"}
+        }
+      }
+    },
+    "atoms": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id"],
+        "properties": {
+          "id": {"type": "integer", "minimum": 0},
+          "type": {"type": ["string", "null"]},
+          "site_label": {"type": ["string", "null"]},
+          "name": {"type": "string"},
+          "element": {"type": ["string", "null"]},
+          "atomic_number": {"type": ["integer", "null"]},
+          "mass": {"type": ["number", "null"]},
+          "charge": {"type": ["number", "null"]},
+          "residue_id": {"type": "integer"},
+          "residue_name": {"type": "string"},
+          "molecule_id": {"type": "integer"},
+          "charge_group": {"type": "integer"},
+          "position": {"type": ["array", "null"], "items": {"type": "number"},
+                       "minItems": 3, "maxItems": 3},
+          "extra": {"type": "object"}
+        }
+      }
+    },
+    "bonds": {"type": "array", "items": {"$ref": "#/definitions/term2"}},
+    "angles": {"type": "array", "items": {"$ref": "#/definitions/term3"}},
+    "dihedrals": {"type": "array", "items": {"$ref": "#/definitions/term4"}},
+    "impropers": {"type": "array", "items": {"$ref": "#/definitions/term4"}},
+    "pairs": {"type": "array"},
+    "exclusions": {"type": "array"},
+    "nonbonded_overrides": {"type": "array"},
+    "molecules": {"type": "array"}
+  },
+  "definitions": {
+    "params": {"type": "object", "additionalProperties": {"type": "number"}},
+    "term2": {
+      "type": "object", "required": ["i", "j", "form"],
+      "properties": {
+        "i": {"type": "integer"}, "j": {"type": "integer"},
+        "form": {"type": "string"}, "params": {"$ref": "#/definitions/params"},
+        "type_ref": {"type": ["string", "null"]}, "comment": {"type": "string"}
+      }
+    },
+    "term3": {
+      "type": "object", "required": ["i", "j", "k", "form"],
+      "properties": {
+        "i": {"type": "integer"}, "j": {"type": "integer"}, "k": {"type": "integer"},
+        "form": {"type": "string"}, "params": {"$ref": "#/definitions/params"},
+        "type_ref": {"type": ["string", "null"]}, "comment": {"type": "string"}
+      }
+    },
+    "term4": {
+      "type": "object", "required": ["i", "j", "k", "l", "form"],
+      "properties": {
+        "i": {"type": "integer"}, "j": {"type": "integer"},
+        "k": {"type": "integer"}, "l": {"type": "integer"},
+        "form": {"type": "string"}, "params": {"$ref": "#/definitions/params"},
+        "type_ref": {"type": ["string", "null"]}, "comment": {"type": "string"},
+        "central": {"type": "integer"}
+      }
+    }
+  }
+}
