@@ -1,0 +1,283 @@
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!------------------------------XYZ-PBC-----------------------------------!
+if xyzpbc .eq. yes then
+    if ix .eq. 1 then
+        calc jsum = @isum + ((@NX - 1) * @NY)
+        impatch SIOX7 A @type @jsum PRIM @type @isum noautog
+        impatch SIOX8 A @type @jsum PRIM @type @isum noautog
+        impatch SIOX9 A @type @jsum PRIM @type @isum noautog
+        coor stat sele segid @type .and. resid @jsum .and. type AL4 .or. -
+                         segid @type .and. resid @jsum .and. type MG4 end
+        set qtype = ?seltype
+        if qtype .eq. AL4 then
+            impatch AOSX2 A @type @jsum  PRIM @type @isum noautog
+        else
+            impatch MOSX2 A @type @jsum  PRIM @type @isum noautog
+        endif
+    endif
+    if iy .eq. 1 then
+        calc jsum = @isum + @NY - 1
+        coor stat sele segid @type .and. resid @isum .and. type AL1 .or. -
+                         segid @type .and. resid @isum .and. type MG1 end
+        set qtype = ?seltype
+        if qtype .eq. AL1 then
+            impatch AOSY3 B @type @jsum  PRIM @type @isum noautog
+        else
+            impatch MOSY3 B @type @jsum  PRIM @type @isum noautog
+        endif
+    endif
+    !
+    ! diagonal on XY or AY or XB or AB image
+    !
+    if ix .eq. 1 then
+        if iy .gt. 1 then
+            calc jsum = @isum + ( @NX - 1 ) * @Ny - 1
+            coor stat sele segid @type .and. resid @isum .and. type AL1 .or. -
+                            segid @type .and. resid @isum .and. type MG1 end
+            set qtype = ?seltype
+            if qtype .eq. AL1 then
+               impatch ALOD2 A @type @jsum  PRIM @type @isum noautog
+            else
+               impatch MGOD2 A @type @jsum  PRIM @type @isum noautog
+            endif
+        endif
+    endif
+    if iy .eq. 1 then
+        if ix .gt. 1 then
+            calc jsum = @isum - 1
+            coor stat sele segid @type .and. resid @isum .and. type AL1 .or. -
+                             segid @type .and. resid @isum .and. type MG1 end
+            set qtype = ?seltype
+            if qtype .eq. AL1 then
+                impatch ALOD2 B @type @jsum  PRIM @type @isum noautog
+            else
+                impatch MGOD2 B @type @jsum  PRIM @type @isum noautog
+            endif
+        endif
+    endif
+    if iy .eq. @Ny then
+        if ix .eq. @Nx then
+            calc jsum = @isum - @Nxy + 1
+            coor stat sele segid @type .and. resid @jsum .and. type AL1 .or. -
+                             segid @type .and. resid @jsum .and. type MG1 end
+            set qtype = ?seltype
+            if qtype .eq. AL1 then
+                impatch ALOD2 PRIM @type @isum XY @type @jsum noautog
+            endif
+            if qtype .eq. MG1 then
+                impatch MGOD2 PRIM @type @isum XY @type @jsum noautog
+            endif
+        endif
+    endif
+endif
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!-------------------------------XY-PBC-----------------------------------!
+if xypbc .eq. yes then
+    if ix .eq. 1 then
+        calc jsum = @isum + ((@NX - 1) * @NY)
+        impatch SIOX7 A @type @jsum PRIM @type @isum noautog
+        impatch SIOX8 A @type @jsum PRIM @type @isum noautog
+        impatch SIOX9 A @type @jsum PRIM @type @isum noautog
+        coor stat sele segid @type .and. resid @jsum .and. type AL4 .or. -
+                         segid @type .and. resid @jsum .and. type MG4 end
+        set qtype = ?seltype
+        if qtype .eq. AL4 then
+            impatch AOSX2 A @type @jsum  PRIM @type @isum noautog
+        else
+            impatch MOSX2 A @type @jsum  PRIM @type @isum noautog
+        endif
+    endif
+    if iy .eq. 1 then
+        calc jsum = @isum + @NY - 1
+        coor stat sele segid @type .and. resid @isum .and. type AL1 .or. -
+                         segid @type .and. resid @isum .and. type MG1 end
+        set qtype = ?seltype
+        if qtype .eq. AL1 then
+            impatch AOSY3 B @type @jsum  PRIM @type @isum noautog
+        else
+            impatch MOSY3 B @type @jsum  PRIM @type @isum noautog
+        endif
+    endif
+
+    !
+    ! diagonal on XY or AY or XB or AB image
+    !
+    if ix .eq. 1 then
+        if iy .gt. 1 then
+            calc jsum = @isum + ( @NX - 1 ) * @Ny - 1
+            coor stat sele segid @type .and. resid @isum .and. type AL1 .or. -
+                            segid @type .and. resid @isum .and. type MG1 end
+            set qtype = ?seltype
+            if qtype .eq. AL1 then
+               impatch ALOD2 A @type @jsum  PRIM @type @isum noautog
+            else
+               impatch MGOD2 A @type @jsum  PRIM @type @isum noautog
+            endif
+        endif
+    endif
+    if iy .eq. 1 then
+        if ix .gt. 1 then
+            calc jsum = @isum - 1
+            coor stat sele segid @type .and. resid @isum .and. type AL1 .or. -
+                             segid @type .and. resid @isum .and. type MG1 end
+            set qtype = ?seltype
+            if qtype .eq. AL1 then
+                impatch ALOD2 B @type @jsum  PRIM @type @isum noautog
+            else
+                impatch MGOD2 B @type @jsum  PRIM @type @isum noautog
+            endif
+        endif
+    endif
+    if iy .eq. @Ny then
+        if ix .eq. @Nx then
+            calc jsum = @isum - @Nxy + 1
+            coor stat sele segid @type .and. resid @jsum .and. type AL1 .or. -
+                             segid @type .and. resid @jsum .and. type MG1 end
+            set qtype = ?seltype
+            if qtype .eq. AL1 then
+                impatch ALOD2 PRIM @type @isum XY @type @jsum noautog
+            endif
+            if qtype .eq. MG1 then
+                impatch MGOD2 PRIM @type @isum XY @type @jsum noautog
+            endif
+        endif
+    endif
+endif
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!-------------------------------YZ-PBC-----------------------------------!
+if yzpbc .eq. yes then
+    if iy .eq. 1 then
+        calc jsum = @isum + @NY - 1
+        coor stat sele segid @type .and. resid @isum .and. type AL1 .or. -
+                         segid @type .and. resid @isum .and. type MG1 end
+        set qtype = ?seltype
+        if qtype .eq. AL1 then
+            impatch AOSY3 B @type @jsum  PRIM @type @isum noautog
+        else
+            impatch MOSY3 B @type @jsum  PRIM @type @isum noautog
+        endif
+    endif
+    if iy .eq. 1 then
+        if ix .gt. 1 then
+            calc jsum = @isum - 1
+            coor stat sele segid @type .and. resid @isum .and. type AL1 .or. -
+                             segid @type .and. resid @isum .and. type MG1 end
+            set qtype = ?seltype
+            if qtype .eq. AL1 then
+                impatch ALOD2 B @type @jsum  PRIM @type @isum noautog
+            else
+                impatch MGOD2 B @type @jsum  PRIM @type @isum noautog
+            endif
+        endif
+    endif
+endif
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!-------------------------------XZ-PBC-----------------------------------!
+if xzpbc .eq. yes then
+    if ix .eq. 1 then
+        calc jsum = @isum + ((@NX - 1) * @NY)
+        impatch SIOX7 A @type @jsum PRIM @type @isum noautog
+        impatch SIOX8 A @type @jsum PRIM @type @isum noautog
+        impatch SIOX9 A @type @jsum PRIM @type @isum noautog
+        coor stat sele segid @type .and. resid @jsum .and. type AL4 .or. -
+                         segid @type .and. resid @jsum .and. type MG4 end
+        set qtype = ?seltype
+        if qtype .eq. AL4 then
+            impatch AOSX2 A @type @jsum  PRIM @type @isum noautog
+        else
+            impatch MOSX2 A @type @jsum  PRIM @type @isum noautog
+        endif
+    endif
+    if ix .eq. 1 then
+         if iy .gt. 1 then
+             calc jsum = @isum + ( @NX - 1 ) * @Ny - 1
+            coor stat sele segid @type .and. resid @isum .and. type AL1 .or. -
+                            segid @type .and. resid @isum .and. type MG1 end
+            set qtype = ?seltype
+            if qtype .eq. AL1 then
+               impatch ALOD2 A @type @jsum  PRIM @type @isum noautog
+            else
+               impatch MGOD2 A @type @jsum  PRIM @type @isum noautog
+            endif
+         endif
+    endif
+endif
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!-------------------------------Y-PBC------------------------------------!
+if ypbc .eq. yes then
+    if iy .eq. 1 then
+        calc jsum = @isum + @NY - 1
+        coor stat sele segid @type .and. resid @isum .and. type AL1 .or. -
+                         segid @type .and. resid @isum .and. type MG1 end
+        set qtype = ?seltype
+        if qtype .eq. AL1 then
+            impatch AOSY3 B @type @jsum  PRIM @type @isum noautog
+        else
+            impatch MOSY3 B @type @jsum  PRIM @type @isum noautog
+        endif
+    endif
+    if iy .eq. 1 then
+        if ix .gt. 1 then
+            calc jsum = @isum - 1
+            coor stat sele segid @type .and. resid @isum .and. type AL1 .or. -
+                             segid @type .and. resid @isum .and. type MG1 end
+            set qtype = ?seltype
+            if qtype .eq. AL1 then
+                impatch ALOD2 B @type @jsum  PRIM @type @isum noautog
+            else
+                impatch MGOD2 B @type @jsum  PRIM @type @isum noautog
+            endif
+        endif
+    endif
+endif
+
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!-------------------------------X-PBC------------------------------------!
+if xpbc .eq. yes then
+    if ix .eq. 1 then
+        calc jsum = @isum + ((@NX - 1) * @NY)
+        impatch SIOX7 A @type @jsum PRIM @type @isum noautog
+        impatch SIOX8 A @type @jsum PRIM @type @isum noautog
+        impatch SIOX9 A @type @jsum PRIM @type @isum noautog
+        coor stat sele segid @type .and. resid @jsum .and. type AL4 .or. -
+                         segid @type .and. resid @jsum .and. type MG4 end
+        set qtype = ?seltype
+        if qtype .eq. AL4 then
+            impatch AOSX2 A @type @jsum  PRIM @type @isum noautog
+        else
+            impatch MOSX2 A @type @jsum  PRIM @type @isum noautog
+        endif
+    endif
+
+    if ix .eq. 1 then
+         if iy .gt. 1 then
+             calc jsum = @isum + ( @NX - 1 ) * @Ny - 1
+            coor stat sele segid @type .and. resid @isum .and. type AL1 .or. -
+                            segid @type .and. resid @isum .and. type MG1 end
+            set qtype = ?seltype
+            if qtype .eq. AL1 then
+               impatch ALOD2 A @type @jsum  PRIM @type @isum noautog
+            else
+               impatch MGOD2 A @type @jsum  PRIM @type @isum noautog
+            endif
+         endif
+    endif
+endif
+
+
+if ix .eq. @Nx then
+    if iy .eq. @Ny then
+        if iz .eq. @Nz then
+            impatch FKIMP PRIM @type @isum PRIM @type @jsum 
+        endif
+    endif
+endif
+
+if zpbc .eq. yes goto esccap
+if pbc .eq. no goto esccap
+label esccap

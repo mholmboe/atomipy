@@ -33,7 +33,7 @@ import os
 import re
 import csv
 import copy
-from typing import Dict, Iterable, List, Optional, Tuple
+from typing import Any, Dict, Iterable, List, Optional, Tuple, TypedDict
 
 from .bond_angle import bond_angle
 from .element import element
@@ -55,7 +55,12 @@ DEFAULT_SHANNON_PATH = os.path.join(
 
 ParamKey = Tuple[str, int, str, int]
 ParamValue = Tuple[float, float, str, str]
-ShannonEntry = Dict[str, Optional[float]]
+
+class ShannonEntry(TypedDict):
+    record: int
+    crystal_radius: Optional[float]
+    ionic_radius: Optional[float]
+    spin_state: Optional[str]
 
 def _merge_oxidation_states(
     oxidation_states: Optional[Dict[str, int]] = None,
@@ -75,7 +80,8 @@ def _merge_oxidation_states(
         if len(elements) != len(ox_values):
             raise ValueError("elements and ox_values must have the same length.")
         for el, ox in zip(elements, ox_values):
-            ox_map[el] = int(ox)
+            if el is not None and ox is not None:
+                ox_map[el] = ox
     return ox_map
 
 
@@ -266,12 +272,12 @@ def _infer_oxidation(atom: dict, ox_hint: Optional[int]) -> Optional[int]:
         except (TypeError, ValueError):
             pass
     charge = atom.get("charge")
-    if isinstance(charge, (int, float)):
-        rounded = int(round(charge))
+    if isinstance(charge, (int, float)) and math.isfinite(charge):
+        rounded = round(charge)
         if abs(rounded - charge) < 0.25:
             return rounded
     el = atom.get("element")
-    return COMMON_OX.get(el)
+    return COMMON_OX.get(el) if isinstance(el, str) else None
 
 
 def _lookup_shannon(
@@ -282,8 +288,8 @@ def _lookup_shannon(
 ) -> Optional[ShannonEntry]:
     if not radii or element is None or ox is None:
         return None
-    ox_int = int(round(ox))
-    cn_int = int(round(cn)) if cn is not None else None
+    ox_int = ox
+    cn_int = cn
     if cn_int is not None:
         entry = radii.get((element, ox_int, cn_int))
         if entry:
@@ -346,8 +352,10 @@ def compute_bvs(
     bonds: List[Tuple[int, int, float]] = []
     if bond_index is None:
         bond_index = []
-    if hasattr(bond_index, "tolist"):
-        bond_index = bond_index.tolist()
+    # Cast to Any to avoid static type errors when calling tolist() on numpy arrays
+    bond_index_any: Any = bond_index
+    if hasattr(bond_index_any, "tolist"):
+        bond_index = bond_index_any.tolist()
     for entry in bond_index:
         if len(entry) < 3:
             continue
@@ -456,15 +464,28 @@ def compute_bvs(
     deltas = []
     for idx, res in enumerate(accum):
         res["expected_ox"] = expected[idx]
-        if expected[idx] is not None:
-            target = abs(expected[idx])  # BVS should match the magnitude of oxidation
+        exp_val = expected[idx]
+        if exp_val is not None:
+            target = abs(exp_val)  # BVS should match the magnitude of oxidation
             delta = res["bvs"] - target
             res["delta"] = delta
             deltas.append(delta * delta)
         else:
             res["delta"] = None
         # Attach Shannon radii if available
-        sh_entry = _lookup_shannon(shannon_radii, res["element"], expected[idx], res.get("cn"))
+        cn_raw = res.get("cn")
+        if isinstance(cn_raw, (int, float, str)):
+            cn_int = int(cn_raw)
+        else:
+            cn_int = len(res["bonds"])
+        res["cn"] = cn_int
+        element_val = res.get("element")
+        ox_val = expected[idx]
+        if isinstance(element_val, str) and ox_val is not None:
+            sh_entry = _lookup_shannon(shannon_radii, element_val, ox_val, cn_int)
+        else:
+            sh_entry = None
+
         if sh_entry:
             res["shannon_ionic_radius"] = sh_entry.get("ionic_radius")
             res["shannon_crystal_radius"] = sh_entry.get("crystal_radius")
@@ -610,6 +631,9 @@ def conf2bvs(
         Box = Cell2Box_dim(Cell)
     else:
         raise ValueError(f"Unsupported file type for BVS analysis: {ext}")
+
+    if Box is None:
+        raise ValueError("Structure is missing box/cell dimensions required for BVS.")
 
     params = load_bv_params(params_path) if params_path else load_bv_params()
     return analyze_bvs(

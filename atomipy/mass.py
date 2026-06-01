@@ -136,6 +136,10 @@ def set_atomic_masses(atoms):
         # Assign mass if element is known
         if element in masses_dict:
             atom['mass'] = masses_dict[element]
+        elif len(element) > 1 and (element[0].upper() + element[1].lower()) in masses_dict:
+            # Fallback: try first two characters with proper case (e.g. 'SIT' -> 'Si', 'MGO' -> 'Mg')
+            fallback2 = element[0].upper() + element[1].lower()
+            atom['mass'] = masses_dict[fallback2]
         elif len(element) > 1 and element[0].upper() in masses_dict:
             # Fallback: try first character only (e.g. 'Hw' -> 'H', 'Ow' -> 'O')
             fallback = element[0].upper()

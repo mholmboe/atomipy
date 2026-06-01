@@ -79,10 +79,9 @@ two_theta, intensity, fig = xrd(
 """
 
 import numpy as np
-from atomipy.transform import direct_cartesian_to_fractional, direct_fractional_to_cartesian
 from .distances import dist_matrix
-from atomipy.cell_utils import Box_dim2Cell, Cell2Box_dim, normalize_box
-from atomipy.element import element
+from .cell_utils import normalize_box
+from .element import element
 
 # matplotlib and scipy are now lazy-loaded inside xrd() to save memory
 
@@ -333,8 +332,6 @@ def atomic_scattering_factors(atom_label, wavelength, two_theta, b_iso=0.0):
     n_electrons : int
         Number of electrons for the atom
     """
-    atom_label_original_for_debug = atom_label # Save original for debugging
-
     # Handle special case transformations similar to MATLAB implementation
     if atom_label.startswith('0'):
         # Handle labels that start with a digit
@@ -682,6 +679,9 @@ def xrd(atoms, Box, wavelength=1.54187, angle_step=0.02,
         hkl_max=8
     )
     """
+    plt = None
+    find_peaks = None
+
     print("Starting XRD calculation...")
     
     # Standardize atom types/elements using atomipy.element
@@ -693,14 +693,16 @@ def xrd(atoms, Box, wavelength=1.54187, angle_step=0.02,
     if plot:
         try:
             import matplotlib.pyplot as plt
-        except ImportError:
-            raise ImportError("matplotlib is required for XRD plotting. Install atomipy[xrd] or matplotlib.")
+        except ImportError as e:
+            raise ImportError(f"matplotlib is required for XRD plotting. Install atomipy[xrd] or matplotlib. Original error: {e}") from e
         try:
             from scipy.signal import find_peaks
-        except ImportError:
-            raise ImportError("scipy is required for XRD peak picking in plot mode. Install atomipy[xrd] or scipy.")
+        except ImportError as e:
+            raise ImportError(f"scipy is required for XRD peak picking in plot mode. Install atomipy[xrd] or scipy. Original error: {e}") from e
     
     Box_dim, Cell = normalize_box(Box)
+    if Box_dim is None or Cell is None:
+        raise ValueError("Box parameter must be provided and must be valid")
     
     a, b, c, alpha, beta, gamma = Cell
     
@@ -950,6 +952,12 @@ def xrd(atoms, Box, wavelength=1.54187, angle_step=0.02,
     
     intensity = np.zeros_like(exp_twotheta)
     
+    # Pre-define meshes for Pyright static analysis
+    twotheta_mesh: np.ndarray = np.array([])
+    twotheta_disc_mesh: np.ndarray = np.array([])
+    f_squared_mesh: np.ndarray = np.array([])
+    fwhm_array: np.ndarray = np.array([])
+
     # Vectorized Gaussian component
     if lorentzian_factor < 1:
         # Vectorized FWHM determination
@@ -1051,7 +1059,7 @@ def xrd(atoms, Box, wavelength=1.54187, angle_step=0.02,
         
         # Save hkl limits to a text file
         with open('hkl_limits.txt', 'w') as f:
-            f.write(f"Maximum Miller indices used in XRD calculation:\n")
+            f.write("Maximum Miller indices used in XRD calculation:\n")
             f.write(f"h_max = {hmax}\n")
             f.write(f"k_max = {kmax}\n")
             f.write(f"l_max = {lmax}\n")
@@ -1107,6 +1115,7 @@ def xrd(atoms, Box, wavelength=1.54187, angle_step=0.02,
     
     # Generate plot
     if plot:
+        assert plt is not None and find_peaks is not None
         print("Generating plot...")
         
         # Find peaks

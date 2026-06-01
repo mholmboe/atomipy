@@ -10,7 +10,7 @@ It provides functions to:
   • Balance the total system charge.
 """
 
-import numpy as np
+import copy
 from .bond_angle import bond_angle
 
 # =====================================================
@@ -286,7 +286,7 @@ def charge_minff(atoms, Box, atom_labels=None, charges=None, resname=None):
 
     total_charge = sum(atoms[i].get('charge', 0) for i in target_atoms) if resname is not None else sum(atom.get('charge', 0) for atom in atoms)
     print(f"Total charge (MINFF): {total_charge:.6f}")
-    if round(total_charge) != total_charge:
+    if abs(round(total_charge) - total_charge) > 1e-5:
         print("Warning: Non-integer total charge. Adjusting to nearest integer.")
         atoms = balance_charges(atoms, round(total_charge))
     return atoms
@@ -388,7 +388,7 @@ def charge_clayff(atoms, Box, atom_labels=None, charges=None, resname=None):
 
     total_charge = sum(atoms[i].get('charge', 0) for i in target_atoms) if resname is not None else sum(atom.get('charge', 0) for atom in atoms)
     print(f"Total charge (CLAYFF): {total_charge:.6f}")
-    if round(total_charge) != total_charge:
+    if abs(round(total_charge) - total_charge) > 1e-5:
         print("Warning: Non-integer total charge. Adjusting to nearest integer.")
         atoms = balance_charges(atoms, round(total_charge))
     return atoms

@@ -162,6 +162,7 @@ def get_structure_stats(atoms, Box=None, total_charge=None, log_file='output.log
     total_mass = sum(atom.get('mass', 0.0) or 0.0 for atom in atoms)
     
     # Add Box dimensions, volume, and density information
+    volume = None
     if Box_dim is not None or Cell is not None:
         output.append("System Dimensions and Properties")
         output.append("-" * 80)
@@ -202,10 +203,10 @@ def get_structure_stats(atoms, Box=None, total_charge=None, log_file='output.log
             
         # Calculate and display density
         # Only calculate if we have a volume and total mass is non-zero
-        if 'volume' in locals() and total_mass > 0:
+        if volume is not None and total_mass > 0:
             # Convert from amu/Å³ to g/cm³
             density = total_mass / volume * AMU_TO_G_PER_CM3
-            output.append(f"System properties:")
+            output.append("System properties:")
             output.append(f"  Total mass: {total_mass:.4f} amu")
             output.append(f"  Density: {density:.4f} g/cm³")
         
@@ -222,7 +223,7 @@ def get_structure_stats(atoms, Box=None, total_charge=None, log_file='output.log
     total_charge = float(total_charge) if total_charge is not None else 0.0
     output.append(f"Total charge: {total_charge:.6f}\n")
     
-    if abs(round(total_charge) - total_charge) > 1e-10:
+    if abs(round(total_charge) - total_charge) > 1e-5:
         output.append("Warning: Non-integer total charge. Adjusting to nearest integer.")
         target_charge = round(total_charge)
         output.append(f"Final total charge: {sum(atom.get('charge', 0) for atom in atoms):.6f} (target was {target_charge})")
@@ -650,7 +651,7 @@ def minff(atoms, Box, ffname='minff', rmaxlong=2.45, rmaxH=1.2, log=False, log_f
                         atom['fftype'] = 'Fet3'
                     else:  # Fe2+ site
                         atom['fftype'] = 'Fet2'
-                        print(f"Do you really have a tetrahedral Fe2+ site?")
+                        print("Do you really have a tetrahedral Fe2+ site?")
                 elif coord_num > 6:
                     atom['fftype'] = 'Fe_ov'  # Over-coordinated
                 elif coord_num < 4:
@@ -972,7 +973,7 @@ def minff(atoms, Box, ffname='minff', rmaxlong=2.45, rmaxH=1.2, log=False, log_f
         # Use provided log_file path or generate default name if not provided
         log_path = log_file if log_file is not None else f"{ffname}_structure_stats.log"
         # Cell is already available from earlier in the function
-        stats = get_structure_stats(atoms, Box=Box, total_charge=total_charge, log_file=log_path, ffname=ffname)
+        get_structure_stats(atoms, Box=Box, total_charge=total_charge, log_file=log_path, ffname=ffname)
         print(f"Structure statistics written to {log_path}")
     
     return atoms # , all_neighbors
@@ -1023,6 +1024,11 @@ def clayff(atoms, Box, ffname='clayff', rmaxlong=2.45, rmaxH=1.2, log=False, log
     atoms = set_atomic_masses(atoms)
 
     # Determine Box format and convert as needed
+    if Box is None:
+        raise ValueError(
+            "clayff requires a simulation Box; received None. "
+            "Make sure a mineral/box source is connected upstream."
+        )
     if len(Box) == 9:
         # Triclinic Box in GROMACS format [lx, ly, lz, 0, 0, xy, 0, xz, yz]
         Box_dim = Box
@@ -1256,7 +1262,7 @@ def clayff(atoms, Box, ffname='clayff', rmaxlong=2.45, rmaxH=1.2, log=False, log
                         atom['fftype'] = 'Fe3t'
                     else:  # Fe2+ site
                         atom['fftype'] = 'Fe2t'
-                        print(f"Do you really have a tetrahedral Fe2+ site?")
+                        print("Do you really have a tetrahedral Fe2+ site?")
                 elif coord_num > 6:
                     atom['fftype'] = 'Fe_ov'  # Over-coordinated
                 elif coord_num < 4:
@@ -1555,7 +1561,7 @@ def clayff(atoms, Box, ffname='clayff', rmaxlong=2.45, rmaxH=1.2, log=False, log
         # Use provided log_file path or generate default name if not provided
         log_path = log_file if log_file is not None else f"{ffname}_structure_stats.log"
         # Cell is already available from earlier in the function
-        stats = get_structure_stats(atoms, Box=Box, total_charge=total_charge, log_file=log_path, ffname=ffname)
+        get_structure_stats(atoms, Box=Box, total_charge=total_charge, log_file=log_path, ffname=ffname)
         print(f"Structure statistics written to {log_path}")
     
     return atoms #, all_neighbors
@@ -1605,7 +1611,7 @@ def write_n2t(atoms, Box=None, n2t_file=None, verbose=True):
     if Box is not None:
         if isinstance(Box, np.ndarray):
             Box = Box.tolist()
-        if not _looks_like_box(Box):
+        if not isinstance(Box, (list, tuple)) or len(Box) not in {3, 6, 9}:
             raise ValueError("Box must be a sequence of length 3, 6, or 9")
         if len(Box) == 6:
             normalized_box = Cell2Box_dim(Box)
@@ -1670,6 +1676,8 @@ def write_n2t(atoms, Box=None, n2t_file=None, verbose=True):
         try:
             from .cell_utils import normalize_box
             _, Cell = normalize_box(Box)
+            if Cell is None:
+                raise ValueError("Failed to normalize Box")
             a, b, c = Cell[0], Cell[1], Cell[2]
             alpha, beta, gamma = (Cell[3], Cell[4], Cell[5]) if len(Cell) > 3 else (90, 90, 90)
             ar, br, gr = np.radians([alpha, beta, gamma])

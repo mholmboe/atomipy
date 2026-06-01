@@ -19,7 +19,7 @@ def pdb(file_path):
     """
     atoms = []
     Cell = None
-    with open(file_path, 'r') as f:
+    with open(file_path, 'r', encoding='utf-8') as f:
         for line in f:
             if line.startswith("CRYST1"):
                 # Parse Cell parameters from CRYST1 line
@@ -138,7 +138,7 @@ def gro(file_path):
     """
     atoms = []
     Box_dim = None
-    with open(file_path, 'r') as f:
+    with open(file_path, 'r', encoding='utf-8') as f:
         lines = f.readlines()
 
     # First line is title, second line is number of atoms, last line is Box dimensions
@@ -248,7 +248,7 @@ def xyz(file_path):
     atoms = []
     Box_dim = None
     
-    with open(file_path, 'r') as f:
+    with open(file_path, 'r', encoding='utf-8') as f:
         lines = f.readlines()
     
     # First line is the number of atoms
@@ -563,7 +563,7 @@ def auto(file_path):
         return poscar(file_path)
     else:
         # Try to detect the format by checking file contents
-        with open(file_path, 'r') as f:
+        with open(file_path, 'r', encoding='utf-8') as f:
             first_line = f.readline().strip()
             if first_line.startswith('REMARK') or 'PDB' in first_line:
                 return pdb(file_path)
@@ -589,7 +589,7 @@ def pqr(file_path):
     atoms, Cell = pdb(file_path)
     # The pdb function already maps occupancy and charge if they look like floats.
     # For PQR, we ensure charge and radius are correctly mapped.
-    with open(file_path, 'r') as f:
+    with open(file_path, 'r', encoding='utf-8') as f:
         idx = 0
         for line in f:
             if line.startswith("ATOM") or line.startswith("HETATM"):
@@ -612,7 +612,7 @@ def poscar(file_path):
        atoms: list of dictionaries.
        Cell: a 1x6 list [a, b, c, alpha, beta, gamma].
     """
-    with open(file_path, 'r') as f:
+    with open(file_path, 'r', encoding='utf-8') as f:
         lines = f.readlines()
     
     title = lines[0].strip()
@@ -703,7 +703,7 @@ def import_traj(file_path):
     if ext == '.pdb':
         current_atoms = []
         current_cell = None
-        with open(file_path, 'r') as f:
+        with open(file_path, 'r', encoding='utf-8') as f:
             for line in f:
                 if line.startswith("CRYST1"):
                     # Common across models
@@ -730,7 +730,7 @@ def import_traj(file_path):
             frames.append((current_atoms, current_cell))
             
     elif ext == '.gro':
-        with open(file_path, 'r') as f:
+        with open(file_path, 'r', encoding='utf-8') as f:
             lines = f.readlines()
         i = 0
         while i < len(lines):

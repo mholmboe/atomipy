@@ -48,12 +48,20 @@ write_traj = write_conf.write_traj
 write_auto = write_conf.auto
 
 # Topology file generation
-from . import write_top
-write_itp = write_top.itp
-write_psf = write_top.psf
-write_lmp = write_top.lmp
+from .write_top import itp as write_itp, psf as write_psf, lmp as write_lmp, top as write_top_func
+write_top = write_top_func
 # Itp file import helper
 from .import_top import import_itp as import_itp_topology
+# GAFF / ACPYPE topology import
+try:
+    from .import_top import import_gaff_top, import_gro_coords
+except ImportError:
+    pass
+# N-way topology merger (GAFF + MINFF/CLAYFF)
+try:
+    from .merge_top import merge_top, merge_top_files, write_merged_top
+except ImportError:
+    pass
 
 # ===== Atom property functions =====
 from .element import element
@@ -73,6 +81,7 @@ unwrap_coordinates = analysis.unwrap_coordinates
 calculate_rdf = analysis.calculate_rdf
 coordination_number = analysis.coordination_number
 closest_atom = analysis.closest_atom
+min_distances = analysis.min_distances
 from .bond_angle import bond_angle, bond_angle_dihedral
 
 # ===== Cell and coordinate transformation functions =====
@@ -130,6 +139,12 @@ create_grid = build.create_grid
 # ===== Resname functions =====
 from .resname import assign_resname
 
+# ===== Composition / system analysis =====
+try:
+    from .composition import composition, get_mol_sequence
+except ImportError:
+    pass
+
 # ===== Solvent functions =====
 from .solvent import find_H2O, solvate, spc2tip4p, tip3p2tip4p
 
@@ -171,6 +186,12 @@ try:
 except ImportError:
     pass
 
+# ===== OpenMM Interface =====
+try:
+    from .openmm_interface import load_minff_into_openmm
+except ImportError:
+    pass
+
 # Version information
 __version__ = "0.95"
 
@@ -178,7 +199,9 @@ __version__ = "0.95"
 __all__ = [
     'import_pdb', 'import_gro', 'import_xyz', 'import_cif', 'import_mmcif', 'import_pqr', 'import_poscar', 'import_traj', 'import_auto',
     'write_pdb', 'write_gro', 'write_xyz', 'write_cif', 'write_pqr', 'write_poscar', 'write_sdf', 'write_traj', 'write_auto',
-    'write_itp', 'write_psf', 'write_lmp', 'import_itp_topology',
+    'write_itp', 'write_top', 'write_psf', 'write_lmp', 'import_itp_topology',
+    'import_gaff_top', 'import_gro_coords',
+    'merge_top', 'merge_top_files', 'write_merged_top',
     'element', 'radius', 'mass', 'set_atomic_masses', 'com',
     'dist_matrix', 'cell_list_dist_matrix', 'config', 'bond_angle', 'bond_angle_dihedral', 'find_H2O',
     'normalize_box','Box_dim2Cell', 'Cell2Box_dim',
@@ -190,12 +213,14 @@ __all__ = [
     'add_H_atom', 'adjust_H_atom', 'adjust_Hw_atom', 'reorder', 'condense', 'create_grid',
     'is_centrosymmetric_along_z',
     'assign_resname', 'spc2tip4p', 'tip3p2tip4p',
+    'composition', 'get_mol_sequence',
     'minff', 'clayff', 'write_n2t', 'get_structure_stats',
     'load_forcefield', 'list_ff_blocks', 'get_ffparams_dir',
     'charge_minff', 'charge_clayff', 'balance_charges', 'assign_formal_charges', 'get_formal_charge', 'get_half_formal_charge',
+    'load_minff_into_openmm',
     'compute_bvs', 'global_instability_index', 'load_bv_params', 'load_shannon_radii', 'bond_valence', 'summarize_bvs',
     'analyze_bvs', 'conf2bvs', 'add_hydrogens_bvs',
     'get_radius', 'bond_distance',
-    'unwrap_coordinates', 'calculate_rdf', 'coordination_number', 'closest_atom',
+    'unwrap_coordinates', 'calculate_rdf', 'coordination_number', 'closest_atom', 'min_distances',
     'xrd', 'occupancy_atom', 'atomic_scattering_factors', 'calculate_multiplicity', 'bragg_law'
 ]

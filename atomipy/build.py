@@ -5,14 +5,9 @@ and other structure building operations.
 
 
 import copy
-import os
 import random
 import numpy as np
-from .distances import dist_matrix, get_neighbor_list
-from . import config
 from .move import translate
-from .transform import cartesian_to_fractional, fractional_to_cartesian
-from .cell_utils import Cell2Box_dim
 
 
 def is_centrosymmetric_along_z(atoms, tolerance=0.1):
@@ -197,9 +192,6 @@ def substitute(atoms, Box, num_oct_subst, o1_type, o2_type, min_o2o2_dist,
                          ([-shift_z, 0, 0] if dim_index == 0 else [0, -shift_z, 0]))
         print(f"Translated structure by {-shift_z:.3f} Å along {dim_name} to center around 0")
     
-    # Total number of substitutions
-    num_total_subst = num_oct_subst + num_tet_subst
-    
     # Initialize list to store O2 atoms
     o2_atoms = []
     o2_indices = []
@@ -311,6 +303,8 @@ def substitute(atoms, Box, num_oct_subst, o1_type, o2_type, min_o2o2_dist,
             atoms[global_idx]['type'] = o1_atoms[idx]['type']
             if 'element' in o1_atoms[idx]:
                 atoms[global_idx]['element'] = o1_atoms[idx]['element']
+            if 'fftype' in atoms[global_idx]:
+                atoms[global_idx]['fftype'] = o1_atoms[idx]['type']
         
         # Store O2 atoms for later use
         o2_indices = [ind_o1[idx] for idx in oct_subst_index]
@@ -333,6 +327,12 @@ def substitute(atoms, Box, num_oct_subst, o1_type, o2_type, min_o2o2_dist,
             raise ValueError("t1_type and t2_type must be specified for tetrahedral substitution")
         
         print(f"\n=== Performing tetrahedral substitution: {t1_type} -> {t2_type} ===")
+        
+        # Determine element for t2_type to ensure consistent updates
+        from .element import element
+        dummy_atom = {'type': t2_type}
+        element([dummy_atom])
+        t2_element = dummy_atom.get('element', '')
         
         # Find all T1 atoms
         ind_t1 = [i for i, atom in enumerate(atoms) if atom['type'] == t1_type]
@@ -412,11 +412,13 @@ def substitute(atoms, Box, num_oct_subst, o1_type, o2_type, min_o2o2_dist,
                     tet_subst_index.append(rand_t1_index[i])
                     n_tet_lo += 1
                     t1_atoms[rand_t1_index[i]]['type'] = t2_type
+                    t1_atoms[rand_t1_index[i]]['element'] = t2_element
                     placed_t2_indices.add(rand_t1_index[i])
                 elif n_tet_hi < num_tet_subst / 2 and current_pos >= ave_tet_z:
                     tet_subst_index.append(rand_t1_index[i])
                     n_tet_hi += 1
                     t1_atoms[rand_t1_index[i]]['type'] = t2_type
+                    t1_atoms[rand_t1_index[i]]['element'] = t2_element
                     placed_t2_indices.add(rand_t1_index[i])
             
             i += 1
@@ -424,6 +426,10 @@ def substitute(atoms, Box, num_oct_subst, o1_type, o2_type, min_o2o2_dist,
         # Update main atoms list with tetrahedral substitutions
         for idx, global_idx in enumerate(ind_t1):
             atoms[global_idx]['type'] = t1_atoms[idx]['type']
+            if 'element' in t1_atoms[idx]:
+                atoms[global_idx]['element'] = t1_atoms[idx]['element']
+            if 'fftype' in atoms[global_idx]:
+                atoms[global_idx]['fftype'] = t1_atoms[idx]['type']
         
         # Report tetrahedral substitution results
         print(f"Tetrahedral substitutions: {n_tet_lo} in lower half, {n_tet_hi} in upper half")
@@ -443,6 +449,9 @@ def substitute(atoms, Box, num_oct_subst, o1_type, o2_type, min_o2o2_dist,
     
     # ========== FINAL DISTANCE CHECKS ==========
     print("\n=== Distance verification ===")
+    
+    o2_atoms_final = []
+    t2_atoms_final = []
     
     if num_oct_subst > 0:
         # Check minimum O2-O2 distance
@@ -729,7 +738,10 @@ def _parse_coord_filter(filter_value, axis_name):
 
     if isinstance(filter_value, dict):
         op = str(filter_value.get('op', '==')).strip()
-        value = float(filter_value.get('value'))
+        val = filter_value.get('value')
+        if val is None:
+            raise ValueError(f"Missing 'value' in filter dict for axis '{axis_name}'")
+        value = float(val)
         if op not in allowed_ops:
             raise ValueError(f"Unsupported operator '{op}' for axis '{axis_name}'")
         return op, value
@@ -765,7 +777,7 @@ def _compare_numeric(value, op, threshold):
 
 
 def delete_sites(atoms, atom_type=None, index=None, molid=None, x=None, y=None, z=None,
-                 logic='and', reindex=True):
+                 logic='and', reindex=True, keep=False):
     """
     Delete atom sites that match one or more selection rules.
 
@@ -788,6 +800,8 @@ def delete_sites(atoms, atom_type=None, index=None, molid=None, x=None, y=None, 
         How to combine criteria: 'and' (default) or 'or'.
     reindex : bool, optional
         If True, reset atom['index'] to consecutive values from 1 (default: True).
+    keep : bool, optional
+        If True, keep matched atoms and remove all others (default: False).
 
     Returns
     -------
@@ -859,7 +873,8 @@ def delete_sites(atoms, atom_type=None, index=None, molid=None, x=None, y=None, 
     removed_count = 0
     for atom in atoms:
         matches = [fn(atom) for fn in criteria]
-        remove_atom = all(matches) if logic == 'and' else any(matches)
+        match_condition = all(matches) if logic == 'and' else any(matches)
+        remove_atom = not match_condition if keep else match_condition
         if remove_atom:
             removed_count += 1
             continue
@@ -874,7 +889,7 @@ def delete_sites(atoms, atom_type=None, index=None, molid=None, x=None, y=None, 
 
 
 def remove(atoms, atom_type=None, index=None, molid=None, x=None, y=None, z=None,
-           logic='and', reindex=True):
+           logic='and', reindex=True, keep=False):
     """
     Alias for delete_sites.
 
@@ -891,6 +906,7 @@ def remove(atoms, atom_type=None, index=None, molid=None, x=None, y=None, z=None
         z=z,
         logic=logic,
         reindex=reindex,
+        keep=keep,
     )
 
 
@@ -911,6 +927,9 @@ def _get_surface_atoms(atoms, distance_threshold=2.5):
     list of dict
         List of surface atoms
     """
+    if not atoms:
+        return []
+
     # First compute the convex hull using atom coordinates
     coords = np.array([[atom['x'], atom['y'], atom['z']] for atom in atoms])
     
@@ -923,8 +942,8 @@ def _get_surface_atoms(atoms, distance_threshold=2.5):
         surface_atoms = [atoms[i] for i in surface_indices]
         
         return surface_atoms
-    except ImportError:
-        # If scipy is not available, use a distance-based approach
+    except (ImportError, Exception):
+        # If scipy is not available or convex hull calculation fails (e.g. coplanar structures), use a distance-based approach
         surface_atoms = []
         
         # Use selection logic based on threshold
@@ -1151,10 +1170,6 @@ def ionize(ion_type, resname, limits, num_ions, Box=None, min_distance=None, sol
     else:
         raise ValueError("Limits must be a list of length 3 [xhi, yhi, zhi] "
                          "or 6 [xlo, ylo, zlo, xhi, yhi, zhi]")
-    
-    # Calculate Box dimensions for the region
-    box_dim = [xhi - xlo, yhi - ylo, zhi - zlo]
-    
     # If minimum distance not specified, use ionic radii
     if min_distance is None:
         ion_radius = ionic_radius().get(ion_type, 1.0)  # Default to 1.0 if not found
@@ -1193,12 +1208,18 @@ def ionize(ion_type, resname, limits, num_ions, Box=None, min_distance=None, sol
                 z = direction_value
         
         # Create ion atom
+        ion_charge_map = {
+            'Na': 1.0, 'K': 1.0, 'Li': 1.0, 'Cs': 1.0, 'Rb': 1.0,
+            'Cl': -1.0, 'F': -1.0, 'Br': -1.0, 'I': -1.0,
+            'Ca': 2.0, 'Mg': 2.0, 'Zn': 2.0, 'Ba': 2.0,
+        }
         ion = {
             'index': len(ions) + 1,
             'molid': len(ions) + 1,  # Each ion is its own molecule
             'resname': resname,
             'type': ion_type,
             'element': ion_type,  # Assume type is element
+            'charge': ion_charge_map.get(ion_type, 0.0),
             'x': x,
             'y': y,
             'z': z
@@ -1315,7 +1336,6 @@ def insert(molecule_atoms, limits, Box=None, rotate='random', min_distance=2.0,
     """
     from .move import rotate as rotate_atoms
     from .move import place
-    from .distances import get_neighbor_list
     
     # Standardize limits to [xlo, ylo, zlo, xhi, yhi, zhi] format
     if len(limits) == 3:

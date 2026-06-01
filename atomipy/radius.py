@@ -1,7 +1,6 @@
 from __future__ import annotations
 from typing import Dict, Optional, Tuple
-from .bond_valence import load_shannon_radii
-ShannonEntry = Dict[str, Optional[float]]
+from .bond_valence import load_shannon_radii, ShannonEntry
 
 def vdw_radius():
     """
