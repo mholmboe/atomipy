@@ -557,6 +557,10 @@ def write_merged_top(
     molecule_name: str  = 'Mixed System',
     # Organic itp files to #include (written by ACPYPE, relative to out_top dir)
     organic_itps:  Optional[Sequence[str]] = None,
+    # Whether to emit per-component [ angles ] sections. CLAYFF defaults to no
+    # angles; MINFF "No angles" also sets this False (the GMINFF_k nonbonded
+    # block is still written; only the angle terms are omitted).
+    write_angles:  bool = True,
 ) -> None:
     """
     Write a self-contained GROMACS .top file and a .gro coordinate file for a
@@ -740,7 +744,7 @@ def _write_mineral_molecule_sections(f, atoms, itp_merged, box_merged):
             f.write('\n')
             
         angles = itp.get('angles', {})
-        if angles and 'ai' in angles:
+        if write_angles and angles and 'ai' in angles:
             f.write('[ angles ]\n')
             f.write('; ai   aj   ak   funct\n')
             for i in range(len(angles['ai'])):
@@ -790,6 +794,7 @@ def merge_top_files(
     minff_variant: str = 'GMINFF_k500',
     water_model: str = 'spce',
     ion_model: str = 'SPCE_HFE_LM',
+    write_angles: bool = True,
 ) -> Tuple[AtomList, ITPDict, list]:
     """
     Read alternating (top_path, gro_path) pairs, merge them all, write files.
@@ -830,6 +835,7 @@ def merge_top_files(
         water_model=water_model,
         ion_model=ion_model,
         organic_itps=organic_itps or None,
+        write_angles=write_angles,
     )
     return atoms_merged, itp_merged, box_merged
 
