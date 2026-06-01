@@ -9,6 +9,29 @@ def _to_float(val, default=0.0):
     except (ValueError, TypeError): return default
 
 
+def angle_parameters(type1, type2, type3, angle_val, KANGLE=500.0):
+    """atomipy MINFF/CLAYFF angle model — the single source of truth for angle
+    parameters, shared by write_top.itp() and merge_top._build_mineral_itp().
+
+    Classifies an angle triplet by its hydrogen count and returns
+    ``(theta0_deg, ktheta, category)``:
+
+      * 1 H  -> 'moh'   M-O-H hydroxyl bend: theta0 = 110.0, k = 125.52
+                 (50.208 when a Mg metal is involved).
+      * 2 H  -> 'water' H-O-H: theta0 = 109.47, k = 383.0.
+      * 0 H  -> 'metal' O-M-O / M-O-M framework bend: theta0 = the *scanned*
+                 angle from the structure, k = KANGLE (the chosen Ka).
+    """
+    types = (str(type1), str(type2), str(type3))
+    h_count = sum(1 for t in types if t[:1].upper() == 'H')
+    if h_count == 1:
+        is_mg = any(t.startswith('Mg') for t in types)
+        return 110.0, (50.208 if is_mg else 125.52), 'moh'
+    if h_count >= 2:
+        return 109.47, 383.0, 'water'
+    return float(angle_val), float(KANGLE), 'metal'
+
+
 def is_solvent_or_ion(atom):
     res = atom.get('resname', '')
     if res is None:
@@ -577,46 +600,23 @@ def itp(atoms, Box=None, file_path=None, molecule_name=None, nrexcl=1, comment=N
                 angle_val = float(angle[3]) if len(angle) > 3 else 0.0
                 
                 if explicit_angles == 1:
-                    # Determine angle parameters based on atom types
-                    h_count = sum(1 for a in [a1, a2, a3] if a in ind_H)
-                    
-                    if h_count == 1:
-                        if any(a in ind_Mgo for a in [a1, a2, a3]):
-                            adeg = 110.0
-                            ktheta = 50.208
-                        elif any(a in ind_Al for a in [a1, a2, a3]):
-                            adeg = 110.0
-                            ktheta = 125.52
-                        else:
-                            adeg = 110.0
-                            ktheta = 125.52
-                    elif h_count == 2:
-                        adeg = 109.47  # SPC water
-                        ktheta = 383.0
-                    else:
-                        if harmonize_angles and triplet_cluster_means:
-                            # Resolve canonical triplet key
-                            at1_t = atoms[a1-1].get('type', 'X')
-                            at2_t = atoms[a2-1].get('type', 'X')
-                            at3_t = atoms[a3-1].get('type', 'X')
-                            key = f"{min(at1_t, at3_t)}-{at2_t}-{max(at1_t, at3_t)}"
-                            clusters = triplet_cluster_means.get(key)
-                            if clusters and len(clusters) > 1:
-                                # Bimodal: assign to nearest cluster mean
-                                adeg = min(clusters, key=lambda c: abs(c[0] - angle_val))[0]
-                            elif clusters:
-                                adeg = clusters[0][0]  # single cluster mean
-                            else:
-                                adeg = angle_val
-                        else:
-                            adeg = angle_val
-                        ktheta = KANGLE
-                    
-                    # Write angle with parameters
+                    # Shared MINFF/CLAYFF angle model (M-O-H standard, metal -> KANGLE).
                     at1_type = atoms[a1-1].get('type', '')
                     at2_type = atoms[a2-1].get('type', '')
                     at3_type = atoms[a3-1].get('type', '')
-                    harmonize_tag = " [harmonized]" if harmonize_angles and h_count == 0 else ""
+                    adeg, ktheta, _cat = angle_parameters(at1_type, at2_type, at3_type, angle_val, KANGLE)
+
+                    # Metal O-M-O / M-O-M: optionally replace the raw scanned theta0
+                    # with the per-triplet cluster mean.
+                    if _cat == 'metal' and harmonize_angles and triplet_cluster_means:
+                        key = f"{min(at1_type, at3_type)}-{at2_type}-{max(at1_type, at3_type)}"
+                        clusters = triplet_cluster_means.get(key)
+                        if clusters and len(clusters) > 1:
+                            adeg = min(clusters, key=lambda c: abs(c[0] - angle_val))[0]
+                        elif clusters:
+                            adeg = clusters[0][0]
+
+                    harmonize_tag = " [harmonized]" if harmonize_angles and _cat == 'metal' else ""
                     f.write(f"{a1:<5} {a2:<5} {a3:<5} {1:<5} {adeg:<6.2f}   {ktheta:<8.2f} ; {at1_type}-{at2_type}-{at3_type}{harmonize_tag}\n")
                 else:
                     # Write angle without parameters

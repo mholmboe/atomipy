@@ -248,15 +248,6 @@ def _build_mineral_itp(atoms_in: list, box: Optional[list]) -> dict:
         frozenset(['Alo',  'Oalhh']),
         frozenset(['Sit',  'Osih']),
     }
-    ANGLED_TRIPLES = {
-        ('H', 'Oh',   'Alo'),  ('H', 'Oh',   'Mgh'), ('H', 'Oh',   'Mgo'),
-        ('H', 'Oh',   'Feo2'), ('H', 'Oh',   'Feo3'), ('H', 'Oh',  'Cah'),
-        ('H', 'Ohmg', 'Mgh'),  ('H', 'Ohmg', 'Mgo'), ('H', 'Ohmg','Alo'),
-        ('H', 'Oalh', 'Alo'),  ('H', 'Oalhh','Alo'),
-        ('H', 'Osih', 'Sit'),
-        ('Hw','Ow',   'Hw'),
-    }
-
     def _atom_fftype(idx):
         return str(updated_atoms[idx].get('fftype', updated_atoms[idx].get('type', ''))).strip()
 
@@ -268,21 +259,47 @@ def _build_mineral_itp(atoms_in: list, box: Optional[list]) -> dict:
             if pair in BONDED_PAIRS:
                 filtered_bonds.append(b)
 
-    filtered_angles = []
-    if Angle_index is not None and len(Angle_index) > 0:
-        for an in Angle_index:
-            ai, aj, ak = int(an[0]), int(an[1]), int(an[2])
-            ti, tj, tk = _atom_fftype(ai), _atom_fftype(aj), _atom_fftype(ak)
-            triple = (ti, tj, tk)
-            triple_rev = (tk, tj, ti)
-            if triple in ANGLED_TRIPLES or triple_rev in ANGLED_TRIPLES:
-                filtered_angles.append(an)
-
     # Build a local-index map: 0-based array position → 1-based local index
     # bond_angle() stores 0-based array positions in Bond_index / Angle_index.
     # The [ atoms ] section uses atom['index'] as nr.  We need the bond ai/aj
     # to reference those same nr values — look them up rather than blindly +1.
     local_idx = [int(a['index']) for a in updated_atoms]   # nr values, 1-based
+
+    # Classify every scanned angle (bond_angle rows are [i, j, k, angle_deg], 0-based)
+    # via atomipy's shared angle model (write_top.angle_parameters) — the SAME logic
+    # write_top.itp() uses, no duplicated criteria:
+    #   'moh'   M-O-H  -> standard θ0/k stored explicitly (c0, c1)
+    #   'metal' O-M-O / M-O-M -> explicit scanned θ0 (c0); the Ka force constant
+    #           (c1) is filled at write time from the chosen angle Ka.
+    from .write_top import angle_parameters
+
+    def _is_h(ff):     return ff[:1].upper() == 'H'
+    def _is_o(ff):     return ff[:1] == 'O'
+    def _is_metal(ff): return bool(ff) and not _is_o(ff) and not _is_h(ff) and ff != 'Fs'
+
+    ang_ai, ang_aj, ang_ak, ang_c0, ang_c1, ang_cat = [], [], [], [], [], []
+    n_metal = n_moh = 0
+    if Angle_index is not None and len(Angle_index) > 0:
+        for an in Angle_index:
+            ai, aj, ak = int(an[0]), int(an[1]), int(an[2])
+            t1, t2, t3 = _atom_fftype(ai), _atom_fftype(aj), _atom_fftype(ak)
+            angle_val = float(an[3]) if len(an) > 3 else 0.0
+            theta0, ktheta, cat = angle_parameters(t1, t2, t3, angle_val, KANGLE=0.0)
+            tl = (t1, t2, t3)
+            if cat == 'moh':
+                if not (any(_is_metal(t) for t in tl) and any(_is_o(t) for t in tl)):
+                    continue                                  # genuine M-O-H only
+                c0, c1 = f'{theta0:.2f}', f'{ktheta:.3f}'     # standard, fixed
+                n_moh += 1
+            elif cat == 'metal':
+                if not (any(_is_metal(t) for t in tl) and all(_is_o(t) or _is_metal(t) for t in tl)):
+                    continue                                  # genuine O-M-O / M-O-M only
+                c0, c1 = f'{theta0:.2f}', ''                  # c1 (Ka) filled at write time
+                n_metal += 1
+            else:
+                continue                                      # water/other not in mineral itp
+            ang_ai.append(local_idx[ai]); ang_aj.append(local_idx[aj]); ang_ak.append(local_idx[ak])
+            ang_c0.append(c0); ang_c1.append(c1); ang_cat.append(cat)
 
     itp = {
         'moleculetype': {'moleculetype': ['MIN'], 'nrexcl': [3]},
@@ -304,15 +321,17 @@ def _build_mineral_itp(atoms_in: list, box: Optional[list]) -> dict:
             'c1':    [''] * len(filtered_bonds)
         } if filtered_bonds else {},
         'angles': {
-            'ai':    [local_idx[int(an[0])] for an in filtered_angles],
-            'aj':    [local_idx[int(an[1])] for an in filtered_angles],
-            'ak':    [local_idx[int(an[2])] for an in filtered_angles],
-            'funct': [1] * len(filtered_angles),
-            'c0':    [''] * len(filtered_angles),
-            'c1':    [''] * len(filtered_angles)
-        } if filtered_angles else {}
+            'ai':       ang_ai,
+            'aj':       ang_aj,
+            'ak':       ang_ak,
+            'funct':    [1] * len(ang_ai),
+            'c0':       ang_c0,                # θ0 (deg): scanned for metal, standard for M-O-H
+            'c1':       ang_c1,                # k: standard for M-O-H; '' for metal (Ka at write)
+            'category': ang_cat,               # 'metal' or 'moh'
+        } if ang_ai else {}
     }
-    print(f"  _build_mineral_itp: {len(filtered_bonds)} bonded pairs, {len(filtered_angles)} angles written to itp")
+    print(f"  _build_mineral_itp: {len(filtered_bonds)} bonded pairs, "
+          f"{n_metal} metal (O-M-O/M-O-M) + {n_moh} M-O-H angles available")
     return itp
 
 
@@ -557,10 +576,12 @@ def write_merged_top(
     molecule_name: str  = 'Mixed System',
     # Organic itp files to #include (written by ACPYPE, relative to out_top dir)
     organic_itps:  Optional[Sequence[str]] = None,
-    # Whether to emit per-component [ angles ] sections. CLAYFF defaults to no
-    # angles; MINFF "No angles" also sets this False (the GMINFF_k nonbonded
-    # block is still written; only the angle terms are omitted).
-    write_angles:  bool = True,
+    # Angle force constant Ka (kJ/mol/rad²) for mineral O-M-O / M-O-M angles.
+    # None  -> emit NO [ angles ] at all (CLAYFF default, MINFF "No angles").
+    # 0/250/500/1500 -> write explicit angles: scanned θ0 for metal angles at
+    # this Ka, and the standard θ0/k for M-O-H. The GMINFF_k nonbonded block is
+    # unaffected (written separately).
+    angle_ka:  Optional[float] = 500.0,
 ) -> None:
     """
     Write a self-contained GROMACS .top file and a .gro coordinate file for a
@@ -675,7 +696,7 @@ def write_merged_top(
 
         # Write mineral molecule sections inline if mineral atoms are present
         if has_mineral:
-            _write_mineral_molecule_sections(f, atoms_merged, itp_merged, box_merged, write_angles=write_angles)
+            _write_mineral_molecule_sections(f, atoms_merged, itp_merged, box_merged, angle_ka=angle_ka)
 
         # [ system ] and [ molecules ]
         f.write('[ system ]\n')
@@ -699,11 +720,14 @@ def write_merged_top(
           f'{len(component_labels)} component(s))')
 
 
-def _write_mineral_molecule_sections(f, atoms, itp_merged, box_merged, write_angles=True):
+def _write_mineral_molecule_sections(f, atoms, itp_merged, box_merged, angle_ka=500.0):
     """Write inline [ moleculetype ] / [ atoms ] / etc. for mineral components.
 
-    When write_angles is False, NO [ angles ] section is emitted at all — not
-    even mineral M-O-H angles (used by CLAYFF "No angles" and MINFF "No angles").
+    angle_ka is the Ka force constant (kJ/mol/rad²) for metal O-M-O / M-O-M
+    angles. When angle_ka is None, NO [ angles ] section is emitted at all — not
+    even M-O-H (CLAYFF "No angles" / MINFF "No angles"). Otherwise each angle is
+    written with explicit parameters: metal angles use their scanned θ0 with
+    this Ka; M-O-H angles use the standard θ0/k stored on the itp.
     """
     original_itps = itp_merged.get('_original_itps', [])
     if not original_itps:
@@ -756,15 +780,25 @@ def _write_mineral_molecule_sections(f, atoms, itp_merged, box_merged, write_ang
             f.write('\n')
             
         angles = itp.get('angles', {})
-        if write_angles and angles and 'ai' in angles:
+        if angle_ka is not None and angles and 'ai' in angles:
+            n = len(angles['ai'])
+            cats = angles.get('category', ['metal'] * n)
+            c0s  = angles.get('c0', [''] * n)
+            c1s  = angles.get('c1', [''] * n)
             f.write('[ angles ]\n')
-            f.write('; ai   aj   ak   funct\n')
-            for i in range(len(angles['ai'])):
+            f.write('; ai   aj   ak   funct      th0          cth\n')
+            for i in range(n):
                 ai = angles['ai'][i]
                 aj = angles['aj'][i]
                 ak = angles['ak'][i]
                 funct = angles['funct'][i]
-                f.write(f'{ai:>5} {aj:>5} {ak:>5} {funct:>5}\n')
+                th0 = c0s[i] if i < len(c0s) else ''
+                # Metal O-M-O / M-O-M get the chosen Ka; M-O-H keep their standard k.
+                kth = f'{float(angle_ka):.3f}' if cats[i] == 'metal' else (c1s[i] if i < len(c1s) else '')
+                if th0 != '' and kth != '':
+                    f.write(f'{ai:>5} {aj:>5} {ak:>5} {funct:>5} {th0:>10} {kth:>12}\n')
+                else:
+                    f.write(f'{ai:>5} {aj:>5} {ak:>5} {funct:>5}\n')
             f.write('\n')
 
 
@@ -806,7 +840,7 @@ def merge_top_files(
     minff_variant: str = 'GMINFF_k500',
     water_model: str = 'spce',
     ion_model: str = 'SPCE_HFE_LM',
-    write_angles: bool = True,
+    angle_ka: Optional[float] = 500.0,
 ) -> Tuple[AtomList, ITPDict, list]:
     """
     Read alternating (top_path, gro_path) pairs, merge them all, write files.
@@ -847,7 +881,7 @@ def merge_top_files(
         water_model=water_model,
         ion_model=ion_model,
         organic_itps=organic_itps or None,
-        write_angles=write_angles,
+        angle_ka=angle_ka,
     )
     return atoms_merged, itp_merged, box_merged
 
