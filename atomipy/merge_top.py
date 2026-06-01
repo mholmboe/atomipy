@@ -632,6 +632,14 @@ def write_merged_top(
             # MINFF-free / ion-free topology never pulls in unused parameter sets.
             if has_mineral:
                 f.write(f'#define {minff_variant}\n')
+            if has_water:
+                # Activate the water-model atomtype block (#ifdef OPC3 / SPCE /
+                # TIP4PEW / ...) in ffnonbonded.itp. The water .itp only
+                # *references* OW_xxx/HW_xxx — those [ atomtypes ] are defined
+                # behind this #ifdef, so without the define OpenMM/GROMACS raises
+                # KeyError: 'OW_opc3'. (The ion #define provides ions only.)
+                _water_define = water_model.lower().replace('/', '').replace('-', '').upper()
+                f.write(f'#define {_water_define}\n')
             if ion_model and has_ions:
                 f.write(f'#define {ion_model}\n')
             f.write('#include "min.ff/ffnonbonded.itp"\n')  # atomtypes only, no [ defaults ]
