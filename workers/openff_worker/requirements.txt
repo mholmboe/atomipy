@@ -1,7 +1,0 @@
-fastapi
-uvicorn
-pydantic
-openff-toolkit
-openff-interchange
-openff-forcefields
-rdkit

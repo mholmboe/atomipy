@@ -1,1 +1,0 @@
-{"systype":"vacuum","dimensions":["25.8","26.8974691","27.5696158","90","90","90"],"input":["namd","gromacs","amber","openmm","genesis","lammps"],"forcefield":{"type":"c36m","files":["default"],"custom":[]},"nonbond_option":"12cutoff","hmr":false}
