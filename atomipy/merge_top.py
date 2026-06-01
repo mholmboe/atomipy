@@ -667,7 +667,7 @@ def write_merged_top(
 
         # Write mineral molecule sections inline if mineral atoms are present
         if has_mineral:
-            _write_mineral_molecule_sections(f, atoms_merged, itp_merged, box_merged)
+            _write_mineral_molecule_sections(f, atoms_merged, itp_merged, box_merged, write_angles=write_angles)
 
         # [ system ] and [ molecules ]
         f.write('[ system ]\n')
@@ -691,8 +691,12 @@ def write_merged_top(
           f'{len(component_labels)} component(s))')
 
 
-def _write_mineral_molecule_sections(f, atoms, itp_merged, box_merged):
-    """Write inline [ moleculetype ] / [ atoms ] / etc. for mineral components."""
+def _write_mineral_molecule_sections(f, atoms, itp_merged, box_merged, write_angles=True):
+    """Write inline [ moleculetype ] / [ atoms ] / etc. for mineral components.
+
+    When write_angles is False, NO [ angles ] section is emitted at all — not
+    even mineral M-O-H angles (used by CLAYFF "No angles" and MINFF "No angles").
+    """
     original_itps = itp_merged.get('_original_itps', [])
     if not original_itps:
         return
