@@ -588,20 +588,15 @@ def write_merged_top(
     now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     total_charge = sum(float(a.get('charge') or 0.0) for a in atoms_merged)
 
-    # Detect what's present in the system
-    resnames = {str(a.get('resname', '')).upper() for a in atoms_merged}
-    solvent_res = {'SOL', 'WAT', 'HOH', 'TIP3', 'OPC', 'OPC3', 'SPC', 'SPCE', 'TIP4', 'TIP5'}
-    ion_res     = {'ION', 'NA', 'CL', 'K', 'LI', 'CS', 'RB', 'F', 'BR', 'I', 'CA', 'MG', 'ZN',
-                   'NA+', 'CL-', 'K+', 'CA2+', 'MG2+', 'ZN2+'}
-    has_water = bool(resnames & solvent_res)
-    has_ions  = bool(resnames & ion_res)
-    has_organic = bool(organic_itps)
-
-    # Decide whether mineral FF include is needed
-    mineral_types = {'Ob', 'Sit', 'Alo', 'Oh', 'H', 'Op', 'Mgo', 'Mgh', 'Alt',
-                     'ob', 'st', 'ao', 'oh', 'ho', 'op', 'mgo', 'mgh'}  # MINFF + CLAYFF
-    has_mineral = any(str(a.get('type', a.get('fftype', ''))).strip() in mineral_types
-                      for a in atoms_merged)
+    # Detect what's present in the system via the shared classifier (resname AND
+    # atomtype; mineral set derived from the FF library). This decides which
+    # parameter blocks the topology activates, so only what's used is included.
+    from .composition import system_component_flags
+    _flags = system_component_flags(atoms_merged, has_organic_itp=bool(organic_itps))
+    has_water   = _flags['water']
+    has_ions    = _flags['ion']
+    has_mineral = _flags['mineral']
+    has_organic = _flags['organic']
 
     component_labels = itp_merged.get('_component_labels', [])
 
@@ -629,8 +624,11 @@ def write_merged_top(
         # forcefield.itp is NOT used: it wraps ffnonbonded+ffbonded but also adds [ defaults ],
         # which would create a duplicate [ defaults ] block and override our gen-pairs=yes above.
         if has_mineral or has_water or has_ions:
-            f.write(f'#define {minff_variant}\n')
-            if ion_model:
+            # Activate only the atomtype blocks the system actually uses, so a
+            # MINFF-free / ion-free topology never pulls in unused parameter sets.
+            if has_mineral:
+                f.write(f'#define {minff_variant}\n')
+            if ion_model and has_ions:
                 f.write(f'#define {ion_model}\n')
             f.write('#include "min.ff/ffnonbonded.itp"\n')  # atomtypes only, no [ defaults ]
             if has_mineral:
@@ -648,8 +646,11 @@ def write_merged_top(
         if has_water:
             wm = water_model.lower().replace('/', '').replace('-', '')
             wm_map = {
-                'spce': 'spce', 'spc': 'spc', 'opc3': 'opc3', 'opc': 'opc',
-                'tip3p': 'tip3p', 'tip4p': 'tip3p', 'tip3pfb': 'tip3p',
+                # 3-site
+                'spce': 'spce', 'spc': 'spc', 'tip3p': 'tip3p', 'opc3': 'opc3',
+                'tip3pfb': 'tip3p-fb',
+                # 4-site (each has its own M-site itp — must NOT collapse to a 3-site model)
+                'opc': 'opc', 'tip4p': 'tip4p', 'tip4pew': 'tip4pew', 'tip4pfb': 'tip4p-fb',
             }
             wm_file = wm_map.get(wm, 'spce')
             f.write(f'; Water model\n')

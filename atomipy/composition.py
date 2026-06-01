@@ -41,6 +41,98 @@ _ION_ELEMENT_TO_GMXNAME: Dict[str, str] = {
 }
 
 
+# --- Component classification (resname AND atomtype) -------------------------
+#: Ion resnames (extends _ION_RESNAMES with plural + CHARMM/AMBER conventions)
+_ION_RESNAMES_EXT = _ION_RESNAMES | {'IONS', 'SOD', 'POT', 'CLA', 'CAL', 'NA+', 'CL-'}
+#: Ion atomtypes — only UNAMBIGUOUS forms (charged notation + CHARMM names).
+#: Bare element symbols (NA, CL, CA…) are intentionally excluded: they collide
+#: with GAFF organic atomtypes (e.g. 'ca' aromatic C, 'cl'/'br'/'i'/'f' halogens).
+#: Ions are reliably identified by resname instead (_ION_RESNAMES_EXT).
+_ION_ATOMTYPES = {
+    'NA+', 'CL-', 'K+', 'LI+', 'CA2+', 'MG2+', 'ZN2+', 'F-', 'BR-', 'I-',
+    'SOD', 'POT', 'CLA', 'CAL',
+}
+#: Atomtype prefixes (case-insensitive) indicating a water molecule
+_WATER_ATOMTYPE_PREFIXES = ('ow', 'hw', 'oh2', 'mw')
+#: Resnames indicating an organic / ligand / biomolecule
+_ORGANIC_RESNAMES = {
+    'LIG', 'API', 'MOL', 'UNL', 'UNK', 'DRG', 'INH',
+    'ALA', 'ARG', 'ASN', 'ASP', 'CYS', 'GLN', 'GLU', 'GLY', 'HIS', 'ILE',
+    'LEU', 'LYS', 'MET', 'PHE', 'PRO', 'SER', 'THR', 'TRP', 'TYR', 'VAL',
+    'HID', 'HIE', 'HIP', 'HSD', 'HSE', 'HSP',
+}
+#: Resnames indicating a mineral framework
+_MINERAL_RESNAMES = {'MIN', 'MINERAL', 'MMT', 'PYR', 'KAO', 'CLAY'}
+#: Baseline MINFF/CLAYFF mineral atomtypes (extended from the FF library at runtime)
+_MINERAL_ATOMTYPES_BASE = {
+    'Ob', 'Obos', 'Obts', 'Obss', 'Ohs', 'Op', 'Oh', 'Oas', 'Oahs', 'Oal',
+    'Osih', 'Oalh', 'Oalhh', 'Sit', 'Site', 'Alo', 'Alt', 'Ale', 'Mgo', 'Mgh',
+    'Mge', 'Cao', 'Cah', 'Lio', 'Nao', 'Feo', 'Fet', 'Fee', 'Fe2', 'Fe3',
+    'Tio', 'Mno', 'Cro', 'Zno', 'H',
+    'st', 'ao', 'at', 'mgo', 'mgh', 'feo', 'fet', 'cao', 'ob', 'oh', 'ho', 'op', 'ohs',
+}
+_mineral_atomtypes_cache = None
+
+
+def _mineral_atomtypes():
+    """Comprehensive MINFF/CLAYFF mineral atomtypes — extended from the bundled FF
+    library so structural Fe/Ti/etc. are recognised (not just a hard-coded subset).
+    Falls back to the baseline set if the library can't be loaded."""
+    global _mineral_atomtypes_cache
+    if _mineral_atomtypes_cache is not None:
+        return _mineral_atomtypes_cache
+    types = set(_MINERAL_ATOMTYPES_BASE)
+    try:
+        from . import ffparams
+        data = ffparams.load_json('GMINFF/gminff_all.json')
+        for block, bd in (data.get('nonbonded_blocks') or {}).items():
+            if 'MINFF' in block.upper() or 'CLAYFF' in block.upper():
+                types.update((bd.get('atomtypes') or {}).keys())
+    except Exception:
+        pass
+    # never let an ion/water type masquerade as mineral
+    types = {t for t in types if t.upper() not in _ION_ATOMTYPES
+             and not t.lower().startswith(_WATER_ATOMTYPE_PREFIXES)}
+    _mineral_atomtypes_cache = types
+    return types
+
+
+def classify_atom(atom: dict, mineral_types=None) -> str:
+    """Classify an atom as ``'water' | 'ion' | 'organic' | 'mineral' | 'other'``
+    using BOTH resname and atomtype.
+
+    Precedence: water → ion → organic-resname → mineral. The organic resname
+    (MOL/LIG/amino acids/…) is checked *before* mineral-by-atomtype so GAFF
+    atomtypes that collide with CLAYFF lowercase types (e.g. ``oh``/``ho``) are
+    not mis-read as mineral. Use resname ``MIN`` for mineral frameworks.
+    """
+    if mineral_types is None:
+        mineral_types = _mineral_atomtypes()
+    rn = str(atom.get('resname') or '').strip().upper()
+    at = str(atom.get('type') or atom.get('fftype') or '').strip()
+    if rn in _SOLVENT_RESNAMES or any(at.lower().startswith(p) for p in _WATER_ATOMTYPE_PREFIXES):
+        return 'water'
+    if rn in _ION_RESNAMES_EXT or at.upper() in _ION_ATOMTYPES:
+        return 'ion'
+    if rn in _ORGANIC_RESNAMES:
+        return 'organic'
+    if at in mineral_types or rn in _MINERAL_RESNAMES:
+        return 'mineral'
+    return 'other'
+
+
+def system_component_flags(atoms, has_organic_itp: bool = False) -> Dict[str, bool]:
+    """Presence flags {water, ion, mineral, organic} for a system, so a topology
+    can activate ONLY the parameter sets it actually contains."""
+    mt = _mineral_atomtypes()
+    flags = {'water': False, 'ion': False, 'mineral': False, 'organic': bool(has_organic_itp)}
+    for a in atoms:
+        c = classify_atom(a, mt)
+        if c in flags:
+            flags[c] = True
+    return flags
+
+
 def _gromacs_mol_name(atom: dict) -> str:
     """Return the canonical GROMACS molecule name for a representative atom.
 
