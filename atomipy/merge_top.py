@@ -78,6 +78,134 @@ def _max_box(*boxes):
     return result
 
 
+def _parse_ion_moleculetypes(path: str) -> dict:
+    """Parse ions.itp -> {define: {molname: atomtype}}.
+
+    Each [ moleculetype ] under a top-level #ifdef maps its molecule name to the
+    atomtype its single [ atoms ] entry references.
+    """
+    out: dict = {}
+    define = None
+    depth = 0  # nested POSRES_ION etc.
+    try:
+        with open(path, encoding='utf-8') as fh:
+            lines = [l.rstrip('\n') for l in fh]
+    except OSError:
+        return out
+    i = 0
+    while i < len(lines):
+        s = lines[i].strip()
+        if s.startswith('#ifdef'):
+            tok = s.split()[1] if len(s.split()) > 1 else ''
+            if define is None and tok != 'POSRES_ION':
+                define = tok
+            else:
+                depth += 1
+        elif s.startswith('#endif'):
+            if depth > 0:
+                depth -= 1
+            else:
+                define = None
+        elif s == '[ moleculetype ]' and define:
+            # next non-comment, non-blank line is "molname nrexcl"
+            j = i + 1
+            while j < len(lines) and (not lines[j].strip() or lines[j].strip().startswith(';')):
+                j += 1
+            molname = lines[j].split()[0] if j < len(lines) and lines[j].split() else None
+            # find the [ atoms ] block and its first data row's atomtype (col 2)
+            atype = None
+            k = j + 1
+            while k < len(lines) and lines[k].strip() != '[ moleculetype ]' and not lines[k].strip().startswith('#endif'):
+                if lines[k].strip() == '[ atoms ]':
+                    m = k + 1
+                    while m < len(lines) and (not lines[m].strip() or lines[m].strip().startswith(';')):
+                        m += 1
+                    cols = lines[m].split() if m < len(lines) else []
+                    if len(cols) >= 2:
+                        atype = cols[1]
+                    break
+                k += 1
+            if molname and atype:
+                out.setdefault(define, {})[molname] = atype
+        i += 1
+    return out
+
+
+def _parse_atomtypes_by_define(path: str) -> dict:
+    """Parse ffnonbonded.itp -> {define: set(atomtype names)} for #ifdef blocks."""
+    out: dict = {}
+    define = None
+    try:
+        with open(path, encoding='utf-8') as fh:
+            in_atomtypes = False
+            for line in fh:
+                s = line.strip()
+                if s.startswith('#ifdef'):
+                    tok = s.split()[1] if len(s.split()) > 1 else ''
+                    if tok != 'POSRES_ION':
+                        define = tok
+                elif s.startswith('#endif'):
+                    define = None
+                elif s.startswith('['):
+                    in_atomtypes = (s == '[ atomtypes ]')
+                elif define and s and not s.startswith(';'):
+                    name = s.split()[0]
+                    out.setdefault(define, set()).add(name)
+    except OSError:
+        pass
+    return out
+
+
+def _resolve_ion_define(ion_model: str, water_model: str, ion_molnames=None) -> str:
+    """Return an ion-model #define from the min.ff library that actually provides
+    the ions present in the system.
+
+    Ion sets are water-model specific AND not every block contains every ion
+    (e.g. ffnonbonded's SPCE_IOD_LM lists only trivalent ions; monovalent Na+/Cl-
+    live under all_IOD_LM / OPC3_IOD_LM / *_HFE_LM …). So a define is only usable
+    if, for each ion in the system, ions.itp defines its [ moleculetype ] AND
+    ffnonbonded defines the atomtype that moleculetype references — both under
+    that same #ifdef. Preference: the requested set, common 3-site waters, then
+    'all', then JC.
+    """
+    if not ion_model:
+        return ion_model
+    base = os.path.join(os.path.dirname(__file__), 'ffparams', 'min.ff')
+    moltypes = _parse_ion_moleculetypes(os.path.join(base, 'ions.itp'))
+    attypes  = _parse_atomtypes_by_define(os.path.join(base, 'ffnonbonded.itp'))
+    all_ion_molnames = set().union(*moltypes.values()) if moltypes else set()
+    needed = {n for n in (ion_molnames or []) if n in all_ion_molnames}
+
+    def _covers(define: str) -> bool:
+        mt = moltypes.get(define, {})
+        at = attypes.get(define, set())
+        if needed:
+            return all(n in mt and mt[n] in at for n in needed)
+        # No explicit ion list: require at least one monovalent atomtype present.
+        return any(a in at for a in ('Na+', 'Cl-', 'K+'))
+
+    if _covers(ion_model):
+        return ion_model
+    ionset = ion_model.split('_', 1)[1] if '_' in ion_model else ion_model
+    candidates = (
+        [f'{w}_{ionset}' for w in ('all', 'SPCE', 'TIP3P', 'OPC3', 'TIP4PEW', 'OPC', 'TIP3PFB', 'TIP4PFB')]
+        + sorted(d for d in moltypes if d.endswith('_' + ionset))
+        + [f'{w}_JC' for w in (water_model.upper(), 'SPCE', 'SPC', 'TIP3P')]
+        + sorted(moltypes)
+    )
+    seen = set()
+    for cand in candidates:
+        if cand in seen:
+            continue
+        seen.add(cand)
+        if _covers(cand):
+            if cand != ion_model:
+                print(f"write_merged_top: ion set '{ion_model}' does not provide all "
+                      f"requested ions for this water model; using '{cand}' instead.")
+            return cand
+    return ion_model
+
+
 def _normalize_itp(itp: Optional[ITPDict]) -> ITPDict:
     """Return a safe copy of itp, defaulting missing sections to empty dicts."""
     if itp is None:
@@ -662,6 +790,9 @@ def write_merged_top(
                 _water_define = water_model.lower().replace('/', '').replace('-', '').upper()
                 f.write(f'#define {_water_define}\n')
             if ion_model and has_ions:
+                ion_model = _resolve_ion_define(
+                    ion_model, water_model,
+                    ion_molnames=[name for name, _ in mol_counts])
                 f.write(f'#define {ion_model}\n')
             f.write('#include "min.ff/ffnonbonded.itp"\n')  # atomtypes only, no [ defaults ]
             if has_mineral:
