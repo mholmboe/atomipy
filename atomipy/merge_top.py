@@ -39,6 +39,7 @@ from __future__ import annotations
 
 import copy
 import os
+import re
 from collections import defaultdict
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Sequence, Tuple
@@ -46,6 +47,18 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple
 # atomipy-native atom dict type alias for documentation
 AtomList = List[Dict[str, Any]]
 ITPDict  = Dict[str, Any]
+
+
+def _ion_key(name: str) -> str:
+    """Normalise an ion name for charge-tolerant matching.
+
+    Upper-cases and strips a trailing charge so the charged and uncharged
+    spellings collapse to the same key: 'Na'/'Na+'/'NA+' -> 'NA',
+    'Ca'/'Ca2+' -> 'CA', 'Cl'/'Cl-' -> 'CL', 'Fe2+' -> 'FE'. (Different
+    oxidation states of the same element share a key — callers prefer an exact
+    match first and only use the key when it is unambiguous.)
+    """
+    return re.sub(r'\d*[+-]+$', '', str(name).strip().upper())
 
 
 # ---------------------------------------------------------------------------
@@ -173,14 +186,16 @@ def _resolve_ion_define(ion_model: str, water_model: str, ion_molnames=None) -> 
     base = os.path.join(os.path.dirname(__file__), 'ffparams', 'min.ff')
     moltypes = _parse_ion_moleculetypes(os.path.join(base, 'ions.itp'))
     attypes  = _parse_atomtypes_by_define(os.path.join(base, 'ffnonbonded.itp'))
-    all_ion_molnames = set().union(*moltypes.values()) if moltypes else set()
-    needed = {n for n in (ion_molnames or []) if n in all_ion_molnames}
+    all_ion_keys = {_ion_key(m) for block in moltypes.values() for m in block}
+    # Charge-tolerant: a system 'Na+' still matches the 'Na' moleculetype, etc.
+    needed = {_ion_key(n) for n in (ion_molnames or []) if _ion_key(n) in all_ion_keys}
 
     def _covers(define: str) -> bool:
-        mt = moltypes.get(define, {})
-        at = attypes.get(define, set())
+        mt = moltypes.get(define, {})       # {molname: referenced atomtype}
+        at = attypes.get(define, set())     # ffnonbonded atomtypes under this define
+        keys = {_ion_key(m): a for m, a in mt.items()}
         if needed:
-            return all(n in mt and mt[n] in at for n in needed)
+            return all(k in keys and keys[k] in at for k in needed)
         # No explicit ion list: require at least one monovalent atomtype present.
         return any(a in at for a in ('Na+', 'Cl-', 'K+'))
 
@@ -204,6 +219,35 @@ def _resolve_ion_define(ion_model: str, water_model: str, ion_molnames=None) -> 
                       f"requested ions for this water model; using '{cand}' instead.")
             return cand
     return ion_model
+
+
+def _remap_ion_molnames(mol_counts, ion_model):
+    """Rewrite ion names in the [ molecules ] list to the exact [ moleculetype ]
+    name present in the chosen ions.itp block, tolerating charged/uncharged
+    spelling (so a system 'Na+' maps to the 'Na' moleculetype, or 'Fe' to
+    'Fe2+'). GROMACS/OpenMM require an exact [ molecules ] ↔ [ moleculetype ]
+    name match, so this prevents "Unknown molecule type" for either spelling.
+    """
+    if not ion_model:
+        return mol_counts
+    base = os.path.join(os.path.dirname(__file__), 'ffparams', 'min.ff')
+    block = _parse_ion_moleculetypes(os.path.join(base, 'ions.itp')).get(ion_model, {})
+    if not block:
+        return mol_counts
+    by_key = defaultdict(list)
+    for m in block:
+        by_key[_ion_key(m)].append(m)
+    out = []
+    for name, count in mol_counts:
+        if name in block:                       # exact match — keep
+            out.append((name, count))
+            continue
+        cands = by_key.get(_ion_key(name))
+        if cands and len(cands) == 1:           # unambiguous charge-tolerant match
+            out.append((cands[0], count))
+        else:                                   # not an ion in this block, or ambiguous
+            out.append((name, count))
+    return out
 
 
 def _normalize_itp(itp: Optional[ITPDict]) -> ITPDict:
@@ -834,7 +878,10 @@ def write_merged_top(
         f.write(f'{molecule_name}\n\n')
         f.write('[ molecules ]\n')
         f.write('; Compound        nmols\n')
-        for mol_name, count in mol_counts:
+        # Match ion names to the chosen ion block's moleculetype spelling
+        # (charge-tolerant: Na/Na+, Ca/Ca2+, …).
+        out_mol_counts = _remap_ion_molnames(mol_counts, ion_model) if has_ions else mol_counts
+        for mol_name, count in out_mol_counts:
             f.write(f'{mol_name:<18} {count}\n')
         f.write('\n')
 
