@@ -48,8 +48,10 @@ write_traj = write_conf.write_traj
 write_auto = write_conf.auto
 
 # Topology file generation
-from .write_top import itp as write_itp, psf as write_psf, lmp as write_lmp, top as write_top_func
-write_top = write_top_func
+# NOTE: `write_top` stays the *module* (atomipy.write_top). The function that
+# writes a complete GROMACS system .top is exposed as `write_gmx_top` to avoid
+# shadowing the module name.
+from .write_top import itp as write_itp, psf as write_psf, lmp as write_lmp, top as write_gmx_top
 # Itp file import helper
 from .import_top import import_itp as import_itp_topology
 # GAFF / ACPYPE topology import
@@ -199,7 +201,7 @@ __version__ = "0.95"
 __all__ = [
     'import_pdb', 'import_gro', 'import_xyz', 'import_cif', 'import_mmcif', 'import_pqr', 'import_poscar', 'import_traj', 'import_auto',
     'write_pdb', 'write_gro', 'write_xyz', 'write_cif', 'write_pqr', 'write_poscar', 'write_sdf', 'write_traj', 'write_auto',
-    'write_itp', 'write_top', 'write_psf', 'write_lmp', 'import_itp_topology',
+    'write_itp', 'write_gmx_top', 'write_psf', 'write_lmp', 'import_itp_topology',
     'import_gaff_top', 'import_gro_coords',
     'merge_top', 'merge_top_files', 'write_merged_top',
     'element', 'radius', 'mass', 'set_atomic_masses', 'com',
