@@ -36,7 +36,7 @@ def load_minff_into_openmm(
     ----------
     top_path : str
         Path to a GROMACS .top file written by atomipy (e.g. via
-        ap.write_top(atoms, Box=Box, file_path='kao.top', forcefield='minff')).
+        ap.write_gmx_top(atoms, Box=Box, file_path='kao.top')).
         Must be self-contained: include #include directives and #ifdef blocks
         for variant selection, but resolve to a complete topology once
         preprocessed.
