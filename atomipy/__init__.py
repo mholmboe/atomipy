@@ -52,6 +52,12 @@ write_auto = write_conf.auto
 # writes a complete GROMACS system .top is exposed as `write_gmx_top` to avoid
 # shadowing the module name.
 from .write_top import itp as write_itp, psf as write_psf, lmp as write_lmp, top as write_gmx_top
+# New robust Topology Hub and Writers
+try:
+    from . import topology
+    from . import write_topology
+except ImportError:
+    pass
 # Itp file import helper
 from .import_top import import_itp as import_itp_topology
 # GAFF / ACPYPE topology import
@@ -137,6 +143,7 @@ is_centrosymmetric_along_z = build.is_centrosymmetric_along_z
 reorder = build.reorder
 condense = build.condense
 create_grid = build.create_grid
+join_and_reorder = build.join_and_reorder
 
 # ===== Resname functions =====
 from .resname import assign_resname
@@ -202,6 +209,7 @@ __all__ = [
     'import_pdb', 'import_gro', 'import_xyz', 'import_cif', 'import_mmcif', 'import_pqr', 'import_poscar', 'import_traj', 'import_auto',
     'write_pdb', 'write_gro', 'write_xyz', 'write_cif', 'write_pqr', 'write_poscar', 'write_sdf', 'write_traj', 'write_auto',
     'write_itp', 'write_gmx_top', 'write_psf', 'write_lmp', 'import_itp_topology',
+    'topology', 'write_topology',
     'import_gaff_top', 'import_gro_coords',
     'merge_top', 'merge_top_files', 'write_merged_top',
     'element', 'radius', 'mass', 'set_atomic_masses', 'com',
@@ -212,7 +220,7 @@ __all__ = [
     'direct_cartesian_to_fractional', 'direct_fractional_to_cartesian',
     'replicate_system', 'translate', 'rotate', 'place', 'center', 'update', 'scale', 'bend',
     'substitute', 'molecule', 'merge', 'slice', 'remove', 'delete_sites', 'fuse_atoms', 'solvate', 'ionize', 'insert',
-    'add_H_atom', 'adjust_H_atom', 'adjust_Hw_atom', 'reorder', 'condense', 'create_grid',
+    'add_H_atom', 'adjust_H_atom', 'adjust_Hw_atom', 'reorder', 'condense', 'create_grid', 'join_and_reorder',
     'is_centrosymmetric_along_z',
     'assign_resname', 'spc2tip4p', 'tip3p2tip4p',
     'composition', 'get_mol_sequence',
