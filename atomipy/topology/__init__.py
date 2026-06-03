@@ -18,10 +18,11 @@ from .model import (
 )
 from . import units, functional_forms, typing, validate, elements, reduce, forcefield
 from .forcefield import ForceField
+from .builder import build_topology_from_atoms
 
 __all__ = [
     "Topology", "Box", "Atom", "AtomType", "Bond", "Angle", "Dihedral",
     "Improper", "Pair", "Exclusion", "PairType", "Molecule", "Defaults", "Meta",
     "SCHEMA_VERSION", "ForceField", "units", "functional_forms", "typing",
-    "validate", "elements", "reduce", "forcefield",
+    "validate", "elements", "reduce", "forcefield", "build_topology_from_atoms"
 ]

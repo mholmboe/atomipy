@@ -2324,3 +2324,50 @@ def create_grid(atom_type, density, limits, resname='ION', molid=None):
     box = [lx, ly, lz]
     
     return atoms, box
+
+def join_and_reorder(*atom_lists) -> list:
+    """
+    Join multiple atom lists together and sequentially reorder their molecule IDs (molid).
+    
+    This function takes any number of atom lists, concatenates them, and ensures that
+    the resulting list has contiguous, non-overlapping `molid` indices starting from 1.
+    This replaces manual boilerplate for loop logic when fusing structures.
+    
+    Parameters
+    ----------
+    *atom_lists : list of dict
+        Variable number of atom lists to join.
+        
+    Returns
+    -------
+    list of dict
+        A single combined atom list with sequentially reordered molids.
+    """
+    combined = []
+    curr_molid = 1
+    
+    import copy
+    
+    for branch_atoms in atom_lists:
+        if not branch_atoms:
+            continue
+            
+        branch = copy.deepcopy(branch_atoms)
+        
+        # Find unique molids in this branch
+        m_ids = sorted(list(set(a.get('molid', 1) for a in branch)))
+        # Map them sequentially starting from curr_molid
+        m_map = {old: curr_molid + i for i, old in enumerate(m_ids)}
+        
+        # Apply the mapping
+        for a in branch:
+            a['molid'] = m_map.get(a.get('molid', 1), curr_molid)
+            
+        combined.extend(branch)
+        curr_molid += len(m_ids)
+        
+    # Re-index the final atoms list 1-based
+    for i, a in enumerate(combined, 1):
+        a['index'] = i
+        
+    return combined
