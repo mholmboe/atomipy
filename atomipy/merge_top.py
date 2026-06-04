@@ -473,8 +473,17 @@ def _build_mineral_itp(atoms_in: list, box: Optional[list]) -> dict:
             ang_ai.append(local_idx[ai]); ang_aj.append(local_idx[aj]); ang_ak.append(local_idx[ak])
             ang_c0.append(c0); ang_c1.append(c1); ang_cat.append(cat)
 
+    # Name the built mineral moleculetype after the atoms' resname (so a user can
+    # name a mineral, e.g. PYRO/KAOL) rather than hard-coding 'MIN'. Defaults to
+    # 'MIN'. merge_top() still dedups collisions (MIN, MIN_1, ...) and syncs the
+    # [ molecules ] entry + resnames to match.
+    _mt_name = 'MIN'
+    if updated_atoms:
+        _rn0 = str(updated_atoms[0].get('resname') or '').strip()
+        if _rn0:
+            _mt_name = _rn0
     itp = {
-        'moleculetype': {'moleculetype': ['MIN'], 'nrexcl': [3]},
+        'moleculetype': {'moleculetype': [_mt_name], 'nrexcl': [3]},
         'atoms': {
             'nr':      local_idx,
             'type':    [a.get('fftype', a.get('type', 'X')) for a in updated_atoms],
@@ -930,19 +939,30 @@ def _write_mineral_molecule_sections(f, atoms, itp_merged, box_merged, angle_ka=
     original_itps = itp_merged.get('_original_itps', [])
     if not original_itps:
         return
-        
+
+    # Track names so each mineral component gets a UNIQUE [ moleculetype ] name
+    # (MIN, MIN_1, ...). merge_top() already deduped the [ molecules ] entries and
+    # the atom resnames the same way; without matching it here, two different
+    # minerals both write [ moleculetype ] MIN while [ molecules ] references MIN_1
+    # -> GROMACS/OpenMM "molecule type 'MIN_1' not found" (and a duplicate 'MIN').
+    _seen_mineral_names: set = set()
     for itp in original_itps:
         if itp is None:
             continue
         # Skip if it is an organic included file
         if itp.get('_source_itp'):
             continue
-            
+
         mt = itp.get('moleculetype', {})
         if not mt or 'moleculetype' not in mt:
             continue
-            
+
         molname = mt['moleculetype'][0]
+        _base, _suf = molname, 1
+        while molname in _seen_mineral_names:
+            molname = f"{_base}_{_suf}"
+            _suf += 1
+        _seen_mineral_names.add(molname)
         nrexcl = mt['nrexcl'][0] if 'nrexcl' in mt else 3
         
         f.write('[ moleculetype ]\n')
