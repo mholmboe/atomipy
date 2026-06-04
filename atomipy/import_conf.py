@@ -532,6 +532,152 @@ def cif(file_path, expand_symmetry=True):
     return atoms, Cell
 
 
+# Atomic-number -> symbol table (index 0 == dummy/attachment point).
+# Used by the Chemical JSON (cjson) reader/writer, which stores elements as
+# atomic numbers rather than symbols.
+ATOMIC_SYMBOLS = (
+    "X",
+    "H", "He", "Li", "Be", "B", "C", "N", "O", "F", "Ne",
+    "Na", "Mg", "Al", "Si", "P", "S", "Cl", "Ar", "K", "Ca",
+    "Sc", "Ti", "V", "Cr", "Mn", "Fe", "Co", "Ni", "Cu", "Zn",
+    "Ga", "Ge", "As", "Se", "Br", "Kr", "Rb", "Sr", "Y", "Zr",
+    "Nb", "Mo", "Tc", "Ru", "Rh", "Pd", "Ag", "Cd", "In", "Sn",
+    "Sb", "Te", "I", "Xe", "Cs", "Ba", "La", "Ce", "Pr", "Nd",
+    "Pm", "Sm", "Eu", "Gd", "Tb", "Dy", "Ho", "Er", "Tm", "Yb",
+    "Lu", "Hf", "Ta", "W", "Re", "Os", "Ir", "Pt", "Au", "Hg",
+    "Tl", "Pb", "Bi", "Po", "At", "Rn", "Fr", "Ra", "Ac", "Th",
+    "Pa", "U", "Np", "Pu", "Am", "Cm", "Bk", "Cf", "Es", "Fm",
+    "Md", "No", "Lr", "Rf", "Db", "Sg", "Bh", "Hs", "Mt", "Ds",
+    "Rg", "Cn", "Nh", "Fl", "Mc", "Lv", "Ts", "Og",
+)
+SYMBOL_TO_NUMBER = {s.upper(): z for z, s in enumerate(ATOMIC_SYMBOLS) if z > 0}
+
+
+def cjson(file_path, resname=None):
+    """Import atoms from a Chemical JSON (.cjson / .json) file.
+
+    Chemical JSON is the open format used by Avogadro2 / Open Chemistry. It
+    stores 3D coordinates (in Angstroms) as a flat ``atoms.coords.3d`` array,
+    elements as atomic numbers, and optionally bonds, formal charges, partial
+    charges (e.g. Gasteiger), atom labels and a unit cell.
+
+    Parameters
+    ----------
+    file_path : str
+        Path to the .cjson (or .json) file.
+    resname : str, optional
+        Residue name to assign to every atom. If None, uses the molecule
+        ``name`` field truncated to a GROMACS-friendly token, else 'MOL'.
+
+    Returns
+    -------
+    atoms : list of dict
+        Each with keys: molid, index, resname, x, y, z, element, type,
+        fftype, charge, neigh, bonds, angles (and 'name' = molecule name).
+    Cell : list or None
+        [a, b, c, alpha, beta, gamma] if a unit cell is present, else None.
+
+    Examples
+    --------
+    atoms, Cell = cjson("L-alanine.cjson")
+    """
+    import json as _json
+
+    with open(file_path, 'r', encoding='utf-8') as f:
+        data = _json.load(f)
+
+    # Accept either the canonical 'chemicalJson'/'chemical json' marker or a
+    # bare object that simply carries an 'atoms' block.
+    atoms_block = data.get('atoms', {}) or {}
+    coords3d = (atoms_block.get('coords', {}) or {}).get('3d', []) or []
+    numbers = (atoms_block.get('elements', {}) or {}).get('number', []) or []
+    labels = (atoms_block.get('elements', {}) or {}).get('label') \
+        or atoms_block.get('labels') or []
+    formal = atoms_block.get('formalCharges') or []
+
+    n_atoms = len(numbers)
+    if n_atoms == 0 or len(coords3d) < 3 * n_atoms:
+        raise ValueError(f"cjson: malformed or empty atom block in {file_path}")
+
+    # Partial charges: prefer Gasteiger, else the first method listed.
+    partial = {}
+    pc = data.get('partialCharges') or {}
+    if isinstance(pc, dict) and pc:
+        method = 'Gasteiger' if 'Gasteiger' in pc else next(iter(pc))
+        partial = {'method': method, 'values': pc.get(method) or []}
+
+    # Molecule name and residue token. The embedded 'name' sometimes carries a
+    # generation artifact (e.g. 'L-alanine.out.gz'); strip trailing file-ish
+    # suffixes so the clean chemical name remains.
+    import re as _re
+    mol_name = (data.get('name') or data.get('properties', {}).get('name')
+                or os.path.splitext(os.path.basename(file_path))[0])
+    mol_name = _re.sub(r'(\.(out|gz|cjson|json|pdb|xyz|mol2?|sdf|log|com|gjf))+$',
+                       '', str(mol_name), flags=_re.IGNORECASE).strip() or \
+        os.path.splitext(os.path.basename(file_path))[0]
+    if resname is None:
+        token = ''.join(ch for ch in str(mol_name).upper() if ch.isalnum())
+        resname = (token[:4] or 'MOL') if token else 'MOL'
+
+    atoms = []
+    for i in range(n_atoms):
+        z = int(numbers[i])
+        sym = ATOMIC_SYMBOLS[z] if 0 <= z < len(ATOMIC_SYMBOLS) else 'X'
+        label = str(labels[i]) if i < len(labels) and labels[i] else f"{sym}{i + 1}"
+        atom = {
+            "molid": 1,
+            "index": i + 1,
+            "resname": resname,
+            "name": mol_name,
+            "x": float(coords3d[3 * i]),
+            "y": float(coords3d[3 * i + 1]),
+            "z": float(coords3d[3 * i + 2]),
+            "element": sym if sym != 'X' else '',
+            "type": label,
+            "fftype": label,
+            "atomic_number": z,
+            "formal_charge": int(formal[i]) if i < len(formal) else 0,
+            "neigh": [],
+            "bonds": [],
+            "angles": [],
+        }
+        if partial.get('values') and i < len(partial['values']):
+            atom["charge"] = float(partial['values'][i])
+        atoms.append(atom)
+
+    # Bonds: flat connection index list (pairs) + parallel order list.
+    bonds_block = data.get('bonds', {}) or {}
+    conn = (bonds_block.get('connections', {}) or {}).get('index', []) or []
+    orders = bonds_block.get('order', []) or []
+    for b in range(len(conn) // 2):
+        a1, a2 = int(conn[2 * b]), int(conn[2 * b + 1])  # 0-based in cjson
+        order = orders[b] if b < len(orders) else 1
+        if 0 <= a1 < n_atoms and 0 <= a2 < n_atoms:
+            atoms[a1]["neigh"].append(a2 + 1)
+            atoms[a2]["neigh"].append(a1 + 1)
+            atoms[a1]["bonds"].append((a2 + 1, order))
+            atoms[a2]["bonds"].append((a1 + 1, order))
+
+    # Unit cell (rare for molecule files).
+    Cell = None
+    uc = data.get('unitCell') or data.get('unit cell') or {}
+    if uc:
+        try:
+            Cell = [float(uc['a']), float(uc['b']), float(uc['c']),
+                    float(uc.get('alpha', 90.0)), float(uc.get('beta', 90.0)),
+                    float(uc.get('gamma', 90.0))]
+        except (KeyError, TypeError, ValueError):
+            Cell = None
+
+    # Fill any missing element symbols from the heuristic detector.
+    if any(not a.get('element') for a in atoms):
+        element_module.element(atoms)
+
+    print(f"Imported {len(atoms)} atoms from cjson '{mol_name}' "
+          f"(resname={resname}, bonds={len(conn) // 2})")
+    return atoms, Cell
+
+
 def auto(file_path):
     """Automatically detect file format and import atoms.
     
@@ -557,6 +703,8 @@ def auto(file_path):
         return xyz(file_path)
     elif ext in ('.cif', '.mmcif', '.mcif'):
         return cif(file_path)
+    elif ext in ('.cjson', '.json'):
+        return cjson(file_path)
     elif ext == '.pqr':
         return pqr(file_path)
     elif ext in ('.poscar', '.contcar') or os.path.basename(file_path).upper() in ('POSCAR', 'CONTCAR'):

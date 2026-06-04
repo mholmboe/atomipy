@@ -31,6 +31,7 @@ import_gro = import_conf.gro
 import_xyz = import_conf.xyz
 import_cif = import_conf.cif
 import_mmcif = import_conf.cif  # alias — cif() handles both CIF and mmCIF
+import_cjson = import_conf.cjson
 import_pqr = import_conf.pqr
 import_poscar = import_conf.poscar
 import_traj = import_conf.import_traj
@@ -41,7 +42,13 @@ write_pdb = write_conf.pdb
 write_gro = write_conf.gro
 write_xyz = write_conf.xyz
 write_cif = write_conf.cif
+write_cjson = write_conf.cjson
 write_pqr = write_conf.pqr
+
+from . import molecule_library
+list_molecules = molecule_library.list_molecules
+load_molecule = molecule_library.load_molecule
+molecule_categories = molecule_library.molecule_categories
 write_poscar = write_conf.poscar
 write_sdf = write_conf.sdf
 write_traj = write_conf.write_traj
@@ -206,8 +213,9 @@ __version__ = "0.95"
 
 # Expose key functions at the package level
 __all__ = [
-    'import_pdb', 'import_gro', 'import_xyz', 'import_cif', 'import_mmcif', 'import_pqr', 'import_poscar', 'import_traj', 'import_auto',
-    'write_pdb', 'write_gro', 'write_xyz', 'write_cif', 'write_pqr', 'write_poscar', 'write_sdf', 'write_traj', 'write_auto',
+    'import_pdb', 'import_gro', 'import_xyz', 'import_cif', 'import_mmcif', 'import_cjson', 'import_pqr', 'import_poscar', 'import_traj', 'import_auto',
+    'write_pdb', 'write_gro', 'write_xyz', 'write_cif', 'write_cjson', 'write_pqr', 'write_poscar', 'write_sdf', 'write_traj', 'write_auto',
+    'list_molecules', 'load_molecule', 'molecule_categories',
     'write_itp', 'write_gmx_top', 'write_psf', 'write_lmp', 'import_itp_topology',
     'topology', 'write_topology',
     'import_gaff_top', 'import_gro_coords',
