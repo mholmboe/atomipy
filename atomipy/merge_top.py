@@ -473,8 +473,17 @@ def _build_mineral_itp(atoms_in: list, box: Optional[list]) -> dict:
             ang_ai.append(local_idx[ai]); ang_aj.append(local_idx[aj]); ang_ak.append(local_idx[ak])
             ang_c0.append(c0); ang_c1.append(c1); ang_cat.append(cat)
 
+    # Name the built mineral moleculetype after the atoms' resname (so a user can
+    # name a mineral, e.g. PYRO/KAOL) rather than hard-coding 'MIN'. Defaults to
+    # 'MIN'. merge_top() still dedups collisions (MIN, MIN_1, ...) and syncs the
+    # [ molecules ] entry + resnames to match.
+    _mt_name = 'MIN'
+    if updated_atoms:
+        _rn0 = str(updated_atoms[0].get('resname') or '').strip()
+        if _rn0:
+            _mt_name = _rn0
     itp = {
-        'moleculetype': {'moleculetype': ['MIN'], 'nrexcl': [3]},
+        'moleculetype': {'moleculetype': [_mt_name], 'nrexcl': [3]},
         'atoms': {
             'nr':      local_idx,
             'type':    [a.get('fftype', a.get('type', 'X')) for a in updated_atoms],
