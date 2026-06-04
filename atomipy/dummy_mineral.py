@@ -339,21 +339,40 @@ _WATER_FILE = {
 }
 
 
-def write_dummy_system_top(atoms, box, out_top, out_gro, water_model='spce',
-                           mol_name='DUM', dummy_itp='dummy.itp'):
-    """Write a self-contained GROMACS .top (+ .gro) for a frozen dummy mineral
-    plus water (and monatomic ions), bypassing the MINFF mineral machinery.
+def _parse_itp_moltype(itp_path):
+    """Return (moleculetype_name, n_atoms_per_molecule) from a GROMACS .itp."""
+    name, natoms, section = None, 0, None
+    with open(itp_path, 'r', encoding='utf-8', errors='ignore') as f:
+        for line in f:
+            s = line.split(';')[0].strip()
+            if not s:
+                continue
+            if s.startswith('['):
+                section = s.strip('[] ').lower()
+                continue
+            if section == 'moleculetype' and name is None:
+                name = s.split()[0]
+            elif section == 'atoms':
+                natoms += 1
+    return name, natoms
 
-    The dummy framework (atoms carrying ``_dummy_type``, set by
-    :func:`assign_dummy_mineral_params`) is described by its own ``[ atomtypes ]``
-    + bond-free ``[ moleculetype ]``; water and ions reuse the validated MINFF
-    ``min.ff`` includes. Load the result with ``ap.load_minff_into_openmm`` (then
-    freeze the framework by zeroing its particle masses).
+
+def write_dummy_system_top(atoms, box, out_top, out_gro, water_model='spce',
+                           mol_name='DUM', dummy_itp='dummy.itp', organic_itps=None):
+    """Write a self-contained GROMACS .top (+ .gro) for a frozen dummy mineral
+    plus optional organic molecules, water and monatomic ions — bypassing the
+    MINFF mineral machinery.
+
+    The dummy framework (atoms carrying ``_dummy_type``) is described by its own
+    ``[ atomtypes ]`` + bond-free ``[ moleculetype ]``; organic molecules reuse
+    their GAFF/OpenFF ``.itp`` (``organic_itps``); water and ions reuse the MINFF
+    ``min.ff`` includes. Atoms are reordered framework → organic → water → ions
+    so each ``[ molecules ]`` block is contiguous.
 
     Parameters
     ----------
     atoms : list of dict
-        Framework atoms (dummy-parameterised) + solvent/ion atoms.
+        Framework (dummy) + organic + solvent/ion atoms.
     box : list
         Box (Cell or Box_dim).
     out_top, out_gro : str
@@ -363,26 +382,68 @@ def write_dummy_system_top(atoms, box, out_top, out_gro, water_model='spce',
     mol_name : str
         Dummy moleculetype name (default 'DUM').
     dummy_itp : str
-        Filename to write the dummy ``.itp`` to (relative to out_top dir).
+        Filename for the generated dummy ``.itp``.
+    organic_itps : list of str, optional
+        Organic ``.itp`` filenames to ``#include`` (each defines a moleculetype).
+
+    Returns
+    -------
+    (ordered_atoms, n_frozen) : tuple
+        The atoms in the order written to the ``.gro`` (framework first), and the
+        number of leading frozen framework atoms — pass ``range(n_frozen)`` to
+        ``system.setParticleMass(i, 0)`` after loading.
     """
     import os as _os
+    from collections import OrderedDict
     from . import write_conf as _wc
+
+    organic_itps = list(organic_itps or [])
+    out_dir = _os.path.dirname(_os.path.abspath(out_top))
 
     frame = [a for a in atoms if a.get('_dummy_type')]
     rest = [a for a in atoms if not a.get('_dummy_type')]
     water = [a for a in rest if str(a.get('resname', '')).upper() in _SOLVENT_RES]
-    ions = [a for a in rest if str(a.get('resname', '')).upper() not in _SOLVENT_RES]
+    nonwater = [a for a in rest if str(a.get('resname', '')).upper() not in _SOLVENT_RES]
 
-    # Write the dummy moleculetype itp (its own [atomtypes] + [moleculetype]).
-    out_dir = _os.path.dirname(_os.path.abspath(out_top))
+    # Distinguish organic molecules (multi-atom molid groups) from monatomic ions.
+    groups = OrderedDict()
+    for a in nonwater:
+        groups.setdefault(a.get('molid'), []).append(a)
+    organic = []
+    ions = []
+    for _mid, g in groups.items():
+        (organic if len(g) > 1 else ions).extend(g)
+
+    # Map each organic .itp to (moltype name, atoms/molecule), and write the dummy itp.
+    org_info = []
+    for oi in organic_itps:
+        p = oi if _os.path.isabs(oi) else _os.path.join(out_dir, _os.path.basename(oi))
+        try:
+            mt, nat = _parse_itp_moltype(p)
+            if mt and nat:
+                org_info.append((_os.path.basename(oi), mt, nat))
+        except OSError:
+            pass
+    natoms_to_moltype = {nat: mt for (_f, mt, nat) in org_info}
+
     itp_path = _os.path.join(out_dir, _os.path.basename(dummy_itp))
     write_dummy_mineral_itp(frame, itp_path, mol_name=mol_name)
 
-    n_water = len(water) // 3        # 3-site water
+    # Organic [ molecules ] counts, by matching each molid group's size to a moltype.
+    org_mol_counts = OrderedDict()
+    for _mid, g in groups.items():
+        if len(g) <= 1:
+            continue
+        mt = natoms_to_moltype.get(len(g))
+        if mt is None and org_info:
+            mt = org_info[0][1]        # fall back to the first organic moltype
+        if mt:
+            org_mol_counts[mt] = org_mol_counts.get(mt, 0) + 1
+
+    n_water = len(water) // 3
     water_define = water_model.lower().replace('/', '').replace('-', '').upper()
     wm_file = _WATER_FILE.get(water_model.lower().replace('/', '').replace('-', ''), 'spce')
 
-    # Ion molecule sequence (monatomic, by resname order of first appearance).
     ion_seq = []
     seen = set()
     for a in ions:
@@ -396,8 +457,10 @@ def write_dummy_system_top(atoms, box, out_top, out_gro, water_model='spce',
         f.write('[ defaults ]\n')
         f.write('; nbfunc   comb-rule   gen-pairs   fudgeLJ   fudgeQQ\n')
         f.write('  1        2           yes         0.5       0.8333333333\n\n')
-        # Activate water (+ ion) atomtype blocks in ffnonbonded, then include it.
-        f.write(f'#include "{_os.path.basename(dummy_itp)}"\n\n')  # dummy [atomtypes] + DUM moltype
+        f.write(f'#include "{_os.path.basename(dummy_itp)}"\n')   # dummy [atomtypes] + DUM moltype
+        for oi in organic_itps:
+            f.write(f'#include "{_os.path.basename(oi)}"\n')       # organic [atomtypes] + moltype
+        f.write('\n')
         if n_water or ion_seq:
             f.write(f'#define {water_define}\n')
             f.write('#include "min.ff/ffnonbonded.itp"\n')
@@ -411,10 +474,13 @@ def write_dummy_system_top(atoms, box, out_top, out_gro, water_model='spce',
         f.write('[ molecules ]\n')
         f.write('; Compound        nmols\n')
         f.write(f' {mol_name:<15} 1\n')
+        for mt, cnt in org_mol_counts.items():
+            f.write(f' {mt:<15} {cnt}\n')
         if n_water:
             f.write(f' {"SOL":<15} {n_water}\n')
         for name, cnt in ion_seq:
             f.write(f' {name:<15} {cnt}\n')
 
-    _wc.gro(frame + water + ions, box, out_gro)
-    return out_top
+    ordered = frame + organic + water + ions
+    _wc.gro(ordered, box, out_gro)
+    return ordered, len(frame)
