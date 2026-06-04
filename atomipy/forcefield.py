@@ -479,8 +479,13 @@ def minff(atoms, Box, ffname='minff', rmaxlong=2.45, rmaxH=1.2, log=False, log_f
         
         # Only calculate bonds in the first pass
         if _ == 0:
-            # Get bonds and angles using bond_angle function (this also calculates coordination numbers)
-            atoms, bond_index, angle_index = bond_angle(atoms, Box, rmaxH=rmaxH, rmaxM=rmaxlong)
+            # Get bonds and angles using bond_angle function (this also calculates coordination numbers).
+            # same_molecule_only=False: mineral framework coordination is purely geometric and must
+            # NOT depend on molid. Imported/uploaded structures (and replication) may carry per-atom or
+            # per-residue molids, which would otherwise make the default same-molecule filter find ZERO
+            # bonds, leaving every atom untyped (e.g. 'Al' instead of 'Alo' -> downstream KeyError).
+            atoms, bond_index, angle_index = bond_angle(atoms, Box, rmaxH=rmaxH, rmaxM=rmaxlong,
+                                                        same_molecule_only=False)
             
             # Store bond information and prepare for atom typing
             for i, atom in enumerate(atoms):
@@ -1110,8 +1115,13 @@ def clayff(atoms, Box, ffname='clayff', rmaxlong=2.45, rmaxH=1.2, log=False, log
         
         # Only calculate bonds in the first pass
         if _ == 0:
-            # Get bonds and angles using bond_angle function (this also calculates coordination numbers)
-            atoms, bond_index, angle_index = bond_angle(atoms, Box, rmaxH=rmaxH, rmaxM=rmaxlong)
+            # Get bonds and angles using bond_angle function (this also calculates coordination numbers).
+            # same_molecule_only=False: mineral framework coordination is purely geometric and must
+            # NOT depend on molid. Imported/uploaded structures (and replication) may carry per-atom or
+            # per-residue molids, which would otherwise make the default same-molecule filter find ZERO
+            # bonds, leaving every atom untyped (e.g. 'Al' instead of 'Alo' -> downstream KeyError).
+            atoms, bond_index, angle_index = bond_angle(atoms, Box, rmaxH=rmaxH, rmaxM=rmaxlong,
+                                                        same_molecule_only=False)
             
             # Store bond information and prepare for atom typing
             for i, atom in enumerate(atoms):
