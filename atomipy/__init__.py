@@ -150,7 +150,7 @@ from .resname import assign_resname
 
 # ===== Composition / system analysis =====
 try:
-    from .composition import composition, get_mol_sequence
+    from .composition import composition, get_mol_sequence, get_mol_sequence_typed
 except ImportError:
     pass
 
@@ -223,7 +223,7 @@ __all__ = [
     'add_H_atom', 'adjust_H_atom', 'adjust_Hw_atom', 'reorder', 'condense', 'create_grid', 'join_and_reorder',
     'is_centrosymmetric_along_z',
     'assign_resname', 'spc2tip4p', 'tip3p2tip4p',
-    'composition', 'get_mol_sequence',
+    'composition', 'get_mol_sequence', 'get_mol_sequence_typed',
     'minff', 'clayff', 'write_n2t', 'get_structure_stats',
     'load_forcefield', 'list_ff_blocks', 'get_ffparams_dir',
     'charge_minff', 'charge_clayff', 'balance_charges', 'assign_formal_charges', 'get_formal_charge', 'get_half_formal_charge',

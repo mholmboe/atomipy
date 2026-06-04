@@ -754,6 +754,12 @@ def write_merged_top(
     # this Ka, and the standard θ0/k for M-O-H. The GMINFF_k nonbonded block is
     # unaffected (written separately).
     angle_ka:  Optional[float] = 500.0,
+    # Optional explicit [ molecules ] override: a sequence of (name, count) pairs.
+    # When given, it REPLACES the auto-derived sequence (get_mol_sequence) — the
+    # user states the molecule order/counts directly. The caller is responsible
+    # for consistency (Σ count×moleculetype_size == atom count, and matching
+    # order). Names must match defined moleculetypes / #included .itp molnames.
+    mol_counts_override: Optional[Sequence[Tuple[str, int]]] = None,
 ) -> None:
     """
     Write a self-contained GROMACS .top file and a .gro coordinate file for a
@@ -802,7 +808,16 @@ def write_merged_top(
     # which correctly handles generic 'ION' resnames, water, minerals, and organic
     # molecules — all keyed by molid boundaries.
     from .composition import get_mol_sequence
-    mol_counts: List[Tuple[str, int]] = get_mol_sequence(atoms_merged)
+    if mol_counts_override:
+        # User-specified [ molecules ] sequence (e.g. from the Topology editor).
+        mol_counts: List[Tuple[str, int]] = [(str(n), int(c)) for n, c in mol_counts_override]
+        _auto = get_mol_sequence(atoms_merged)
+        _auto_atoms = sum(c for _, c in _auto)  # informational only
+        print(f"write_merged_top: using caller-supplied [ molecules ] override "
+              f"({len(mol_counts)} entries, {sum(c for _, c in mol_counts)} molecules) "
+              f"in place of the auto-detected {len(_auto)} entries.")
+    else:
+        mol_counts: List[Tuple[str, int]] = get_mol_sequence(atoms_merged)
 
     # ------------------------------------------------------------------
     # Write .top
@@ -880,7 +895,12 @@ def write_merged_top(
         f.write('; Compound        nmols\n')
         # Match ion names to the chosen ion block's moleculetype spelling
         # (charge-tolerant: Na/Na+, Ca/Ca2+, …).
-        out_mol_counts = _remap_ion_molnames(mol_counts, ion_model) if has_ions else mol_counts
+        # A caller override is written verbatim (the user's exact molnames); the
+        # automatic ion-name remap only applies to the auto-derived sequence.
+        if mol_counts_override:
+            out_mol_counts = mol_counts
+        else:
+            out_mol_counts = _remap_ion_molnames(mol_counts, ion_model) if has_ions else mol_counts
         for mol_name, count in out_mol_counts:
             f.write(f'{mol_name:<18} {count}\n')
         f.write('\n')
