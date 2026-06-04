@@ -57,12 +57,28 @@ _WATER_ATOMTYPE_PREFIXES = ('ow', 'hw', 'oh2', 'mw')
 #: Resnames indicating an organic / ligand / biomolecule
 _ORGANIC_RESNAMES = {
     'LIG', 'API', 'MOL', 'UNL', 'UNK', 'DRG', 'INH',
+    # Amino acids (standard 3-letter + His protonation variants)
     'ALA', 'ARG', 'ASN', 'ASP', 'CYS', 'GLN', 'GLU', 'GLY', 'HIS', 'ILE',
     'LEU', 'LYS', 'MET', 'PHE', 'PRO', 'SER', 'THR', 'TRP', 'TYR', 'VAL',
     'HID', 'HIE', 'HIP', 'HSD', 'HSE', 'HSP',
+    # Common protonation / non-standard / terminal-cap residues
+    'CYX', 'CYM', 'ASH', 'GLH', 'LYN', 'ARN', 'HYP', 'ACE', 'NME', 'NHE', 'SEC', 'PYL',
+    # DNA nucleotides (PDB v3 / Amber) + 5'/3' terminal forms
+    'DA', 'DC', 'DG', 'DT', 'DU',
+    'DA5', 'DA3', 'DC5', 'DC3', 'DG5', 'DG3', 'DT5', 'DT3', 'DU5', 'DU3',
+    # RNA nucleotides + alt prefixes + 5'/3' terminal forms
+    'A', 'C', 'G', 'U', 'RA', 'RC', 'RG', 'RU',
+    'A5', 'A3', 'C5', 'C3', 'G5', 'G3', 'U5', 'U3',
+    'RA5', 'RA3', 'RC5', 'RC3', 'RG5', 'RG3', 'RU5', 'RU3',
 }
 #: Resnames indicating a mineral framework
-_MINERAL_RESNAMES = {'MIN', 'MINERAL', 'MMT', 'PYR', 'KAO', 'CLAY'}
+_MINERAL_RESNAMES = {
+    'MIN', 'MINERAL', 'MMT', 'PYR', 'KAO', 'CLAY',
+    # Zeolite framework codes (first-3-letters of the bundled zeolite presets;
+    # 'MFI' is the IZA code for ZSM-5)
+    'ABW', 'ANA', 'CHA', 'ETR', 'EUO', 'EZT', 'FAU', 'FER', 'HEU', 'MOR',
+    'PHI', 'SOD', 'ZSM', 'MFI',
+}
 #: Baseline MINFF/CLAYFF mineral atomtypes (extended from the FF library at runtime)
 _MINERAL_ATOMTYPES_BASE = {
     'Ob', 'Obos', 'Obts', 'Obss', 'Ohs', 'Op', 'Oh', 'Oas', 'Oahs', 'Oal',
