@@ -191,6 +191,12 @@ try:
     from .bond_valence import analyze_bvs, conf2bvs, add_hydrogens_bvs
 except ImportError:
     pass
+
+# ===== Oxidation-state guessing (rules + charge balance) =====
+try:
+    from .oxidation import guess_oxidation_states, PAULING_EN
+except ImportError:
+    pass
 try:
     from .radius import get_radius, bond_distance
 except ImportError:
@@ -238,6 +244,7 @@ __all__ = [
     'load_minff_into_openmm',
     'compute_bvs', 'global_instability_index', 'load_bv_params', 'load_shannon_radii', 'bond_valence', 'summarize_bvs',
     'analyze_bvs', 'conf2bvs', 'add_hydrogens_bvs',
+    'guess_oxidation_states', 'PAULING_EN',
     'get_radius', 'bond_distance',
     'unwrap_coordinates', 'calculate_rdf', 'coordination_number', 'closest_atom', 'min_distances',
     'xrd', 'occupancy_atom', 'atomic_scattering_factors', 'calculate_multiplicity', 'bragg_law'

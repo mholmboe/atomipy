@@ -578,6 +578,36 @@ atoms, cell = ap.load_molecule('L-tryptophan')   # 27 atoms, resname 'LTRY'
 - `charge_clayff(atoms, Box, atom_labels=None, charges=None, resname=None)`: Assign CLAYFF charges to atoms based on coordination environment
 - `balance_charges(atoms, resname=None)`: Balance the total charge of the system by adjusting oxygen charges
 
+### Oxidation states (rules + charge balance)
+
+`guess_oxidation_states(atoms, total_charge=0, group_by='all', method='auto', write=True, key='oxidation_state', verbose=False)`
+guesses per-atom oxidation states without needing accurate geometry — a parallel
+alternative to the geometry-based `compute_bvs` (bond-valence sums) and the
+force-field `assign_formal_charges`. Two engines:
+
+- **`ionic`** — apply reliable oxidation states (group 1 → +1, group 2 → +2,
+  Al/B/Ga/Sc/Y/La → +3, Si/Ge/Ti/Zr/Hf → +4, F → −1, O → −2, Cl/Br/I → −1,
+  H → +1) then solve the remaining variable elements (C, N, S, Fe, Mn, …) so each
+  charge group sums to its net charge (0 by default — a neutral lattice). Single
+  variable elements are solved exactly (incl. fractional mixed valence, e.g.
+  Fe₃O₄ → +8/3); multiple variable elements are resolved by enumerating common
+  oxidation states for a charge-balanced, most-probable combination. Best for
+  crystals / unit cells.
+- **`electronegativity`** — the rigorous definition: each bond's electrons go to
+  the more electronegative atom, so `ox = Σ(±bond order) + formal charge`. Needs
+  connectivity (`atom['bonds']`/`atom['neigh']`). Best for molecules.
+
+`method='auto'` (default) picks the electronegativity engine when bond orders are
+present, else the ionic engine. Results are written to `atom['oxidation_state']`.
+
+```python
+import atomipy as ap
+atoms, cell = ap.import_auto('UC_conf/Pyrophyllite_GII_0.0.pdb')
+ap.guess_oxidation_states(atoms)        # Si=+4, Al=+3, O=-2, H=+1 (neutral)
+atoms, _ = ap.load_molecule('L-alanine')
+ap.guess_oxidation_states(atoms)        # methyl C=-3, alpha C=0, carboxyl C=+3, N=-3
+```
+
 ## Data Structure
 
 All atomic information is stored in a list of dictionaries called `atoms`. Each atom dictionary contains the following fields:
