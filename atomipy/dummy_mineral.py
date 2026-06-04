@@ -90,7 +90,7 @@ def pauling_effective_charge(oxidation_state, element, ref_en=None):
     return oxidation_state * f
 
 
-def _anion_charges_minff(atoms, ox, anion_idx, Box, verbose):
+def _anion_charges_minff(atoms, ox, anion_idx, Box, verbose, rmaxlong=2.45, rmaxH=1.2):
     """Coordination-resolved anion charges (the MINFF formula):
 
         q_anion = oxidation_anion + Σ_j (oxidation_j − partial_j) / CN_j
@@ -101,11 +101,12 @@ def _anion_charges_minff(atoms, ox, anion_idx, Box, verbose):
     picks up its H's +0.6 deficit and a bridging O picks up shares from every
     metal it bridges. Exact neutrality follows for a neutral lattice.
 
-    Mutates atoms[i]['charge'] for i in anion_idx. Requires coordination, which
-    it computes via bond_angle (rmaxM=2.45, rmaxH=1.2 — MINFF defaults).
+    Mutates atoms[i]['charge'] for i in anion_idx. Coordination is computed via
+    bond_angle with the metal (``rmaxlong``) and hydrogen (``rmaxH``) cutoffs —
+    the same global cutoffs MINFF typing uses.
     """
     from .bond_angle import bond_angle
-    bond_angle(atoms, Box, verbose=False)        # populate 'neigh' (0-based)
+    bond_angle(atoms, Box, rmaxM=rmaxlong, rmaxH=rmaxH, verbose=False)  # populate 'neigh' (0-based)
     anion_set = set(anion_idx)
 
     # CN of each donor = how many anions it coordinates.
@@ -132,7 +133,7 @@ def _anion_charges_minff(atoms, ox, anion_idx, Box, verbose):
 
 def assign_dummy_mineral_params(atoms, Box=None, charge_mode='pauling', charge_scale=0.5,
                                 h_charge=0.4, metal_site='Alo', resname='DUM',
-                                freeze=True, verbose=True):
+                                rmaxlong=2.45, rmaxH=1.2, freeze=True, verbose=True):
     """Assign dummy (non-MINFF) parameters to a mineral framework in place.
 
     Sets on every atom: ``charge``, ``sigma``/``epsilon`` (nm, kJ/mol),
@@ -167,6 +168,11 @@ def assign_dummy_mineral_params(atoms, Box=None, charge_mode='pauling', charge_s
         Fixed hydrogen charge in 'pauling' mode (default 0.4).
     metal_site : str
         MINFF LJ site borrowed for metal/cation atoms ('Alo' default, 'Sit', 'Mgo').
+    rmaxlong : float
+        Metal–anion coordination cutoff in Å for the MINFF charge formula
+        (default 2.45 — the MINFF global cutoff).
+    rmaxH : float
+        Hydrogen bond cutoff in Å (default 1.2 — the MINFF global cutoff).
     resname, freeze, verbose : see above.
 
     Returns
@@ -203,7 +209,8 @@ def assign_dummy_mineral_params(atoms, Box=None, charge_mode='pauling', charge_s
         if Box is not None:
             try:
                 # MINFF coordination-resolved anion charges (q_O = -2 + Σ deficits).
-                _anion_charges_minff(atoms, ox, anion_idx, Box, verbose)
+                _anion_charges_minff(atoms, ox, anion_idx, Box, verbose,
+                                     rmaxlong=rmaxlong, rmaxH=rmaxH)
                 used_minff = True
             except Exception as exc:
                 if verbose:
