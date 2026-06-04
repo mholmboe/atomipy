@@ -27,9 +27,10 @@ organic (GAFF) itp.
 This is intentionally approximate — a *dummy* for qualitative questions
 (wetting, ion adsorption, interfacial structuring), not quantitative energetics.
 """
+import math
 import re
 
-from .oxidation import guess_oxidation_states, _norm_element
+from .oxidation import guess_oxidation_states, _norm_element, PAULING_EN
 
 # Borrowable MINFF Lennard-Jones sites: (sigma_nm, epsilon_kJ_per_mol).
 MINFF_LJ_SITES = {
@@ -38,10 +39,12 @@ MINFF_LJ_SITES = {
     'Sit':    (0.08223, 0.42242),  # Si tetrahedral — smallest cation site overall
     'Mgo':    (0.19555, 0.73412),  # a roomier divalent-ish option
     'H':      (0.00000, 0.00000),  # MINFF hydrogens carry no LJ
+    'F_ion':  (0.30985, 0.69345),  # MINFF F- — fluoride anion (CaF2, F-hectorite)
 }
 
 # Elements MINFF can type as a framework site (everything else → "dummy needed").
-MINFF_FRAMEWORK_ELEMENTS = {'Si', 'Al', 'Mg', 'Fe', 'Ca', 'Ti', 'Li', 'O', 'H'}
+# F is supported (fluorite CaF2, F-hectorite); O/H are the framework non-metals.
+MINFF_FRAMEWORK_ELEMENTS = {'Si', 'Al', 'Mg', 'Fe', 'Ca', 'Ti', 'Li', 'O', 'H', 'F'}
 
 # Atomic masses (g/mol) for the topology. Frozen atoms get mass 0 in OpenMM, but
 # the .itp keeps real masses so the same topology is valid for a GROMACS export.
@@ -71,84 +74,132 @@ _ATOMIC_NUMBER = {
 }
 
 
-def assign_dummy_mineral_params(atoms, charge_scale=0.5, metal_site='Alo',
-                                resname='DUM', freeze=True, verbose=True):
+def pauling_effective_charge(oxidation_state, element, ref_en=None):
+    """Pauling effective charge: q_formal × [1 − exp(−¼ (χ_ref − χ_M)²)].
+
+    The bracket is Pauling's fractional ionic character of the bond between the
+    cation and the reference anion (oxygen by default). Returns ``oxidation_state``
+    scaled by that ionicity. Only meaningful for cations (oxidation > 0); anions
+    don't fit this form and are set by charge balance instead.
+    """
+    chi_ref = PAULING_EN['O'] if ref_en is None else ref_en
+    chi_m = PAULING_EN.get(element)
+    if chi_m is None:
+        return 0.5 * oxidation_state           # fallback: half-formal
+    f = 1.0 - math.exp(-0.25 * (chi_ref - chi_m) ** 2)
+    return oxidation_state * f
+
+
+def assign_dummy_mineral_params(atoms, charge_mode='pauling', charge_scale=0.5,
+                                h_charge=0.4, metal_site='Alo', resname='DUM',
+                                freeze=True, verbose=True):
     """Assign dummy (non-MINFF) parameters to a mineral framework in place.
 
-    Sets on every atom: ``charge`` (= charge_scale × oxidation state),
-    ``sigma``/``epsilon`` (nm, kJ/mol), ``_dummy_type`` (a synthetic GROMACS
-    atomtype name), ``mass``, and ``frozen`` (if ``freeze``). Also sets
-    ``resname`` so the whole framework is one moleculetype.
+    Sets on every atom: ``charge``, ``sigma``/``epsilon`` (nm, kJ/mol),
+    ``_dummy_type`` (a synthetic GROMACS atomtype name), ``mass``, ``resname``,
+    and ``frozen`` (if ``freeze``).
+
+    Charge modes
+    ------------
+    'pauling' (default)
+        Cations get a Pauling effective charge q_eff = oxidation ×
+        [1 − exp(−¼(χ_O − χ_M)²)] (e.g. Si +1.79, Al +1.70, Mg +1.36,
+        Ti +2.38, Fe²⁺ +0.95 / Fe³⁺ +1.43). H is fixed at ``h_charge`` (+0.4,
+        the MINFF value). Anions (O, F, …) are then set by **charge balance** so
+        each framework stays neutral (distributed by |oxidation state|).
+    'half'
+        Legacy: charge = ``charge_scale`` × oxidation state for every atom.
 
     Parameters
     ----------
     atoms : list of dict
-        The mineral atoms (need 'element' or a typeable 'type').
+    charge_mode : {'pauling', 'half'}
     charge_scale : float
-        Multiplier on the oxidation state to get the partial charge (default 0.5).
+        Multiplier for the 'half' mode (default 0.5).
+    h_charge : float
+        Fixed hydrogen charge in 'pauling' mode (default 0.4).
     metal_site : str
-        Which MINFF LJ site to borrow for metal/cation atoms
-        ('Alo' default, 'Sit', 'Mgo', …; see ``MINFF_LJ_SITES``).
-    resname : str
-        Residue / moleculetype name for the dummy framework (default 'DUM').
-    freeze : bool
-        If True (default), flag atoms ``frozen=True`` (OpenMM sets mass 0).
-    verbose : bool
-        Print a warning naming the non-MINFF elements and a summary.
+        MINFF LJ site borrowed for metal/cation atoms ('Alo' default, 'Sit', 'Mgo').
+    resname, freeze, verbose : see above.
 
     Returns
     -------
     (atoms, report) : tuple
-        report = {'non_minff_elements', 'net_charge', 'n_atoms', 'metal_site'}.
+        report = {'non_minff_elements', 'net_charge', 'n_atoms', 'metal_site',
+                  'charge_mode'}.
     """
-    if metal_site not in MINFF_LJ_SITES or metal_site in ('O_opc3', 'H'):
+    if metal_site not in MINFF_LJ_SITES or metal_site in ('O_opc3', 'H', 'F_ion'):
         raise ValueError(f"metal_site must be one of "
-                         f"{[k for k in MINFF_LJ_SITES if k not in ('O_opc3', 'H')]}")
+                         f"{[k for k in MINFF_LJ_SITES if k not in ('O_opc3', 'H', 'F_ion')]}")
 
     metal_sigma, metal_eps = MINFF_LJ_SITES[metal_site]
-    o_sigma, o_eps = MINFF_LJ_SITES['O_opc3']
 
-    # Oxidation states → charges (ionic engine, neutral lattice by default).
+    # Oxidation states (ionic engine, neutral lattice by default).
     ox = guess_oxidation_states(atoms, method='ionic', write=True)
+    elements = [_norm_element(a) for a in atoms]
 
+    # --- Charges ---
+    anion_idx = []
+    for i, (atom, o) in enumerate(zip(atoms, ox)):
+        el = elements[i]
+        if charge_mode == 'half':
+            atom['charge'] = round(charge_scale * float(o), 6)
+        elif el == 'H':
+            atom['charge'] = round(float(h_charge), 6)
+        elif o > 0:                                   # cation → Pauling effective charge
+            atom['charge'] = round(pauling_effective_charge(float(o), el), 6)
+        else:                                         # anion (O, F, …) → balance later
+            atom['charge'] = 0.0
+            anion_idx.append(i)
+    if charge_mode != 'half' and anion_idx:
+        # Anions absorb the remainder so the framework is neutral, split by |ox|.
+        assigned = sum(a['charge'] for a in atoms)
+        weights = [abs(float(ox[i])) or 1.0 for i in anion_idx]
+        wsum = sum(weights) or 1.0
+        for i, w in zip(anion_idx, weights):
+            atoms[i]['charge'] = round(-assigned * w / wsum, 6)
+
+    # --- LJ, type, mass, freeze ---
     non_minff = set()
-    net_charge = 0.0
-    for atom, o in zip(atoms, ox):
-        el = _norm_element(atom)
+    for i, atom in enumerate(atoms):
+        el = elements[i]
         if el not in MINFF_FRAMEWORK_ELEMENTS:
             non_minff.add(el)
-        q = round(charge_scale * float(o), 6)
-        atom['charge'] = q
-        net_charge += q
         if el == 'O':
-            atom['sigma'], atom['epsilon'] = o_sigma, o_eps
+            atom['sigma'], atom['epsilon'] = MINFF_LJ_SITES['O_opc3']
+        elif el == 'F':
+            atom['sigma'], atom['epsilon'] = MINFF_LJ_SITES['F_ion']
         elif el == 'H':
             atom['sigma'], atom['epsilon'] = MINFF_LJ_SITES['H']
         else:
             atom['sigma'], atom['epsilon'] = metal_sigma, metal_eps
-        atom['_dummy_type'] = f"{el}d"            # synthetic atomtype, e.g. 'Mnd'
+        atom['_dummy_type'] = f"{el}d"
         atom['mass'] = _ATOMIC_MASS.get(el, 0.0)
         atom['resname'] = resname
         atom['molid'] = 1
         if freeze:
             atom['frozen'] = True
 
+    net_charge = round(sum(a['charge'] for a in atoms), 6)
     report = {
         'non_minff_elements': sorted(non_minff),
-        'net_charge': round(net_charge, 6),
+        'net_charge': net_charge,
         'n_atoms': len(atoms),
         'metal_site': metal_site,
+        'charge_mode': charge_mode,
     }
     if verbose:
         if non_minff:
+            _q = (f"Pauling effective charges (H={h_charge:+g})" if charge_mode != 'half'
+                  else f"{charge_scale}×oxidation state")
             print(f"WARNING: not MINFF-compatible — element(s) {sorted(non_minff)} "
                   f"have no MINFF framework type. Building a FROZEN DUMMY model "
-                  f"(charges = {charge_scale}×oxidation state, O LJ = OPC3, metal "
-                  f"LJ = {metal_site}). Qualitative only; run EM/NVT, not NPT.")
-        print(f"[dummy mineral] {len(atoms)} atoms, net charge {report['net_charge']:+.3f} e, "
-              f"metal site '{metal_site}'.")
-        if abs(report['net_charge']) > 1e-3:
-            print(f"  NOTE: net charge is non-zero ({report['net_charge']:+.3f} e) — "
+                  f"(charges = {_q}, O LJ = OPC3, metal LJ = {metal_site}). "
+                  f"Qualitative only; run EM/NVT, not NPT.")
+        print(f"[dummy mineral] {len(atoms)} atoms, net charge {net_charge:+.3f} e, "
+              f"mode '{charge_mode}', metal site '{metal_site}'.")
+        if abs(net_charge) > 1e-3:
+            print(f"  NOTE: net charge is non-zero ({net_charge:+.3f} e) — "
                   f"add neutralizing ions before production.")
     return atoms, report
 

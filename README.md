@@ -611,10 +611,19 @@ ap.guess_oxidation_states(atoms)        # methyl C=-3, alpha C=0, carboxyl C=+3,
 ### Frozen "dummy mineral" for non-MINFF inorganics
 
 For an inorganic whose framework MINFF can't type (e.g. MnO, NiO, Cr₂O₃),
-`assign_dummy_mineral_params(atoms, charge_scale=0.5, metal_site='Alo')` builds a
-crude qualitative model: partial charges = ½ × the guessed oxidation state, LJ
-borrowed from MINFF (oxygen → OPC3-O, metals → a small buried site, default
-`Alo`; H → none), and the framework flagged **frozen**. Freezing means **no
+`assign_dummy_mineral_params(atoms, charge_mode='pauling', metal_site='Alo')`
+builds a crude qualitative model. Charges follow one of two modes:
+
+- **`pauling`** (default) — each cation gets a Pauling *effective* charge
+  `q_eff = oxidation × [1 − exp(−¼(χ_O − χ_M)²)]` (the bracket is the bond's
+  fractional ionic character): Si +1.79, Al +1.70, Mg +1.36, Ti +2.38, Fe²⁺
+  +0.95 / Fe³⁺ +1.43. Hydrogen is fixed at +0.4 (the MINFF value), and the
+  anions (O, F) are set by charge balance so each framework stays neutral
+  (`ap.pauling_effective_charge(ox, element)` exposes the formula).
+- **`half`** — legacy `charge_scale × oxidation state` for every atom.
+
+LJ is borrowed from MINFF (oxygen → OPC3-O, fluorine → MINFF F⁻, metals → a
+small buried site, default `Alo`; H → none), and the framework flagged **frozen**. Freezing means **no
 bonded parameters are needed** (the gap MINFF leaves), so only nonbonded terms
 remain — the material interacts with water/solutes via electrostatics + LJ.
 `write_dummy_mineral_itp(atoms, 'dummy.itp')` writes a self-contained GROMACS
