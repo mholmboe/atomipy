@@ -608,6 +608,21 @@ atoms, _ = ap.load_molecule('L-alanine')
 ap.guess_oxidation_states(atoms)        # methyl C=-3, alpha C=0, carboxyl C=+3, N=-3
 ```
 
+### Frozen "dummy mineral" for non-MINFF inorganics
+
+For an inorganic whose framework MINFF can't type (e.g. MnO, NiO, Cr₂O₃),
+`assign_dummy_mineral_params(atoms, charge_scale=0.5, metal_site='Alo')` builds a
+crude qualitative model: partial charges = ½ × the guessed oxidation state, LJ
+borrowed from MINFF (oxygen → OPC3-O, metals → a small buried site, default
+`Alo`; H → none), and the framework flagged **frozen**. Freezing means **no
+bonded parameters are needed** (the gap MINFF leaves), so only nonbonded terms
+remain — the material interacts with water/solutes via electrostatics + LJ.
+`write_dummy_mineral_itp(atoms, 'dummy.itp')` writes a self-contained GROMACS
+`.itp` (its own `[ atomtypes ]` + a bond-free `[ moleculetype ]`) that
+`#include`s like an organic itp. Run **EM/NVT only** (a frozen rigid body is
+incompatible with an NPT barostat). Intended for qualitative questions (wetting,
+ion adsorption), not quantitative energetics.
+
 ## Data Structure
 
 All atomic information is stored in a list of dictionaries called `atoms`. Each atom dictionary contains the following fields:
