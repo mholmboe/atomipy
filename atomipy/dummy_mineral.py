@@ -205,3 +205,93 @@ def write_dummy_mineral_itp(atoms, file_path, mol_name='DUM'):
                     f"{q:>11.6f} {mass:>11.5f}\n")
         f.write("\n")
     return file_path
+
+
+_SOLVENT_RES = {'SOL', 'WAT', 'HOH', 'TIP3', 'OPC', 'OPC3', 'SPC', 'SPCE',
+                'TIP4', 'TIP5'}
+_WATER_FILE = {
+    'spce': 'spce', 'spc': 'spc', 'tip3p': 'tip3p', 'opc3': 'opc3',
+    'tip3pfb': 'tip3p-fb', 'opc': 'opc', 'tip4p': 'tip4p',
+    'tip4pew': 'tip4pew', 'tip4pfb': 'tip4p-fb',
+}
+
+
+def write_dummy_system_top(atoms, box, out_top, out_gro, water_model='spce',
+                           mol_name='DUM', dummy_itp='dummy.itp'):
+    """Write a self-contained GROMACS .top (+ .gro) for a frozen dummy mineral
+    plus water (and monatomic ions), bypassing the MINFF mineral machinery.
+
+    The dummy framework (atoms carrying ``_dummy_type``, set by
+    :func:`assign_dummy_mineral_params`) is described by its own ``[ atomtypes ]``
+    + bond-free ``[ moleculetype ]``; water and ions reuse the validated MINFF
+    ``min.ff`` includes. Load the result with ``ap.load_minff_into_openmm`` (then
+    freeze the framework by zeroing its particle masses).
+
+    Parameters
+    ----------
+    atoms : list of dict
+        Framework atoms (dummy-parameterised) + solvent/ion atoms.
+    box : list
+        Box (Cell or Box_dim).
+    out_top, out_gro : str
+        Output paths.
+    water_model : str
+        Water model for the include/define (default 'spce').
+    mol_name : str
+        Dummy moleculetype name (default 'DUM').
+    dummy_itp : str
+        Filename to write the dummy ``.itp`` to (relative to out_top dir).
+    """
+    import os as _os
+    from . import write_conf as _wc
+
+    frame = [a for a in atoms if a.get('_dummy_type')]
+    rest = [a for a in atoms if not a.get('_dummy_type')]
+    water = [a for a in rest if str(a.get('resname', '')).upper() in _SOLVENT_RES]
+    ions = [a for a in rest if str(a.get('resname', '')).upper() not in _SOLVENT_RES]
+
+    # Write the dummy moleculetype itp (its own [atomtypes] + [moleculetype]).
+    out_dir = _os.path.dirname(_os.path.abspath(out_top))
+    itp_path = _os.path.join(out_dir, _os.path.basename(dummy_itp))
+    write_dummy_mineral_itp(frame, itp_path, mol_name=mol_name)
+
+    n_water = len(water) // 3        # 3-site water
+    water_define = water_model.lower().replace('/', '').replace('-', '').upper()
+    wm_file = _WATER_FILE.get(water_model.lower().replace('/', '').replace('-', ''), 'spce')
+
+    # Ion molecule sequence (monatomic, by resname order of first appearance).
+    ion_seq = []
+    seen = set()
+    for a in ions:
+        rn = str(a.get('resname', '')).strip()
+        if rn and rn not in seen:
+            seen.add(rn)
+            ion_seq.append((rn, sum(1 for b in ions if str(b.get('resname', '')).strip() == rn)))
+
+    with open(out_top, 'w', encoding='utf-8') as f:
+        f.write('; Frozen dummy-mineral system written by atomipy (qualitative; EM/NVT only)\n\n')
+        f.write('[ defaults ]\n')
+        f.write('; nbfunc   comb-rule   gen-pairs   fudgeLJ   fudgeQQ\n')
+        f.write('  1        2           yes         0.5       0.8333333333\n\n')
+        # Activate water (+ ion) atomtype blocks in ffnonbonded, then include it.
+        f.write(f'#include "{_os.path.basename(dummy_itp)}"\n\n')  # dummy [atomtypes] + DUM moltype
+        if n_water or ion_seq:
+            f.write(f'#define {water_define}\n')
+            f.write('#include "min.ff/ffnonbonded.itp"\n')
+            if n_water:
+                f.write(f'#include "min.ff/{wm_file}.itp"\n')
+            if ion_seq:
+                f.write('#include "min.ff/ions.itp"\n')
+            f.write('\n')
+        f.write('[ system ]\n')
+        f.write('Frozen dummy mineral + solvent\n\n')
+        f.write('[ molecules ]\n')
+        f.write('; Compound        nmols\n')
+        f.write(f' {mol_name:<15} 1\n')
+        if n_water:
+            f.write(f' {"SOL":<15} {n_water}\n')
+        for name, cnt in ion_seq:
+            f.write(f' {name:<15} {cnt}\n')
+
+    _wc.gro(frame + water + ions, box, out_gro)
+    return out_top
