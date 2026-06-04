@@ -1,0 +1,2631 @@
+{
+ "_source": "Avogadro2 molecules library (BSD-3-Clause, (c) 2016 G. Hutchison, U. Pittsburgh)",
+ "categories": {
+  "alcohols": [
+   {
+    "name": "2-aminoethanol",
+    "file": "alcohols/2-aminoethanol.cjson",
+    "formula": "C2H7NO",
+    "natoms": 11
+   },
+   {
+    "name": "but-2-yne-1_4-diol",
+    "file": "alcohols/but-2-yne-1_4-diol.cjson",
+    "formula": "C4H6O2",
+    "natoms": 12
+   },
+   {
+    "name": "cyclohexanol",
+    "file": "alcohols/cyclohexanol.cjson",
+    "formula": "C6H12O",
+    "natoms": 19
+   },
+   {
+    "name": "cyclopentanol",
+    "file": "alcohols/cyclopentanol.cjson",
+    "formula": "C5H10O",
+    "natoms": 16
+   },
+   {
+    "name": "ethane-1_2-diol",
+    "file": "alcohols/ethane-1_2-diol.cjson",
+    "formula": "C2H6O2",
+    "natoms": 10
+   },
+   {
+    "name": "ethanol",
+    "file": "alcohols/ethanol.cjson",
+    "formula": "C2H6O",
+    "natoms": 9
+   },
+   {
+    "name": "methanol",
+    "file": "alcohols/methanol.cjson",
+    "formula": "CH4O",
+    "natoms": 6
+   },
+   {
+    "name": "propan-1-ol",
+    "file": "alcohols/propan-1-ol.cjson",
+    "formula": "C3H8O",
+    "natoms": 12
+   },
+   {
+    "name": "propan-2-ol",
+    "file": "alcohols/propan-2-ol.cjson",
+    "formula": "C3H8O",
+    "natoms": 12
+   },
+   {
+    "name": "propane-1_2_3-triol",
+    "file": "alcohols/propane-1_2_3-triol.cjson",
+    "formula": "C3H8O3",
+    "natoms": 14
+   }
+  ],
+  "aldehydes": [
+   {
+    "name": "acetaldehyde",
+    "file": "aldehydes/acetaldehyde.cjson",
+    "formula": "C2H4O",
+    "natoms": 7
+   },
+   {
+    "name": "formaldehyde",
+    "file": "aldehydes/formaldehyde.cjson",
+    "formula": "CH2O",
+    "natoms": 4
+   }
+  ],
+  "alkanes": [
+   {
+    "name": "2-methylpropane",
+    "file": "alkanes/2-methylpropane.cjson",
+    "formula": "C4H10",
+    "natoms": 14
+   },
+   {
+    "name": "butane",
+    "file": "alkanes/butane.cjson",
+    "formula": "C4H10",
+    "natoms": 14
+   },
+   {
+    "name": "decane",
+    "file": "alkanes/decane.cjson",
+    "formula": "C10H22",
+    "natoms": 32
+   },
+   {
+    "name": "dodecane",
+    "file": "alkanes/dodecane.cjson",
+    "formula": "C12H26",
+    "natoms": 38
+   },
+   {
+    "name": "eicosane",
+    "file": "alkanes/eicosane.cjson",
+    "formula": "C20H42",
+    "natoms": 62
+   }
+  ],
+  "alkenes": [
+   {
+    "name": "2-methylbut-2-ene",
+    "file": "alkenes/2-methylbut-2-ene.cjson",
+    "formula": "C5H10",
+    "natoms": 15
+   },
+   {
+    "name": "2-methylbuta-1_3-diene",
+    "file": "alkenes/2-methylbuta-1_3-diene.cjson",
+    "formula": "C5H8",
+    "natoms": 13
+   },
+   {
+    "name": "3E-penta-1_3-diene",
+    "file": "alkenes/3E-penta-1_3-diene.cjson",
+    "formula": "C5H8",
+    "natoms": 13
+   },
+   {
+    "name": "3Z-penta-1_3-diene",
+    "file": "alkenes/3Z-penta-1_3-diene.cjson",
+    "formula": "C5H8",
+    "natoms": 13
+   },
+   {
+    "name": "3Z_3-ethylhepta-1_3-diene",
+    "file": "alkenes/3Z_3-ethylhepta-1_3-diene.cjson",
+    "formula": "C9H16",
+    "natoms": 25
+   },
+   {
+    "name": "E-but-2-ene",
+    "file": "alkenes/E-but-2-ene.cjson",
+    "formula": "C4H8",
+    "natoms": 12
+   },
+   {
+    "name": "E-hept-2-ene",
+    "file": "alkenes/E-hept-2-ene.cjson",
+    "formula": "C7H14",
+    "natoms": 21
+   },
+   {
+    "name": "E-hept-3-ene",
+    "file": "alkenes/E-hept-3-ene.cjson",
+    "formula": "C7H14",
+    "natoms": 21
+   },
+   {
+    "name": "E-hex-2-ene",
+    "file": "alkenes/E-hex-2-ene.cjson",
+    "formula": "C6H12",
+    "natoms": 18
+   },
+   {
+    "name": "E-hex-3-ene",
+    "file": "alkenes/E-hex-3-ene.cjson",
+    "formula": "C6H12",
+    "natoms": 18
+   },
+   {
+    "name": "E-oct-2-ene",
+    "file": "alkenes/E-oct-2-ene.cjson",
+    "formula": "C8H16",
+    "natoms": 24
+   },
+   {
+    "name": "E-oct-3-ene",
+    "file": "alkenes/E-oct-3-ene.cjson",
+    "formula": "C8H16",
+    "natoms": 24
+   },
+   {
+    "name": "E-oct-4-ene",
+    "file": "alkenes/E-oct-4-ene.cjson",
+    "formula": "C8H16",
+    "natoms": 24
+   },
+   {
+    "name": "E-pent-2-ene",
+    "file": "alkenes/E-pent-2-ene.cjson",
+    "formula": "C5H10",
+    "natoms": 15
+   },
+   {
+    "name": "Z-but-2-ene",
+    "file": "alkenes/Z-but-2-ene.cjson",
+    "formula": "C4H8",
+    "natoms": 12
+   },
+   {
+    "name": "Z-hept-2-ene",
+    "file": "alkenes/Z-hept-2-ene.cjson",
+    "formula": "C7H14",
+    "natoms": 21
+   },
+   {
+    "name": "Z-hept-3-ene",
+    "file": "alkenes/Z-hept-3-ene.cjson",
+    "formula": "C7H14",
+    "natoms": 21
+   },
+   {
+    "name": "Z-hex-2-ene",
+    "file": "alkenes/Z-hex-2-ene.cjson",
+    "formula": "C6H12",
+    "natoms": 18
+   },
+   {
+    "name": "Z-hex-3-ene",
+    "file": "alkenes/Z-hex-3-ene.cjson",
+    "formula": "C6H12",
+    "natoms": 18
+   },
+   {
+    "name": "Z-oct-2-ene",
+    "file": "alkenes/Z-oct-2-ene.cjson",
+    "formula": "C8H16",
+    "natoms": 24
+   },
+   {
+    "name": "Z-oct-3-ene",
+    "file": "alkenes/Z-oct-3-ene.cjson",
+    "formula": "C8H16",
+    "natoms": 24
+   },
+   {
+    "name": "Z-oct-4-ene",
+    "file": "alkenes/Z-oct-4-ene.cjson",
+    "formula": "C8H16",
+    "natoms": 24
+   },
+   {
+    "name": "Z-pent-2-ene",
+    "file": "alkenes/Z-pent-2-ene.cjson",
+    "formula": "C5H10",
+    "natoms": 15
+   },
+   {
+    "name": "but-1-ene",
+    "file": "alkenes/but-1-ene.cjson",
+    "formula": "C4H8",
+    "natoms": 12
+   },
+   {
+    "name": "ethene",
+    "file": "alkenes/ethene.cjson",
+    "formula": "C2H4",
+    "natoms": 6
+   },
+   {
+    "name": "hept-1-ene",
+    "file": "alkenes/hept-1-ene.cjson",
+    "formula": "C7H14",
+    "natoms": 21
+   },
+   {
+    "name": "hex-1-ene",
+    "file": "alkenes/hex-1-ene.cjson",
+    "formula": "C6H12",
+    "natoms": 18
+   },
+   {
+    "name": "oct-1-ene",
+    "file": "alkenes/oct-1-ene.cjson",
+    "formula": "C8H16",
+    "natoms": 24
+   },
+   {
+    "name": "pent-1-ene",
+    "file": "alkenes/pent-1-ene.cjson",
+    "formula": "C5H10",
+    "natoms": 15
+   },
+   {
+    "name": "propene",
+    "file": "alkenes/propene.cjson",
+    "formula": "C3H6",
+    "natoms": 9
+   }
+  ],
+  "alkynes": [
+   {
+    "name": "acetylene",
+    "file": "alkynes/acetylene.cjson",
+    "formula": "C2H2",
+    "natoms": 4
+   },
+   {
+    "name": "propyne",
+    "file": "alkynes/propyne.cjson",
+    "formula": "C3H4",
+    "natoms": 7
+   }
+  ],
+  "amides": [
+   {
+    "name": "N_N-dimethylacetamide",
+    "file": "amides/N_N-dimethylacetamide.cjson",
+    "formula": "C4H9NO",
+    "natoms": 15
+   },
+   {
+    "name": "N_N-dimethylformamide",
+    "file": "amides/N_N-dimethylformamide.cjson",
+    "formula": "C3H7NO",
+    "natoms": 12
+   },
+   {
+    "name": "acetamide",
+    "file": "amides/acetamide.cjson",
+    "formula": "C2H5NO",
+    "natoms": 9
+   },
+   {
+    "name": "ethyl_carbamate",
+    "file": "amides/ethyl_carbamate.cjson",
+    "formula": "C3H7NO2",
+    "natoms": 13
+   },
+   {
+    "name": "oxamide",
+    "file": "amides/oxamide.cjson",
+    "formula": "C2H4N2O2",
+    "natoms": 10
+   }
+  ],
+  "amines": [
+   {
+    "name": "1H-azepine",
+    "file": "amines/1H-azepine.cjson",
+    "formula": "C6H7N",
+    "natoms": 14
+   },
+   {
+    "name": "2-aminopropane",
+    "file": "amines/2-aminopropane.cjson",
+    "formula": "C3H9N",
+    "natoms": 13
+   },
+   {
+    "name": "S-sec-butylamine",
+    "file": "amines/S-sec-butylamine.cjson",
+    "formula": "C4H11N",
+    "natoms": 16
+   },
+   {
+    "name": "ammonia",
+    "file": "amines/ammonia.cjson",
+    "formula": "H3N",
+    "natoms": 4
+   },
+   {
+    "name": "azepane",
+    "file": "amines/azepane.cjson",
+    "formula": "C6H13N",
+    "natoms": 20
+   },
+   {
+    "name": "diethylamine",
+    "file": "amines/diethylamine.cjson",
+    "formula": "C4H11N",
+    "natoms": 16
+   },
+   {
+    "name": "dimethylamine",
+    "file": "amines/dimethylamine.cjson",
+    "formula": "C2H7N",
+    "natoms": 10
+   },
+   {
+    "name": "ethylamine",
+    "file": "amines/ethylamine.cjson",
+    "formula": "C2H7N",
+    "natoms": 10
+   },
+   {
+    "name": "methylamine",
+    "file": "amines/methylamine.cjson",
+    "formula": "CH5N",
+    "natoms": 7
+   },
+   {
+    "name": "piperazine",
+    "file": "amines/piperazine.cjson",
+    "formula": "C4H10N2",
+    "natoms": 16
+   },
+   {
+    "name": "piperidine",
+    "file": "amines/piperidine.cjson",
+    "formula": "C5H11N",
+    "natoms": 17
+   },
+   {
+    "name": "pyrrolidine",
+    "file": "amines/pyrrolidine.cjson",
+    "formula": "C4H9N",
+    "natoms": 14
+   },
+   {
+    "name": "tert-butylamine",
+    "file": "amines/tert-butylamine.cjson",
+    "formula": "C4H11N",
+    "natoms": 16
+   },
+   {
+    "name": "triethylamine",
+    "file": "amines/triethylamine.cjson",
+    "formula": "C6H15N",
+    "natoms": 22
+   },
+   {
+    "name": "triethylenediamine",
+    "file": "amines/triethylenediamine.cjson",
+    "formula": "C6H12N2",
+    "natoms": 20
+   },
+   {
+    "name": "trimethylamine",
+    "file": "amines/trimethylamine.cjson",
+    "formula": "C3H9N",
+    "natoms": 13
+   }
+  ],
+  "amino_acids": [
+   {
+    "name": "D-alanine",
+    "file": "amino_acids/D-alanine.cjson",
+    "formula": "C3H7NO2",
+    "natoms": 13
+   },
+   {
+    "name": "D-allo-threonine",
+    "file": "amino_acids/D-allo-threonine.cjson",
+    "formula": "C4H9NO3",
+    "natoms": 17
+   },
+   {
+    "name": "D-arginine",
+    "file": "amino_acids/D-arginine.cjson",
+    "formula": "C6H14N4O2",
+    "natoms": 26
+   },
+   {
+    "name": "D-asparagine",
+    "file": "amino_acids/D-asparagine.cjson",
+    "formula": "C4H8N2O3",
+    "natoms": 17
+   },
+   {
+    "name": "D-aspartic_acid",
+    "file": "amino_acids/D-aspartic_acid.cjson",
+    "formula": "C4H7NO4",
+    "natoms": 16
+   },
+   {
+    "name": "D-cysteine",
+    "file": "amino_acids/D-cysteine.cjson",
+    "formula": "C3H7NO2S",
+    "natoms": 14
+   },
+   {
+    "name": "D-glutamic_acid",
+    "file": "amino_acids/D-glutamic_acid.cjson",
+    "formula": "C5H9NO4",
+    "natoms": 19
+   },
+   {
+    "name": "D-glutamine",
+    "file": "amino_acids/D-glutamine.cjson",
+    "formula": "C5H10N2O3",
+    "natoms": 20
+   },
+   {
+    "name": "D-histidine",
+    "file": "amino_acids/D-histidine.cjson",
+    "formula": "C6H9N3O2",
+    "natoms": 20
+   },
+   {
+    "name": "D-isoleucine",
+    "file": "amino_acids/D-isoleucine.cjson",
+    "formula": "C6H13NO2",
+    "natoms": 22
+   },
+   {
+    "name": "D-leucine",
+    "file": "amino_acids/D-leucine.cjson",
+    "formula": "C6H13NO2",
+    "natoms": 22
+   },
+   {
+    "name": "D-lysine",
+    "file": "amino_acids/D-lysine.cjson",
+    "formula": "C6H14N2O2",
+    "natoms": 24
+   },
+   {
+    "name": "D-methionine",
+    "file": "amino_acids/D-methionine.cjson",
+    "formula": "C5H11NO2S",
+    "natoms": 20
+   },
+   {
+    "name": "D-phenylalanine",
+    "file": "amino_acids/D-phenylalanine.cjson",
+    "formula": "C9H11NO2",
+    "natoms": 23
+   },
+   {
+    "name": "D-proline",
+    "file": "amino_acids/D-proline.cjson",
+    "formula": "C5H9NO2",
+    "natoms": 17
+   },
+   {
+    "name": "D-serine",
+    "file": "amino_acids/D-serine.cjson",
+    "formula": "C3H7NO3",
+    "natoms": 14
+   },
+   {
+    "name": "D-threonine",
+    "file": "amino_acids/D-threonine.cjson",
+    "formula": "C4H9NO3",
+    "natoms": 17
+   },
+   {
+    "name": "D-tryptophan",
+    "file": "amino_acids/D-tryptophan.cjson",
+    "formula": "C11H12N2O2",
+    "natoms": 27
+   },
+   {
+    "name": "D-tyrosine",
+    "file": "amino_acids/D-tyrosine.cjson",
+    "formula": "C9H11NO3",
+    "natoms": 24
+   },
+   {
+    "name": "D-valine",
+    "file": "amino_acids/D-valine.cjson",
+    "formula": "C5H11NO2",
+    "natoms": 19
+   },
+   {
+    "name": "L-4-nitrophenylalanine",
+    "file": "amino_acids/L-4-nitrophenylalanine.cjson",
+    "formula": "C9H10N2O4",
+    "natoms": 25
+   },
+   {
+    "name": "L-alanine",
+    "file": "amino_acids/L-alanine.cjson",
+    "formula": "C3H7NO2",
+    "natoms": 13
+   },
+   {
+    "name": "L-allo-isoleucine",
+    "file": "amino_acids/L-allo-isoleucine.cjson",
+    "formula": "C6H13NO2",
+    "natoms": 22
+   },
+   {
+    "name": "L-arginine",
+    "file": "amino_acids/L-arginine.cjson",
+    "formula": "C6H14N4O2",
+    "natoms": 26
+   },
+   {
+    "name": "L-asparagine",
+    "file": "amino_acids/L-asparagine.cjson",
+    "formula": "C4H8N2O3",
+    "natoms": 17
+   },
+   {
+    "name": "L-aspartic_acid",
+    "file": "amino_acids/L-aspartic_acid.cjson",
+    "formula": "C4H7NO4",
+    "natoms": 16
+   },
+   {
+    "name": "L-cysteine",
+    "file": "amino_acids/L-cysteine.cjson",
+    "formula": "C3H7NO2S",
+    "natoms": 14
+   },
+   {
+    "name": "L-glutamic_acid",
+    "file": "amino_acids/L-glutamic_acid.cjson",
+    "formula": "C5H9NO4",
+    "natoms": 19
+   },
+   {
+    "name": "L-glutamine",
+    "file": "amino_acids/L-glutamine.cjson",
+    "formula": "C5H10N2O3",
+    "natoms": 20
+   },
+   {
+    "name": "L-histidine",
+    "file": "amino_acids/L-histidine.cjson",
+    "formula": "C6H9N3O2",
+    "natoms": 20
+   },
+   {
+    "name": "L-isoleucine",
+    "file": "amino_acids/L-isoleucine.cjson",
+    "formula": "C6H13NO2",
+    "natoms": 22
+   },
+   {
+    "name": "L-leucine",
+    "file": "amino_acids/L-leucine.cjson",
+    "formula": "C6H13NO2",
+    "natoms": 22
+   },
+   {
+    "name": "L-lysine",
+    "file": "amino_acids/L-lysine.cjson",
+    "formula": "C6H14N2O2",
+    "natoms": 24
+   },
+   {
+    "name": "L-methionine",
+    "file": "amino_acids/L-methionine.cjson",
+    "formula": "C5H11NO2S",
+    "natoms": 20
+   },
+   {
+    "name": "L-phenylalanine",
+    "file": "amino_acids/L-phenylalanine.cjson",
+    "formula": "C9H11NO2",
+    "natoms": 23
+   },
+   {
+    "name": "L-proline",
+    "file": "amino_acids/L-proline.cjson",
+    "formula": "C5H9NO2",
+    "natoms": 17
+   },
+   {
+    "name": "L-serine",
+    "file": "amino_acids/L-serine.cjson",
+    "formula": "C3H7NO3",
+    "natoms": 14
+   },
+   {
+    "name": "L-threonine",
+    "file": "amino_acids/L-threonine.cjson",
+    "formula": "C4H9NO3",
+    "natoms": 17
+   },
+   {
+    "name": "L-tryptophan",
+    "file": "amino_acids/L-tryptophan.cjson",
+    "formula": "C11H12N2O2",
+    "natoms": 27
+   },
+   {
+    "name": "L-tyrosine",
+    "file": "amino_acids/L-tyrosine.cjson",
+    "formula": "C9H11NO3",
+    "natoms": 24
+   },
+   {
+    "name": "L-valine",
+    "file": "amino_acids/L-valine.cjson",
+    "formula": "C5H11NO2",
+    "natoms": 19
+   },
+   {
+    "name": "glycine",
+    "file": "amino_acids/glycine.cjson",
+    "formula": "C2H5NO2",
+    "natoms": 10
+   }
+  ],
+  "aromatics": [
+   {
+    "name": "1H-indene",
+    "file": "aromatics/1H-indene.cjson",
+    "formula": "C9H8",
+    "natoms": 17
+   },
+   {
+    "name": "1H-indole",
+    "file": "aromatics/1H-indole.cjson",
+    "formula": "C8H7N",
+    "natoms": 16
+   },
+   {
+    "name": "1_10-phenanthroline",
+    "file": "aromatics/1_10-phenanthroline.cjson",
+    "formula": "C12H8N2",
+    "natoms": 22
+   },
+   {
+    "name": "1_8-naphthyridine",
+    "file": "aromatics/1_8-naphthyridine.cjson",
+    "formula": "C8H6N2",
+    "natoms": 16
+   },
+   {
+    "name": "2H-chromene",
+    "file": "aromatics/2H-chromene.cjson",
+    "formula": "C9H8O",
+    "natoms": 18
+   },
+   {
+    "name": "4H-chromene",
+    "file": "aromatics/4H-chromene.cjson",
+    "formula": "C9H8O",
+    "natoms": 18
+   },
+   {
+    "name": "7H-purine",
+    "file": "aromatics/7H-purine.cjson",
+    "formula": "C5H4N4",
+    "natoms": 13
+   },
+   {
+    "name": "9H-carbazole",
+    "file": "aromatics/9H-carbazole.cjson",
+    "formula": "C12H9N",
+    "natoms": 22
+   },
+   {
+    "name": "9H-fluorene",
+    "file": "aromatics/9H-fluorene.cjson",
+    "formula": "C13H10",
+    "natoms": 23
+   },
+   {
+    "name": "9H-xanthene",
+    "file": "aromatics/9H-xanthene.cjson",
+    "formula": "C13H10O",
+    "natoms": 24
+   },
+   {
+    "name": "acenaphthene",
+    "file": "aromatics/acenaphthene.cjson",
+    "formula": "C12H10",
+    "natoms": 22
+   },
+   {
+    "name": "acenaphthenequinone",
+    "file": "aromatics/acenaphthenequinone.cjson",
+    "formula": "C12H6O2",
+    "natoms": 20
+   },
+   {
+    "name": "acenaphthylene",
+    "file": "aromatics/acenaphthylene.cjson",
+    "formula": "C12H8",
+    "natoms": 20
+   },
+   {
+    "name": "acridine",
+    "file": "aromatics/acridine.cjson",
+    "formula": "C13H9N",
+    "natoms": 23
+   },
+   {
+    "name": "aniline",
+    "file": "aromatics/aniline.cjson",
+    "formula": "C6H7N",
+    "natoms": 14
+   },
+   {
+    "name": "anisole",
+    "file": "aromatics/anisole.cjson",
+    "formula": "C7H8O",
+    "natoms": 16
+   },
+   {
+    "name": "anthracene",
+    "file": "aromatics/anthracene.cjson",
+    "formula": "C14H10",
+    "natoms": 24
+   },
+   {
+    "name": "benzaldehyde",
+    "file": "aromatics/benzaldehyde.cjson",
+    "formula": "C7H6O",
+    "natoms": 14
+   },
+   {
+    "name": "benzene",
+    "file": "aromatics/benzene.cjson",
+    "formula": "C6H6",
+    "natoms": 12
+   },
+   {
+    "name": "benzofuran",
+    "file": "aromatics/benzofuran.cjson",
+    "formula": "C8H6O",
+    "natoms": 15
+   },
+   {
+    "name": "benzoic_acid",
+    "file": "aromatics/benzoic_acid.cjson",
+    "formula": "C7H6O2",
+    "natoms": 15
+   },
+   {
+    "name": "benzothiophene",
+    "file": "aromatics/benzothiophene.cjson",
+    "formula": "C8H6S",
+    "natoms": 15
+   },
+   {
+    "name": "benzoyl_chloride",
+    "file": "aromatics/benzoyl_chloride.cjson",
+    "formula": "C7H5ClO",
+    "natoms": 14
+   },
+   {
+    "name": "caffeine",
+    "file": "aromatics/caffeine.cjson",
+    "formula": "C8H10N4O2",
+    "natoms": 24
+   },
+   {
+    "name": "chromone",
+    "file": "aromatics/chromone.cjson",
+    "formula": "C9H6O2",
+    "natoms": 17
+   },
+   {
+    "name": "cinnoline",
+    "file": "aromatics/cinnoline.cjson",
+    "formula": "C8H6N2",
+    "natoms": 16
+   },
+   {
+    "name": "coumarin",
+    "file": "aromatics/coumarin.cjson",
+    "formula": "C9H6O2",
+    "natoms": 17
+   },
+   {
+    "name": "isoquinoline",
+    "file": "aromatics/isoquinoline.cjson",
+    "formula": "C9H7N",
+    "natoms": 17
+   },
+   {
+    "name": "naphthalene",
+    "file": "aromatics/naphthalene.cjson",
+    "formula": "C10H8",
+    "natoms": 18
+   },
+   {
+    "name": "nitrobenzene",
+    "file": "aromatics/nitrobenzene.cjson",
+    "formula": "C6H5NO2",
+    "natoms": 14
+   },
+   {
+    "name": "phenanthrene",
+    "file": "aromatics/phenanthrene.cjson",
+    "formula": "C14H10",
+    "natoms": 24
+   },
+   {
+    "name": "phenol",
+    "file": "aromatics/phenol.cjson",
+    "formula": "C6H6O",
+    "natoms": 13
+   },
+   {
+    "name": "phthalimide",
+    "file": "aromatics/phthalimide.cjson",
+    "formula": "C8H5NO2",
+    "natoms": 16
+   },
+   {
+    "name": "quinazoline",
+    "file": "aromatics/quinazoline.cjson",
+    "formula": "C8H6N2",
+    "natoms": 16
+   },
+   {
+    "name": "quinoline",
+    "file": "aromatics/quinoline.cjson",
+    "formula": "C9H7N",
+    "natoms": 17
+   },
+   {
+    "name": "tetralin",
+    "file": "aromatics/tetralin.cjson",
+    "formula": "C10H12",
+    "natoms": 22
+   },
+   {
+    "name": "toluene",
+    "file": "aromatics/toluene.cjson",
+    "formula": "C7H8",
+    "natoms": 15
+   },
+   {
+    "name": "uric_acid",
+    "file": "aromatics/uric_acid.cjson",
+    "formula": "C5H4N4O3",
+    "natoms": 16
+   }
+  ],
+  "carbamides": [
+   {
+    "name": "urea",
+    "file": "carbamides/urea.cjson",
+    "formula": "CH4N2O",
+    "natoms": 8
+   }
+  ],
+  "carbohydrates": [
+   {
+    "name": "d-allose",
+    "file": "carbohydrates/d-allose.cjson",
+    "formula": "C6H12O6",
+    "natoms": 24
+   },
+   {
+    "name": "d-altrose",
+    "file": "carbohydrates/d-altrose.cjson",
+    "formula": "C6H12O6",
+    "natoms": 24
+   },
+   {
+    "name": "d-arabinose",
+    "file": "carbohydrates/d-arabinose.cjson",
+    "formula": "C5H10O5",
+    "natoms": 20
+   },
+   {
+    "name": "d-erythrose",
+    "file": "carbohydrates/d-erythrose.cjson",
+    "formula": "C4H8O4",
+    "natoms": 16
+   },
+   {
+    "name": "d-erythrulose",
+    "file": "carbohydrates/d-erythrulose.cjson",
+    "formula": "C4H8O4",
+    "natoms": 16
+   },
+   {
+    "name": "d-fructose",
+    "file": "carbohydrates/d-fructose.cjson",
+    "formula": "C6H12O6",
+    "natoms": 24
+   },
+   {
+    "name": "d-galactose",
+    "file": "carbohydrates/d-galactose.cjson",
+    "formula": "C6H12O6",
+    "natoms": 24
+   },
+   {
+    "name": "d-glucose",
+    "file": "carbohydrates/d-glucose.cjson",
+    "formula": "C6H12O6",
+    "natoms": 24
+   },
+   {
+    "name": "d-glyceraldehyde",
+    "file": "carbohydrates/d-glyceraldehyde.cjson",
+    "formula": "C3H6O3",
+    "natoms": 12
+   },
+   {
+    "name": "d-gulose",
+    "file": "carbohydrates/d-gulose.cjson",
+    "formula": "C6H12O6",
+    "natoms": 24
+   },
+   {
+    "name": "d-idose",
+    "file": "carbohydrates/d-idose.cjson",
+    "formula": "C6H12O6",
+    "natoms": 24
+   },
+   {
+    "name": "d-lyxose",
+    "file": "carbohydrates/d-lyxose.cjson",
+    "formula": "C5H10O5",
+    "natoms": 20
+   },
+   {
+    "name": "d-mannose",
+    "file": "carbohydrates/d-mannose.cjson",
+    "formula": "C6H12O6",
+    "natoms": 24
+   },
+   {
+    "name": "d-psicose",
+    "file": "carbohydrates/d-psicose.cjson",
+    "formula": "C6H12O6",
+    "natoms": 24
+   },
+   {
+    "name": "d-ribose",
+    "file": "carbohydrates/d-ribose.cjson",
+    "formula": "C5H10O5",
+    "natoms": 20
+   },
+   {
+    "name": "d-ribulose",
+    "file": "carbohydrates/d-ribulose.cjson",
+    "formula": "C5H10O5",
+    "natoms": 20
+   },
+   {
+    "name": "d-sorbose",
+    "file": "carbohydrates/d-sorbose.cjson",
+    "formula": "C6H12O6",
+    "natoms": 24
+   },
+   {
+    "name": "d-tagatose",
+    "file": "carbohydrates/d-tagatose.cjson",
+    "formula": "C6H12O6",
+    "natoms": 24
+   },
+   {
+    "name": "d-talose",
+    "file": "carbohydrates/d-talose.cjson",
+    "formula": "C6H12O6",
+    "natoms": 24
+   },
+   {
+    "name": "d-threose",
+    "file": "carbohydrates/d-threose.cjson",
+    "formula": "C4H8O4",
+    "natoms": 16
+   },
+   {
+    "name": "d-xylose",
+    "file": "carbohydrates/d-xylose.cjson",
+    "formula": "C5H10O5",
+    "natoms": 20
+   },
+   {
+    "name": "d-xylulose",
+    "file": "carbohydrates/d-xylulose.cjson",
+    "formula": "C5H10O5",
+    "natoms": 20
+   },
+   {
+    "name": "dihydroxyacetone",
+    "file": "carbohydrates/dihydroxyacetone.cjson",
+    "formula": "C3H6O3",
+    "natoms": 12
+   }
+  ],
+  "carboxylic_acids": [
+   {
+    "name": "2_2-dichloroacetic_acid",
+    "file": "carboxylic_acids/2_2-dichloroacetic_acid.cjson",
+    "formula": "C2H2Cl2O2",
+    "natoms": 8
+   },
+   {
+    "name": "2_2_2-trichloroacetic_acid",
+    "file": "carboxylic_acids/2_2_2-trichloroacetic_acid.cjson",
+    "formula": "C2HCl3O2",
+    "natoms": 8
+   },
+   {
+    "name": "2_2_2-trifluoroacetic_acid",
+    "file": "carboxylic_acids/2_2_2-trifluoroacetic_acid.cjson",
+    "formula": "C2HF3O2",
+    "natoms": 8
+   },
+   {
+    "name": "D-lactic_acid",
+    "file": "carboxylic_acids/D-lactic_acid.cjson",
+    "formula": "C3H6O3",
+    "natoms": 12
+   },
+   {
+    "name": "D-malic_acid",
+    "file": "carboxylic_acids/D-malic_acid.cjson",
+    "formula": "C4H6O5",
+    "natoms": 15
+   },
+   {
+    "name": "D-tartaric_acid",
+    "file": "carboxylic_acids/D-tartaric_acid.cjson",
+    "formula": "C4H6O6",
+    "natoms": 16
+   },
+   {
+    "name": "E-butanoic_acid",
+    "file": "carboxylic_acids/E-butanoic_acid.cjson",
+    "formula": "C4H8O2",
+    "natoms": 14
+   },
+   {
+    "name": "E-butenedioic_acid",
+    "file": "carboxylic_acids/E-butenedioic_acid.cjson",
+    "formula": "C4H4O4",
+    "natoms": 12
+   },
+   {
+    "name": "L-ascorbic_acid",
+    "file": "carboxylic_acids/L-ascorbic_acid.cjson",
+    "formula": "C6H8O6",
+    "natoms": 20
+   },
+   {
+    "name": "L-lactic_acid",
+    "file": "carboxylic_acids/L-lactic_acid.cjson",
+    "formula": "C3H6O3",
+    "natoms": 12
+   },
+   {
+    "name": "L-malic_acid",
+    "file": "carboxylic_acids/L-malic_acid.cjson",
+    "formula": "C4H6O5",
+    "natoms": 15
+   },
+   {
+    "name": "L-tartaric_acid",
+    "file": "carboxylic_acids/L-tartaric_acid.cjson",
+    "formula": "C4H6O6",
+    "natoms": 16
+   },
+   {
+    "name": "acetic_acid",
+    "file": "carboxylic_acids/acetic_acid.cjson",
+    "formula": "C2H4O2",
+    "natoms": 8
+   },
+   {
+    "name": "butanoic_acid",
+    "file": "carboxylic_acids/butanoic_acid.cjson",
+    "formula": "C4H8O2",
+    "natoms": 14
+   },
+   {
+    "name": "citric_acid",
+    "file": "carboxylic_acids/citric_acid.cjson",
+    "formula": "C6H8O7",
+    "natoms": 21
+   },
+   {
+    "name": "formic_acid",
+    "file": "carboxylic_acids/formic_acid.cjson",
+    "formula": "CH2O2",
+    "natoms": 5
+   },
+   {
+    "name": "isobutyric_acid",
+    "file": "carboxylic_acids/isobutyric_acid.cjson",
+    "formula": "C4H8O2",
+    "natoms": 14
+   },
+   {
+    "name": "oxalic_acid",
+    "file": "carboxylic_acids/oxalic_acid.cjson",
+    "formula": "C2H2O4",
+    "natoms": 8
+   },
+   {
+    "name": "propanoic_acid",
+    "file": "carboxylic_acids/propanoic_acid.cjson",
+    "formula": "C3H6O2",
+    "natoms": 11
+   }
+  ],
+  "coordination": [
+   {
+    "name": "3-trigonal-planar",
+    "file": "coordination/3-trigonal-planar.cjson",
+    "formula": "H3B",
+    "natoms": 4
+   },
+   {
+    "name": "3-trigonal-pyramidal",
+    "file": "coordination/3-trigonal-pyramidal.cjson",
+    "formula": "H3N",
+    "natoms": 4
+   },
+   {
+    "name": "4-tetrahedral",
+    "file": "coordination/4-tetrahedral.cjson",
+    "formula": "CH4",
+    "natoms": 5
+   },
+   {
+    "name": "5-square-pyramidal",
+    "file": "coordination/5-square-pyramidal.cjson",
+    "formula": "F5S",
+    "natoms": 6
+   },
+   {
+    "name": "5-trigonal-bipyramidal",
+    "file": "coordination/5-trigonal-bipyramidal.cjson",
+    "formula": "Cl5P",
+    "natoms": 6
+   }
+  ],
+  "cyclic_alkanes": [
+   {
+    "name": "1R-camphene",
+    "file": "cyclic_alkanes/1R-camphene.cjson",
+    "formula": "C10H16",
+    "natoms": 26
+   },
+   {
+    "name": "1R-camphor",
+    "file": "cyclic_alkanes/1R-camphor.cjson",
+    "formula": "C10H16O",
+    "natoms": 27
+   },
+   {
+    "name": "abietic_acid",
+    "file": "cyclic_alkanes/abietic_acid.cjson",
+    "formula": "C20H30O2",
+    "natoms": 52
+   },
+   {
+    "name": "adamantane",
+    "file": "cyclic_alkanes/adamantane.cjson",
+    "formula": "C10H16",
+    "natoms": 26
+   },
+   {
+    "name": "cis-decahydronaphthalene",
+    "file": "cyclic_alkanes/cis-decahydronaphthalene.cjson",
+    "formula": "C10H18",
+    "natoms": 28
+   },
+   {
+    "name": "cubane",
+    "file": "cyclic_alkanes/cubane.cjson",
+    "formula": "C8H8",
+    "natoms": 16
+   },
+   {
+    "name": "cyclobutane",
+    "file": "cyclic_alkanes/cyclobutane.cjson",
+    "formula": "C4H8",
+    "natoms": 12
+   },
+   {
+    "name": "cyclodecane",
+    "file": "cyclic_alkanes/cyclodecane.cjson",
+    "formula": "C10H20",
+    "natoms": 30
+   },
+   {
+    "name": "cycloheptane",
+    "file": "cyclic_alkanes/cycloheptane.cjson",
+    "formula": "C7H14",
+    "natoms": 21
+   },
+   {
+    "name": "cyclohexane-boat",
+    "file": "cyclic_alkanes/cyclohexane-boat.cjson",
+    "formula": "C6H12",
+    "natoms": 18
+   },
+   {
+    "name": "cyclohexane-chair",
+    "file": "cyclic_alkanes/cyclohexane-chair.cjson",
+    "formula": "C6H12",
+    "natoms": 18
+   },
+   {
+    "name": "cyclohexane-twist-boat",
+    "file": "cyclic_alkanes/cyclohexane-twist-boat.cjson",
+    "formula": "C6H12",
+    "natoms": 18
+   },
+   {
+    "name": "cyclohexane",
+    "file": "cyclic_alkanes/cyclohexane.cjson",
+    "formula": "C6H12",
+    "natoms": 18
+   },
+   {
+    "name": "cyclononane",
+    "file": "cyclic_alkanes/cyclononane.cjson",
+    "formula": "C9H18",
+    "natoms": 27
+   },
+   {
+    "name": "cyclooctane",
+    "file": "cyclic_alkanes/cyclooctane.cjson",
+    "formula": "C8H16",
+    "natoms": 24
+   },
+   {
+    "name": "cyclopentane",
+    "file": "cyclic_alkanes/cyclopentane.cjson",
+    "formula": "C5H10",
+    "natoms": 15
+   },
+   {
+    "name": "cyclopropane",
+    "file": "cyclic_alkanes/cyclopropane.cjson",
+    "formula": "C3H6",
+    "natoms": 9
+   },
+   {
+    "name": "norbornane",
+    "file": "cyclic_alkanes/norbornane.cjson",
+    "formula": "C7H12",
+    "natoms": 19
+   },
+   {
+    "name": "trans-decahydronaphthalene",
+    "file": "cyclic_alkanes/trans-decahydronaphthalene.cjson",
+    "formula": "C10H18",
+    "natoms": 28
+   }
+  ],
+  "cyclic_alkenes": [
+   {
+    "name": "Z-cycloheptene",
+    "file": "cyclic_alkenes/Z-cycloheptene.cjson",
+    "formula": "C7H12",
+    "natoms": 19
+   },
+   {
+    "name": "Z-cyclooctene",
+    "file": "cyclic_alkenes/Z-cyclooctene.cjson",
+    "formula": "C8H14",
+    "natoms": 22
+   },
+   {
+    "name": "cyclohepta-1_3-diene",
+    "file": "cyclic_alkenes/cyclohepta-1_3-diene.cjson",
+    "formula": "C7H10",
+    "natoms": 17
+   },
+   {
+    "name": "cyclohepta-1_3_5-triene",
+    "file": "cyclic_alkenes/cyclohepta-1_3_5-triene.cjson",
+    "formula": "C7H8",
+    "natoms": 15
+   },
+   {
+    "name": "cyclohepta-1_4-diene",
+    "file": "cyclic_alkenes/cyclohepta-1_4-diene.cjson",
+    "formula": "C7H10",
+    "natoms": 17
+   },
+   {
+    "name": "cyclohexa-1_3-diene",
+    "file": "cyclic_alkenes/cyclohexa-1_3-diene.cjson",
+    "formula": "C6H8",
+    "natoms": 14
+   },
+   {
+    "name": "cyclohexa-1_4-diene",
+    "file": "cyclic_alkenes/cyclohexa-1_4-diene.cjson",
+    "formula": "C6H8",
+    "natoms": 14
+   },
+   {
+    "name": "cyclohexene",
+    "file": "cyclic_alkenes/cyclohexene.cjson",
+    "formula": "C6H10",
+    "natoms": 16
+   },
+   {
+    "name": "cycloocta-1_3-diene",
+    "file": "cyclic_alkenes/cycloocta-1_3-diene.cjson",
+    "formula": "C8H12",
+    "natoms": 20
+   },
+   {
+    "name": "cycloocta-1_3_5-triene",
+    "file": "cyclic_alkenes/cycloocta-1_3_5-triene.cjson",
+    "formula": "C8H10",
+    "natoms": 18
+   },
+   {
+    "name": "cycloocta-1_3_5_7-tetraene",
+    "file": "cyclic_alkenes/cycloocta-1_3_5_7-tetraene.cjson",
+    "formula": "C8H8",
+    "natoms": 16
+   },
+   {
+    "name": "cyclopenta-1_3-diene",
+    "file": "cyclic_alkenes/cyclopenta-1_3-diene.cjson",
+    "formula": "C5H6",
+    "natoms": 11
+   },
+   {
+    "name": "cyclopentene",
+    "file": "cyclic_alkenes/cyclopentene.cjson",
+    "formula": "C5H8",
+    "natoms": 13
+   }
+  ],
+  "ethers": [
+   {
+    "name": "1_4-dioxane",
+    "file": "ethers/1_4-dioxane.cjson",
+    "formula": "C4H8O2",
+    "natoms": 14
+   },
+   {
+    "name": "di-tert-butylether",
+    "file": "ethers/di-tert-butylether.cjson",
+    "formula": "C8H18O",
+    "natoms": 27
+   },
+   {
+    "name": "dibutylether",
+    "file": "ethers/dibutylether.cjson",
+    "formula": "C8H18O",
+    "natoms": 27
+   },
+   {
+    "name": "diethylether",
+    "file": "ethers/diethylether.cjson",
+    "formula": "C4H10O",
+    "natoms": 15
+   },
+   {
+    "name": "diisopropylether",
+    "file": "ethers/diisopropylether.cjson",
+    "formula": "C6H14O",
+    "natoms": 21
+   },
+   {
+    "name": "dimethylether",
+    "file": "ethers/dimethylether.cjson",
+    "formula": "C2H6O",
+    "natoms": 9
+   },
+   {
+    "name": "dipropylether",
+    "file": "ethers/dipropylether.cjson",
+    "formula": "C6H14O",
+    "natoms": 21
+   },
+   {
+    "name": "ethylmethylether",
+    "file": "ethers/ethylmethylether.cjson",
+    "formula": "C3H8O",
+    "natoms": 12
+   },
+   {
+    "name": "tetrahydrofuran",
+    "file": "ethers/tetrahydrofuran.cjson",
+    "formula": "C4H8O",
+    "natoms": 13
+   },
+   {
+    "name": "tetrahydropyran",
+    "file": "ethers/tetrahydropyran.cjson",
+    "formula": "C5H10O",
+    "natoms": 16
+   }
+  ],
+  "fatty_acids": [
+   {
+    "name": "arachidonic_acid",
+    "file": "fatty_acids/arachidonic_acid.cjson",
+    "formula": "C20H32O2",
+    "natoms": 54
+   },
+   {
+    "name": "cervonic_acid",
+    "file": "fatty_acids/cervonic_acid.cjson",
+    "formula": "C22H32O2",
+    "natoms": 56
+   },
+   {
+    "name": "decanoic_acid",
+    "file": "fatty_acids/decanoic_acid.cjson",
+    "formula": "C10H20O2",
+    "natoms": 32
+   },
+   {
+    "name": "hexanoic_acid",
+    "file": "fatty_acids/hexanoic_acid.cjson",
+    "formula": "C6H12O2",
+    "natoms": 20
+   },
+   {
+    "name": "lauric_acid",
+    "file": "fatty_acids/lauric_acid.cjson",
+    "formula": "C12H24O2",
+    "natoms": 38
+   },
+   {
+    "name": "linoleic_acid",
+    "file": "fatty_acids/linoleic_acid.cjson",
+    "formula": "C18H32O2",
+    "natoms": 52
+   },
+   {
+    "name": "linolenic_acid",
+    "file": "fatty_acids/linolenic_acid.cjson",
+    "formula": "C18H30O2",
+    "natoms": 50
+   },
+   {
+    "name": "myristic_acid",
+    "file": "fatty_acids/myristic_acid.cjson",
+    "formula": "C14H28O2",
+    "natoms": 44
+   },
+   {
+    "name": "octanoic_acid",
+    "file": "fatty_acids/octanoic_acid.cjson",
+    "formula": "C8H16O2",
+    "natoms": 26
+   },
+   {
+    "name": "oleic_acid",
+    "file": "fatty_acids/oleic_acid.cjson",
+    "formula": "C18H34O2",
+    "natoms": 54
+   },
+   {
+    "name": "palmitic_acid",
+    "file": "fatty_acids/palmitic_acid.cjson",
+    "formula": "C16H32O2",
+    "natoms": 50
+   },
+   {
+    "name": "pentanoic_acid",
+    "file": "fatty_acids/pentanoic_acid.cjson",
+    "formula": "C5H10O2",
+    "natoms": 17
+   },
+   {
+    "name": "stearic_acid",
+    "file": "fatty_acids/stearic_acid.cjson",
+    "formula": "C18H36O2",
+    "natoms": 56
+   }
+  ],
+  "fullerenes": [
+   {
+    "name": "C180",
+    "file": "fullerenes/C180.cjson",
+    "formula": "C180",
+    "natoms": 180
+   },
+   {
+    "name": "C20",
+    "file": "fullerenes/C20.cjson",
+    "formula": "C20",
+    "natoms": 20
+   },
+   {
+    "name": "C24",
+    "file": "fullerenes/C24.cjson",
+    "formula": "C24",
+    "natoms": 24
+   },
+   {
+    "name": "C240",
+    "file": "fullerenes/C240.cjson",
+    "formula": "C240",
+    "natoms": 240
+   },
+   {
+    "name": "C26",
+    "file": "fullerenes/C26.cjson",
+    "formula": "C26",
+    "natoms": 26
+   },
+   {
+    "name": "C28",
+    "file": "fullerenes/C28.cjson",
+    "formula": "C28",
+    "natoms": 28
+   },
+   {
+    "name": "C30",
+    "file": "fullerenes/C30.cjson",
+    "formula": "C30",
+    "natoms": 30
+   },
+   {
+    "name": "C32",
+    "file": "fullerenes/C32.cjson",
+    "formula": "C32",
+    "natoms": 32
+   },
+   {
+    "name": "C36",
+    "file": "fullerenes/C36.cjson",
+    "formula": "C36",
+    "natoms": 36
+   },
+   {
+    "name": "C50",
+    "file": "fullerenes/C50.cjson",
+    "formula": "C50",
+    "natoms": 50
+   },
+   {
+    "name": "C60-buckminsterfullerene",
+    "file": "fullerenes/C60-buckminsterfullerene.cjson",
+    "formula": "C60",
+    "natoms": 60
+   },
+   {
+    "name": "C70",
+    "file": "fullerenes/C70.cjson",
+    "formula": "C70",
+    "natoms": 70
+   },
+   {
+    "name": "C76",
+    "file": "fullerenes/C76.cjson",
+    "formula": "C76",
+    "natoms": 76
+   },
+   {
+    "name": "C78",
+    "file": "fullerenes/C78.cjson",
+    "formula": "C78",
+    "natoms": 78
+   },
+   {
+    "name": "C80",
+    "file": "fullerenes/C80.cjson",
+    "formula": "C80",
+    "natoms": 80
+   },
+   {
+    "name": "PC70BM",
+    "file": "fullerenes/PC70BM.cjson",
+    "formula": "C82H14O2",
+    "natoms": 98
+   },
+   {
+    "name": "PCBM",
+    "file": "fullerenes/PCBM.cjson",
+    "formula": "C72H14O2",
+    "natoms": 88
+   }
+  ],
+  "furanose": [
+   {
+    "name": "alpha-D-allofuranose",
+    "file": "furanose/alpha-D-allofuranose.cjson",
+    "formula": "C6H12O6",
+    "natoms": 24
+   },
+   {
+    "name": "alpha-D-altrofuranose",
+    "file": "furanose/alpha-D-altrofuranose.cjson",
+    "formula": "C6H12O6",
+    "natoms": 24
+   },
+   {
+    "name": "alpha-D-arabinofuranose",
+    "file": "furanose/alpha-D-arabinofuranose.cjson",
+    "formula": "C5H10O5",
+    "natoms": 20
+   },
+   {
+    "name": "alpha-D-fructofuranose",
+    "file": "furanose/alpha-D-fructofuranose.cjson",
+    "formula": "C6H12O6",
+    "natoms": 24
+   },
+   {
+    "name": "alpha-D-galactofuranose",
+    "file": "furanose/alpha-D-galactofuranose.cjson",
+    "formula": "C6H12O6",
+    "natoms": 24
+   },
+   {
+    "name": "alpha-D-glucofuranose",
+    "file": "furanose/alpha-D-glucofuranose.cjson",
+    "formula": "C6H12O6",
+    "natoms": 24
+   },
+   {
+    "name": "alpha-D-gulofuranose",
+    "file": "furanose/alpha-D-gulofuranose.cjson",
+    "formula": "C6H12O6",
+    "natoms": 24
+   },
+   {
+    "name": "alpha-D-idofuranose",
+    "file": "furanose/alpha-D-idofuranose.cjson",
+    "formula": "C6H12O6",
+    "natoms": 24
+   },
+   {
+    "name": "alpha-D-lyxofuranose",
+    "file": "furanose/alpha-D-lyxofuranose.cjson",
+    "formula": "C5H10O5",
+    "natoms": 20
+   },
+   {
+    "name": "alpha-D-mannofuranose",
+    "file": "furanose/alpha-D-mannofuranose.cjson",
+    "formula": "C6H12O6",
+    "natoms": 24
+   },
+   {
+    "name": "alpha-D-ribofuranose",
+    "file": "furanose/alpha-D-ribofuranose.cjson",
+    "formula": "C5H10O5",
+    "natoms": 20
+   },
+   {
+    "name": "alpha-D-sorbofuranose",
+    "file": "furanose/alpha-D-sorbofuranose.cjson",
+    "formula": "C6H12O6",
+    "natoms": 24
+   },
+   {
+    "name": "alpha-D-talofuranose",
+    "file": "furanose/alpha-D-talofuranose.cjson",
+    "formula": "C6H12O6",
+    "natoms": 24
+   },
+   {
+    "name": "alpha-D-xylofuranose",
+    "file": "furanose/alpha-D-xylofuranose.cjson",
+    "formula": "C5H10O5",
+    "natoms": 20
+   },
+   {
+    "name": "alpha-L-altrofuranose",
+    "file": "furanose/alpha-L-altrofuranose.cjson",
+    "formula": "C6H12O6",
+    "natoms": 24
+   },
+   {
+    "name": "beta-D-allofuranose",
+    "file": "furanose/beta-D-allofuranose.cjson",
+    "formula": "C6H12O6",
+    "natoms": 24
+   },
+   {
+    "name": "beta-D-altrofuranose",
+    "file": "furanose/beta-D-altrofuranose.cjson",
+    "formula": "C6H12O6",
+    "natoms": 24
+   },
+   {
+    "name": "beta-D-arabinofuranose",
+    "file": "furanose/beta-D-arabinofuranose.cjson",
+    "formula": "C5H10O5",
+    "natoms": 20
+   },
+   {
+    "name": "beta-D-fructofuranose",
+    "file": "furanose/beta-D-fructofuranose.cjson",
+    "formula": "C6H12O6",
+    "natoms": 24
+   },
+   {
+    "name": "beta-D-galactofuranose",
+    "file": "furanose/beta-D-galactofuranose.cjson",
+    "formula": "C6H12O6",
+    "natoms": 24
+   },
+   {
+    "name": "beta-D-glucofuranose",
+    "file": "furanose/beta-D-glucofuranose.cjson",
+    "formula": "C6H12O6",
+    "natoms": 24
+   },
+   {
+    "name": "beta-D-gulofuranose",
+    "file": "furanose/beta-D-gulofuranose.cjson",
+    "formula": "C6H12O6",
+    "natoms": 24
+   },
+   {
+    "name": "beta-D-idofuranose",
+    "file": "furanose/beta-D-idofuranose.cjson",
+    "formula": "C6H12O6",
+    "natoms": 24
+   },
+   {
+    "name": "beta-D-lyxofuranose",
+    "file": "furanose/beta-D-lyxofuranose.cjson",
+    "formula": "C5H10O5",
+    "natoms": 20
+   },
+   {
+    "name": "beta-D-mannofuranose",
+    "file": "furanose/beta-D-mannofuranose.cjson",
+    "formula": "C6H12O6",
+    "natoms": 24
+   },
+   {
+    "name": "beta-D-ribofuranose",
+    "file": "furanose/beta-D-ribofuranose.cjson",
+    "formula": "C5H10O5",
+    "natoms": 20
+   },
+   {
+    "name": "beta-D-sorbofuranose",
+    "file": "furanose/beta-D-sorbofuranose.cjson",
+    "formula": "C6H12O6",
+    "natoms": 24
+   },
+   {
+    "name": "beta-D-talofuranose",
+    "file": "furanose/beta-D-talofuranose.cjson",
+    "formula": "C6H12O6",
+    "natoms": 24
+   },
+   {
+    "name": "beta-D-xylofuranose",
+    "file": "furanose/beta-D-xylofuranose.cjson",
+    "formula": "C5H10O5",
+    "natoms": 20
+   },
+   {
+    "name": "beta-L-altrofuranose",
+    "file": "furanose/beta-L-altrofuranose.cjson",
+    "formula": "C6H12O6",
+    "natoms": 24
+   }
+  ],
+  "halogenated": [
+   {
+    "name": "1,1_difluoroethene",
+    "file": "halogenated/1,1_difluoroethene.cjson",
+    "formula": "C2H2F2",
+    "natoms": 6
+   },
+   {
+    "name": "2_bromo_1_chloropropane",
+    "file": "halogenated/2_bromo_1_chloropropane.cjson",
+    "formula": "C3H6BrCl",
+    "natoms": 11
+   },
+   {
+    "name": "allyl_bromide",
+    "file": "halogenated/allyl_bromide.cjson",
+    "formula": "C3H5Br",
+    "natoms": 9
+   },
+   {
+    "name": "benzal_chloride",
+    "file": "halogenated/benzal_chloride.cjson",
+    "formula": "C7H6Cl2",
+    "natoms": 15
+   },
+   {
+    "name": "benzyl_bromide",
+    "file": "halogenated/benzyl_bromide.cjson",
+    "formula": "C7H7Br",
+    "natoms": 15
+   },
+   {
+    "name": "benzyl_chloride",
+    "file": "halogenated/benzyl_chloride.cjson",
+    "formula": "C7H7Cl",
+    "natoms": 15
+   },
+   {
+    "name": "bis_chloromethyl_ketone",
+    "file": "halogenated/bis_chloromethyl_ketone.cjson",
+    "formula": "C3H4Cl2O",
+    "natoms": 10
+   },
+   {
+    "name": "bromoacetic_acid",
+    "file": "halogenated/bromoacetic_acid.cjson",
+    "formula": "C2H3BrO2",
+    "natoms": 8
+   },
+   {
+    "name": "bromoacetone",
+    "file": "halogenated/bromoacetone.cjson",
+    "formula": "C3H5BrO",
+    "natoms": 10
+   },
+   {
+    "name": "bromomethane",
+    "file": "halogenated/bromomethane.cjson",
+    "formula": "CH3Br",
+    "natoms": 5
+   },
+   {
+    "name": "chloroacetic_acid",
+    "file": "halogenated/chloroacetic_acid.cjson",
+    "formula": "C2H3ClO2",
+    "natoms": 8
+   },
+   {
+    "name": "chloromethane",
+    "file": "halogenated/chloromethane.cjson",
+    "formula": "CH3Cl",
+    "natoms": 5
+   },
+   {
+    "name": "dichlorodiphenyltrichloroethane",
+    "file": "halogenated/dichlorodiphenyltrichloroethane.cjson",
+    "formula": "C14H9Cl5",
+    "natoms": 28
+   },
+   {
+    "name": "fluoroacetic_acid",
+    "file": "halogenated/fluoroacetic_acid.cjson",
+    "formula": "C2H3FO2",
+    "natoms": 8
+   },
+   {
+    "name": "fluoroacetone",
+    "file": "halogenated/fluoroacetone.cjson",
+    "formula": "C3H5FO",
+    "natoms": 10
+   },
+   {
+    "name": "fluoromethane",
+    "file": "halogenated/fluoromethane.cjson",
+    "formula": "CH3F",
+    "natoms": 5
+   },
+   {
+    "name": "halothane",
+    "file": "halogenated/halothane.cjson",
+    "formula": "C2HBrClF3",
+    "natoms": 8
+   },
+   {
+    "name": "hexachloroacetone",
+    "file": "halogenated/hexachloroacetone.cjson",
+    "formula": "C3Cl6O",
+    "natoms": 10
+   },
+   {
+    "name": "iodomethane",
+    "file": "halogenated/iodomethane.cjson",
+    "formula": "CH3I",
+    "natoms": 5
+   },
+   {
+    "name": "isoflurane",
+    "file": "halogenated/isoflurane.cjson",
+    "formula": "C3H2ClF5O",
+    "natoms": 12
+   },
+   {
+    "name": "tetrachloroethylene",
+    "file": "halogenated/tetrachloroethylene.cjson",
+    "formula": "C2Cl4",
+    "natoms": 6
+   },
+   {
+    "name": "triclofos",
+    "file": "halogenated/triclofos.cjson",
+    "formula": "C2H4Cl3O4P",
+    "natoms": 14
+   },
+   {
+    "name": "vinyl_bromide",
+    "file": "halogenated/vinyl_bromide.cjson",
+    "formula": "C2H3Br",
+    "natoms": 6
+   },
+   {
+    "name": "vinyl_chloride",
+    "file": "halogenated/vinyl_chloride.cjson",
+    "formula": "C2H3Cl",
+    "natoms": 6
+   },
+   {
+    "name": "vinyl_fluoride",
+    "file": "halogenated/vinyl_fluoride.cjson",
+    "formula": "C2H3F",
+    "natoms": 6
+   },
+   {
+    "name": "vinyl_iodide",
+    "file": "halogenated/vinyl_iodide.cjson",
+    "formula": "C2H3I",
+    "natoms": 6
+   }
+  ],
+  "heteroaromatics": [
+   {
+    "name": "1H-indole",
+    "file": "heteroaromatics/1H-indole.cjson",
+    "formula": "C8H7N",
+    "natoms": 16
+   },
+   {
+    "name": "1H-pyrazole",
+    "file": "heteroaromatics/1H-pyrazole.cjson",
+    "formula": "C3H4N2",
+    "natoms": 9
+   },
+   {
+    "name": "1H-pyrrole",
+    "file": "heteroaromatics/1H-pyrrole.cjson",
+    "formula": "C4H5N",
+    "natoms": 10
+   },
+   {
+    "name": "1_2-oxazole",
+    "file": "heteroaromatics/1_2-oxazole.cjson",
+    "formula": "C3H3NO",
+    "natoms": 8
+   },
+   {
+    "name": "1_2-thiazole",
+    "file": "heteroaromatics/1_2-thiazole.cjson",
+    "formula": "C3H3NS",
+    "natoms": 8
+   },
+   {
+    "name": "1_3-oxazole",
+    "file": "heteroaromatics/1_3-oxazole.cjson",
+    "formula": "C3H3NO",
+    "natoms": 8
+   },
+   {
+    "name": "1_3-thiazole",
+    "file": "heteroaromatics/1_3-thiazole.cjson",
+    "formula": "C3H3NS",
+    "natoms": 8
+   },
+   {
+    "name": "benzofuran",
+    "file": "heteroaromatics/benzofuran.cjson",
+    "formula": "C8H6O",
+    "natoms": 15
+   },
+   {
+    "name": "benzothiophene",
+    "file": "heteroaromatics/benzothiophene.cjson",
+    "formula": "C8H6S",
+    "natoms": 15
+   },
+   {
+    "name": "furan",
+    "file": "heteroaromatics/furan.cjson",
+    "formula": "C4H4O",
+    "natoms": 9
+   },
+   {
+    "name": "isonicotinamide",
+    "file": "heteroaromatics/isonicotinamide.cjson",
+    "formula": "C6H6N2O",
+    "natoms": 15
+   },
+   {
+    "name": "isonicotinic_acid",
+    "file": "heteroaromatics/isonicotinic_acid.cjson",
+    "formula": "C6H5NO2",
+    "natoms": 14
+   },
+   {
+    "name": "nicotinamide",
+    "file": "heteroaromatics/nicotinamide.cjson",
+    "formula": "C6H6N2O",
+    "natoms": 15
+   },
+   {
+    "name": "nicotinic_acid",
+    "file": "heteroaromatics/nicotinic_acid.cjson",
+    "formula": "C6H5NO2",
+    "natoms": 14
+   },
+   {
+    "name": "picolinamide",
+    "file": "heteroaromatics/picolinamide.cjson",
+    "formula": "C6H6N2O",
+    "natoms": 15
+   },
+   {
+    "name": "picolinic_acid",
+    "file": "heteroaromatics/picolinic_acid.cjson",
+    "formula": "C6H5NO2",
+    "natoms": 14
+   },
+   {
+    "name": "pyridine",
+    "file": "heteroaromatics/pyridine.cjson",
+    "formula": "C5H5N",
+    "natoms": 11
+   },
+   {
+    "name": "thiophene",
+    "file": "heteroaromatics/thiophene.cjson",
+    "formula": "C4H4S",
+    "natoms": 9
+   }
+  ],
+  "ketones": [
+   {
+    "name": "acetone",
+    "file": "ketones/acetone.cjson",
+    "formula": "C3H6O",
+    "natoms": 10
+   },
+   {
+    "name": "butanone",
+    "file": "ketones/butanone.cjson",
+    "formula": "C4H8O",
+    "natoms": 13
+   },
+   {
+    "name": "cyclohexanone",
+    "file": "ketones/cyclohexanone.cjson",
+    "formula": "C6H10O",
+    "natoms": 17
+   },
+   {
+    "name": "methyl_vinyl_ketone",
+    "file": "ketones/methyl_vinyl_ketone.cjson",
+    "formula": "C4H6O",
+    "natoms": 11
+   },
+   {
+    "name": "p-benzoquinone",
+    "file": "ketones/p-benzoquinone.cjson",
+    "formula": "C6H4O2",
+    "natoms": 12
+   }
+  ],
+  "macrocycles": [
+   {
+    "name": "phthalocyanine",
+    "file": "macrocycles/phthalocyanine.cjson",
+    "formula": "C32H18N8",
+    "natoms": 58
+   },
+   {
+    "name": "porphin",
+    "file": "macrocycles/porphin.cjson",
+    "formula": "C20H14N4",
+    "natoms": 38
+   }
+  ],
+  "nitriles": [
+   {
+    "name": "1_1_1-trichloroacetonitrile",
+    "file": "nitriles/1_1_1-trichloroacetonitrile.cjson",
+    "formula": "C2Cl3N",
+    "natoms": 6
+   },
+   {
+    "name": "acetonitrile",
+    "file": "nitriles/acetonitrile.cjson",
+    "formula": "C2H3N",
+    "natoms": 6
+   },
+   {
+    "name": "butyronitrile",
+    "file": "nitriles/butyronitrile.cjson",
+    "formula": "C4H7N",
+    "natoms": 12
+   },
+   {
+    "name": "isobutyronitrile",
+    "file": "nitriles/isobutyronitrile.cjson",
+    "formula": "C4H7N",
+    "natoms": 12
+   },
+   {
+    "name": "propionitrile",
+    "file": "nitriles/propionitrile.cjson",
+    "formula": "C3H5N",
+    "natoms": 9
+   }
+  ],
+  "nucleobases": [
+   {
+    "name": "adenine",
+    "file": "nucleobases/adenine.cjson",
+    "formula": "C5H5N5",
+    "natoms": 15
+   },
+   {
+    "name": "cytosine",
+    "file": "nucleobases/cytosine.cjson",
+    "formula": "C4H5N3O",
+    "natoms": 13
+   },
+   {
+    "name": "guanine",
+    "file": "nucleobases/guanine.cjson",
+    "formula": "C5H5N5O",
+    "natoms": 16
+   },
+   {
+    "name": "thymine",
+    "file": "nucleobases/thymine.cjson",
+    "formula": "C5H6N2O2",
+    "natoms": 15
+   },
+   {
+    "name": "uracil",
+    "file": "nucleobases/uracil.cjson",
+    "formula": "C4H4N2O2",
+    "natoms": 12
+   }
+  ],
+  "pyranose": [
+   {
+    "name": "2-deoxy-D-ribopyranose",
+    "file": "pyranose/2-deoxy-D-ribopyranose.cjson",
+    "formula": "C5H10O4",
+    "natoms": 19
+   },
+   {
+    "name": "6-deoxy-D-gulopyranose",
+    "file": "pyranose/6-deoxy-D-gulopyranose.cjson",
+    "formula": "C6H12O5",
+    "natoms": 23
+   },
+   {
+    "name": "6-deoxy-D-talopyranose",
+    "file": "pyranose/6-deoxy-D-talopyranose.cjson",
+    "formula": "C6H12O5",
+    "natoms": 23
+   },
+   {
+    "name": "6-deoxy-L-altropyranose",
+    "file": "pyranose/6-deoxy-L-altropyranose.cjson",
+    "formula": "C6H12O5",
+    "natoms": 23
+   },
+   {
+    "name": "6-deoxy-L-galactopyranose",
+    "file": "pyranose/6-deoxy-L-galactopyranose.cjson",
+    "formula": "C6H12O5",
+    "natoms": 23
+   },
+   {
+    "name": "6-deoxy-L-mannopyranose",
+    "file": "pyranose/6-deoxy-L-mannopyranose.cjson",
+    "formula": "C6H12O5",
+    "natoms": 23
+   },
+   {
+    "name": "alpha-D-allopyranose",
+    "file": "pyranose/alpha-D-allopyranose.cjson",
+    "formula": "C6H12O6",
+    "natoms": 24
+   },
+   {
+    "name": "alpha-D-altropyranose",
+    "file": "pyranose/alpha-D-altropyranose.cjson",
+    "formula": "C6H12O6",
+    "natoms": 24
+   },
+   {
+    "name": "alpha-D-fructopyranose",
+    "file": "pyranose/alpha-D-fructopyranose.cjson",
+    "formula": "C6H12O6",
+    "natoms": 24
+   },
+   {
+    "name": "alpha-D-fucopyranose",
+    "file": "pyranose/alpha-D-fucopyranose.cjson",
+    "formula": "C6H12O5",
+    "natoms": 23
+   },
+   {
+    "name": "alpha-D-galactopyranose",
+    "file": "pyranose/alpha-D-galactopyranose.cjson",
+    "formula": "C6H12O6",
+    "natoms": 24
+   },
+   {
+    "name": "alpha-D-galacturonopyranose",
+    "file": "pyranose/alpha-D-galacturonopyranose.cjson",
+    "formula": "C6H9O7",
+    "natoms": 22
+   },
+   {
+    "name": "alpha-D-glucopyranose",
+    "file": "pyranose/alpha-D-glucopyranose.cjson",
+    "formula": "C6H12O6",
+    "natoms": 24
+   },
+   {
+    "name": "alpha-D-glucuronopyranose",
+    "file": "pyranose/alpha-D-glucuronopyranose.cjson",
+    "formula": "C6H9O7",
+    "natoms": 22
+   },
+   {
+    "name": "alpha-D-gulopyranose",
+    "file": "pyranose/alpha-D-gulopyranose.cjson",
+    "formula": "C6H12O6",
+    "natoms": 24
+   },
+   {
+    "name": "alpha-D-idopyranose",
+    "file": "pyranose/alpha-D-idopyranose.cjson",
+    "formula": "C6H12O6",
+    "natoms": 24
+   },
+   {
+    "name": "alpha-D-lyxopyranose",
+    "file": "pyranose/alpha-D-lyxopyranose.cjson",
+    "formula": "C5H10O5",
+    "natoms": 20
+   },
+   {
+    "name": "alpha-D-mannopyranose",
+    "file": "pyranose/alpha-D-mannopyranose.cjson",
+    "formula": "C6H12O6",
+    "natoms": 24
+   },
+   {
+    "name": "alpha-D-psicopyranose",
+    "file": "pyranose/alpha-D-psicopyranose.cjson",
+    "formula": "C6H12O6",
+    "natoms": 24
+   },
+   {
+    "name": "alpha-D-rhamnopyranose",
+    "file": "pyranose/alpha-D-rhamnopyranose.cjson",
+    "formula": "C6H12O5",
+    "natoms": 23
+   },
+   {
+    "name": "alpha-D-tagatopyranose",
+    "file": "pyranose/alpha-D-tagatopyranose.cjson",
+    "formula": "C6H12O6",
+    "natoms": 24
+   },
+   {
+    "name": "alpha-D-talopyranose",
+    "file": "pyranose/alpha-D-talopyranose.cjson",
+    "formula": "C6H12O6",
+    "natoms": 24
+   },
+   {
+    "name": "alpha-L-altropyranose",
+    "file": "pyranose/alpha-L-altropyranose.cjson",
+    "formula": "C6H12O6",
+    "natoms": 24
+   },
+   {
+    "name": "alpha-L-arabinopyranose",
+    "file": "pyranose/alpha-L-arabinopyranose.cjson",
+    "formula": "C5H10O5",
+    "natoms": 20
+   },
+   {
+    "name": "alpha-L-fucopyranose",
+    "file": "pyranose/alpha-L-fucopyranose.cjson",
+    "formula": "C6H12O5",
+    "natoms": 23
+   },
+   {
+    "name": "alpha-L-galactopyranose",
+    "file": "pyranose/alpha-L-galactopyranose.cjson",
+    "formula": "C6H12O6",
+    "natoms": 24
+   },
+   {
+    "name": "alpha-L-lyxopyranose",
+    "file": "pyranose/alpha-L-lyxopyranose.cjson",
+    "formula": "C5H10O5",
+    "natoms": 20
+   },
+   {
+    "name": "alpha-L-rhamnopyranose",
+    "file": "pyranose/alpha-L-rhamnopyranose.cjson",
+    "formula": "C6H12O5",
+    "natoms": 23
+   },
+   {
+    "name": "alpha-L-ribopyranose",
+    "file": "pyranose/alpha-L-ribopyranose.cjson",
+    "formula": "C5H10O5",
+    "natoms": 20
+   },
+   {
+    "name": "alpha-L-sorbopyranose",
+    "file": "pyranose/alpha-L-sorbopyranose.cjson",
+    "formula": "C6H12O6",
+    "natoms": 24
+   },
+   {
+    "name": "alpha-L-xylopyranose",
+    "file": "pyranose/alpha-L-xylopyranose.cjson",
+    "formula": "C5H10O5",
+    "natoms": 20
+   },
+   {
+    "name": "beta-D-allopyranose",
+    "file": "pyranose/beta-D-allopyranose.cjson",
+    "formula": "C6H12O6",
+    "natoms": 24
+   },
+   {
+    "name": "beta-D-altropyranose",
+    "file": "pyranose/beta-D-altropyranose.cjson",
+    "formula": "C6H12O6",
+    "natoms": 24
+   },
+   {
+    "name": "beta-D-arabinopyranose",
+    "file": "pyranose/beta-D-arabinopyranose.cjson",
+    "formula": "C5H10O5",
+    "natoms": 20
+   },
+   {
+    "name": "beta-D-fructopyranose",
+    "file": "pyranose/beta-D-fructopyranose.cjson",
+    "formula": "C6H12O6",
+    "natoms": 24
+   },
+   {
+    "name": "beta-D-fucopyranose",
+    "file": "pyranose/beta-D-fucopyranose.cjson",
+    "formula": "C6H12O5",
+    "natoms": 23
+   },
+   {
+    "name": "beta-D-galactopyranose",
+    "file": "pyranose/beta-D-galactopyranose.cjson",
+    "formula": "C6H12O6",
+    "natoms": 24
+   },
+   {
+    "name": "beta-D-glucopyranose",
+    "file": "pyranose/beta-D-glucopyranose.cjson",
+    "formula": "C6H12O6",
+    "natoms": 24
+   },
+   {
+    "name": "beta-D-gulopyranose",
+    "file": "pyranose/beta-D-gulopyranose.cjson",
+    "formula": "C6H12O6",
+    "natoms": 24
+   },
+   {
+    "name": "beta-D-idopyranose",
+    "file": "pyranose/beta-D-idopyranose.cjson",
+    "formula": "C6H12O6",
+    "natoms": 24
+   },
+   {
+    "name": "beta-D-lyxopyranose",
+    "file": "pyranose/beta-D-lyxopyranose.cjson",
+    "formula": "C5H10O5",
+    "natoms": 20
+   },
+   {
+    "name": "beta-D-mannopyranose",
+    "file": "pyranose/beta-D-mannopyranose.cjson",
+    "formula": "C6H12O6",
+    "natoms": 24
+   },
+   {
+    "name": "beta-D-rhamnopyranose",
+    "file": "pyranose/beta-D-rhamnopyranose.cjson",
+    "formula": "C6H12O5",
+    "natoms": 23
+   },
+   {
+    "name": "beta-D-sorbopyranose",
+    "file": "pyranose/beta-D-sorbopyranose.cjson",
+    "formula": "C6H12O6",
+    "natoms": 24
+   },
+   {
+    "name": "beta-D-tagatopyranose",
+    "file": "pyranose/beta-D-tagatopyranose.cjson",
+    "formula": "C6H12O6",
+    "natoms": 24
+   },
+   {
+    "name": "beta-D-talopyranose",
+    "file": "pyranose/beta-D-talopyranose.cjson",
+    "formula": "C6H12O6",
+    "natoms": 24
+   },
+   {
+    "name": "beta-L-altropyranose",
+    "file": "pyranose/beta-L-altropyranose.cjson",
+    "formula": "C6H12O6",
+    "natoms": 24
+   },
+   {
+    "name": "beta-L-arabinopyranose",
+    "file": "pyranose/beta-L-arabinopyranose.cjson",
+    "formula": "C5H10O5",
+    "natoms": 20
+   },
+   {
+    "name": "beta-L-lyxopyranose",
+    "file": "pyranose/beta-L-lyxopyranose.cjson",
+    "formula": "C5H10O5",
+    "natoms": 20
+   },
+   {
+    "name": "beta-L-ribopyranose",
+    "file": "pyranose/beta-L-ribopyranose.cjson",
+    "formula": "C5H10O5",
+    "natoms": 20
+   },
+   {
+    "name": "beta-L-xylopyranose",
+    "file": "pyranose/beta-L-xylopyranose.cjson",
+    "formula": "C5H10O5",
+    "natoms": 20
+   }
+  ],
+  "steroids": [
+   {
+    "name": "cholesterol",
+    "file": "steroids/cholesterol.cjson",
+    "formula": "C27H46O",
+    "natoms": 74
+   },
+   {
+    "name": "estradiol",
+    "file": "steroids/estradiol.cjson",
+    "formula": "C18H24O2",
+    "natoms": 44
+   },
+   {
+    "name": "testosterone",
+    "file": "steroids/testosterone.cjson",
+    "formula": "C18H26O2",
+    "natoms": 46
+   }
+  ],
+  "sulfoxides": [
+   {
+    "name": "dimethyl_sulfoxide",
+    "file": "sulfoxides/dimethyl_sulfoxide.cjson",
+    "formula": "C2H6OS",
+    "natoms": 10
+   }
+  ],
+  "thiols": [
+   {
+    "name": "2-methylproprane-2-thiol",
+    "file": "thiols/2-methylproprane-2-thiol.cjson",
+    "formula": "C4H10S",
+    "natoms": 15
+   },
+   {
+    "name": "R_butane-2-thiol",
+    "file": "thiols/R_butane-2-thiol.cjson",
+    "formula": "C4H10S",
+    "natoms": 15
+   },
+   {
+    "name": "butane-1-thiol",
+    "file": "thiols/butane-1-thiol.cjson",
+    "formula": "C4H10S",
+    "natoms": 15
+   },
+   {
+    "name": "ethane-1_2-dithiol",
+    "file": "thiols/ethane-1_2-dithiol.cjson",
+    "formula": "C2H6S2",
+    "natoms": 10
+   },
+   {
+    "name": "ethanethiol",
+    "file": "thiols/ethanethiol.cjson",
+    "formula": "C2H6S",
+    "natoms": 9
+   },
+   {
+    "name": "heptane-1-thiol",
+    "file": "thiols/heptane-1-thiol.cjson",
+    "formula": "C7H16S",
+    "natoms": 24
+   },
+   {
+    "name": "hexane-1-thiol",
+    "file": "thiols/hexane-1-thiol.cjson",
+    "formula": "C6H14S",
+    "natoms": 21
+   },
+   {
+    "name": "methanethiol",
+    "file": "thiols/methanethiol.cjson",
+    "formula": "CH4S",
+    "natoms": 6
+   },
+   {
+    "name": "octane-1-thiol",
+    "file": "thiols/octane-1-thiol.cjson",
+    "formula": "C8H18S",
+    "natoms": 27
+   },
+   {
+    "name": "pentane-1-thiol",
+    "file": "thiols/pentane-1-thiol.cjson",
+    "formula": "C5H12S",
+    "natoms": 18
+   },
+   {
+    "name": "proprane-1-thiol",
+    "file": "thiols/proprane-1-thiol.cjson",
+    "formula": "C3H8S",
+    "natoms": 12
+   },
+   {
+    "name": "proprane-2-thiol",
+    "file": "thiols/proprane-2-thiol.cjson",
+    "formula": "C3H8S",
+    "natoms": 12
+   }
+  ]
+ }
+}

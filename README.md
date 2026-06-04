@@ -457,6 +457,7 @@ What it supports:
 - `import_gro(file_path)`: Import a Gromacs GRO file, returning `(atoms, Box_dim)`. Coordinates and box are converted from nm to Å.
 - `import_xyz(file_path)`: Import an XYZ file, returning `(atoms, Cell)`.
 - `import_cif(file_path, expand_symmetry=True)`: Import a CIF/mmCIF file using GEMMI, returning `(atoms, Cell)`. Standardizes symmetry expansion for minerals.
+- `import_cjson(file_path, resname=None)`: Import a Chemical JSON (`.cjson`/`.json`) file (Avogadro2 / Open Chemistry format), returning `(atoms, Cell)`. Carries 3D coordinates, bonds (with order), formal charges, and partial charges.
 - `import_pqr(file_path)`: Import a PQR file (charge and radius in place of occupancy/temp).
 - `import_poscar(file_path)`: Import VASP POSCAR/CONTCAR files (fractional or Cartesian).
 - `import_traj(file_path)`: Multi-frame importer for .pdb or .gro trajectory files.
@@ -468,7 +469,29 @@ What it supports:
 - `write_pqr(atoms, Box, file_path)`: Write atoms to a PQR file.
 - `write_poscar(atoms, Box, file_path)`: Write atoms to a VASP POSCAR file.
 - `write_sdf(atoms, Box, file_path)`: Write atoms to an SDF file.
+- `write_cjson(atoms, Box, file_path, name=None)`: Write atoms to a Chemical JSON (`.cjson`) file (coordinates, atomic numbers, bonds, formal + partial charges, optional unit cell).
 - `write_traj(frames, file_path)`: Write multiple frames to a trajectory file.
+
+### Bundled Molecule Library
+
+A curated library of ~428 small organic molecules (Chemical JSON), vendored from
+the [Avogadro2 molecules library](https://github.com/OpenChemistry/molecules)
+(BSD-3-Clause, © 2016 Geoffrey Hutchison, University of Pittsburgh) and filtered
+to molecules composed only of GAFF / OpenFF-parameterizable elements. Categories
+include amino acids, nucleobases, carbohydrates (furanose/pyranose), alcohols,
+fatty acids, steroids, aromatics, heteroaromatics, and most common functional
+groups. Stored under `atomipy/structures/molecules/` with an `index.json` manifest.
+
+- `molecule_categories()`: Sorted list of available category names.
+- `list_molecules(category=None)`: List molecules (`{name, file, formula, natoms, category}`), optionally filtered to one category.
+- `load_molecule(name_or_file, resname=None)`: Load a molecule by name (`'L-alanine'`) or path (`'amino_acids/L-alanine.cjson'`), returning `(atoms, Cell)`.
+
+```python
+import atomipy as ap
+ap.molecule_categories()             # ['alcohols', 'amino_acids', 'aromatics', ...]
+ap.list_molecules('nucleobases')     # adenine, cytosine, guanine, thymine, uracil
+atoms, cell = ap.load_molecule('L-tryptophan')   # 27 atoms, resname 'LTRY'
+```
 
 ### Force Field
 
