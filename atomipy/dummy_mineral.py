@@ -106,7 +106,13 @@ def _anion_charges_minff(atoms, ox, anion_idx, Box, verbose, rmaxlong=2.45, rmax
     the same global cutoffs MINFF typing uses.
     """
     from .bond_angle import bond_angle
-    bond_angle(atoms, Box, rmaxM=rmaxlong, rmaxH=rmaxH, verbose=False)  # populate 'neigh' (0-based)
+    # same_molecule_only=False: framework coordination is purely geometric and
+    # must NOT depend on molid. An imported/uploaded structure may carry per-atom
+    # or per-residue molids (and replication multiplies them), which would
+    # otherwise make the default same-molecule filter find ZERO bonds and orphan
+    # every cation. (MINFF sidesteps this by resetting molids first; we don't.)
+    bond_angle(atoms, Box, rmaxM=rmaxlong, rmaxH=rmaxH,
+               same_molecule_only=False, verbose=False)  # populate 'neigh' (0-based)
     anion_set = set(anion_idx)
 
     # CN of each donor = how many anions it coordinates.
