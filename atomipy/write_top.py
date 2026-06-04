@@ -1649,7 +1649,7 @@ def lmp(atoms, Box=None, file_path=None, forcefield=None, rmaxH=1.2, rmaxM=2.45,
             molid = atom.get('molid', atom.get('resid', 1))
             charge = safe_charge(atom)
             x, y, z = atom.get('x', 0.0), atom.get('y', 0.0), atom.get('z', 0.0)
-            f.write(f"{i:<8}{molid:<8}{atom_type:<8}{charge:<12.6f}{x:<12.5f}{y:<12.5f}{z:<12.5f}  # {atom.get('type', '')}\n")
+            f.write(f"{i:<8}{molid:<8}{atom_type:<8}{charge:>12.6f}  {x:<12.5f}{y:<12.5f}{z:<12.5f}  # {atom.get('type', '')}\n")
         f.write("\n")
         
         # Write bond coefficients if we have bonds

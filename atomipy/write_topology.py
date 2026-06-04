@@ -434,8 +434,11 @@ def write_data(topology: Topology, file_path: str, *, atom_style: str = "full",
     w("Atoms  # full\n")
     for a in topology.atoms:
         x, y, z = (L(p) for p in (a.position or [0.0, 0.0, 0.0]))
-        w(f"{a.id + 1} {a.molecule_id} {atype_id[a.type or 'X']} "
-          f"{(a.charge or 0.0):.6f} {x:.6f} {y:.6f} {z:.6f}")
+        # Pad the leading integer columns and right-align the charge so the
+        # charge values end at the same position (matching the .itp/.psf and
+        # legacy .data formatting).
+        w(f"{a.id + 1:<8}{a.molecule_id:<8}{atype_id[a.type or 'X']:<8}"
+          f"{(a.charge or 0.0):>12.6f}  {x:.6f} {y:.6f} {z:.6f}")
     w("")
 
     def terms(title, term_list, idx_attr):

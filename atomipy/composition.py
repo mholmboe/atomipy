@@ -426,3 +426,27 @@ def get_mol_sequence(atoms: list) -> List[Tuple[str, int]]:
     """
     comp = composition(atoms, verbose=False)
     return comp['mol_sequence']
+
+
+def get_mol_sequence_typed(atoms: list) -> List[Tuple[str, int, str]]:
+    """Like :func:`get_mol_sequence`, but each entry is ``(name, count, klass)``
+    where ``klass`` is the component class ('mineral' | 'organic' | 'ion' |
+    'water' | 'other') of a representative atom of that molecule.
+
+    Intended for UI display (e.g. the Topology editor), so a user can see both
+    the apparent ``[ molecules ]`` sequence AND how each molecule was classified
+    — making a mis-classification (e.g. an organic read as mineral) obvious.
+    """
+    from collections import OrderedDict
+    from itertools import groupby
+    mt = _mineral_atomtypes()
+    seen: OrderedDict = OrderedDict()
+    for a in atoms:
+        mid = a.get('molid', 0)
+        if mid not in seen:
+            seen[mid] = a  # first atom of each molecule = representative
+    named = [(_gromacs_mol_name(r), classify_atom(r, mt)) for r in seen.values()]
+    out: List[Tuple[str, int, str]] = []
+    for (name, klass), group in groupby(named):
+        out.append((name, sum(1 for _ in group), klass))
+    return out
