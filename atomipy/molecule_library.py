@@ -16,6 +16,7 @@ Typical use::
 """
 import json
 import os
+import re
 
 _LIB_DIR = os.path.join(os.path.dirname(__file__), 'structures', 'molecules')
 _INDEX = os.path.join(_LIB_DIR, 'index.json')
@@ -52,7 +53,25 @@ def list_molecules(category=None):
             continue
         for e in entries:
             out.append({**e, 'category': cat})
-    return sorted(out, key=lambda e: (e['category'], e['name'].lower()))
+    return sorted(out, key=_display_sort_key)
+
+
+_STEREO_RE = re.compile(r'^(dl|ld|d|l)-', re.IGNORECASE)
+_STEREO_RANK = {'l': 0, 'dl': 1, 'ld': 1, 'd': 2}
+
+
+def _display_sort_key(e):
+    """Sort within a category by the base (stereo-stripped) name, then order
+    enantiomers L < (achiral/racemic) < D — so e.g. L-alanine appears before
+    D-alanine, and each amino acid's L form leads its D form."""
+    name = str(e['name'])
+    m = _STEREO_RE.match(name)
+    if m:
+        base = name[m.end():].lower()
+        rank = _STEREO_RANK.get(m.group(1).lower(), 1)
+    else:
+        base, rank = name.lower(), 1
+    return (e['category'], base, rank, name.lower())
 
 
 def _resolve(name_or_file):
