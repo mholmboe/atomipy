@@ -90,7 +90,47 @@ def pauling_effective_charge(oxidation_state, element, ref_en=None):
     return oxidation_state * f
 
 
-def assign_dummy_mineral_params(atoms, charge_mode='pauling', charge_scale=0.5,
+def _anion_charges_minff(atoms, ox, anion_idx, Box, verbose):
+    """Coordination-resolved anion charges (the MINFF formula):
+
+        q_anion = oxidation_anion + Σ_j (oxidation_j − partial_j) / CN_j
+
+    where j runs over the charge donors (cations and H) coordinating the anion,
+    and CN_j is donor j's number of coordinating anions. Each donor's charge
+    deficit is shared equally over the anions it coordinates, so a hydroxyl O
+    picks up its H's +0.6 deficit and a bridging O picks up shares from every
+    metal it bridges. Exact neutrality follows for a neutral lattice.
+
+    Mutates atoms[i]['charge'] for i in anion_idx. Requires coordination, which
+    it computes via bond_angle (rmaxM=2.45, rmaxH=1.2 — MINFF defaults).
+    """
+    from .bond_angle import bond_angle
+    bond_angle(atoms, Box, verbose=False)        # populate 'neigh' (0-based)
+    anion_set = set(anion_idx)
+
+    # CN of each donor = how many anions it coordinates.
+    cn = {}
+    for j, o in enumerate(ox):
+        if float(o) > 0:                          # donor (cation or H)
+            cn[j] = sum(1 for nb in (atoms[j].get('neigh') or []) if nb in anion_set)
+
+    orphaned = 0
+    for i in anion_idx:
+        q = float(ox[i])
+        for j in (atoms[i].get('neigh') or []):
+            if float(ox[j]) > 0 and cn.get(j, 0) > 0:
+                q += (float(ox[j]) - atoms[j]['charge']) / cn[j]
+        atoms[i]['charge'] = round(q, 6)
+    for j, c in cn.items():
+        if c == 0:
+            orphaned += 1
+    if orphaned and verbose:
+        print(f"[dummy mineral] {orphaned} cation(s) have no coordinating anion "
+              f"within 2.45 Å — their charge deficit could not be redistributed "
+              f"(net charge will be non-zero).")
+
+
+def assign_dummy_mineral_params(atoms, Box=None, charge_mode='pauling', charge_scale=0.5,
                                 h_charge=0.4, metal_site='Alo', resname='DUM',
                                 freeze=True, verbose=True):
     """Assign dummy (non-MINFF) parameters to a mineral framework in place.
@@ -105,14 +145,21 @@ def assign_dummy_mineral_params(atoms, charge_mode='pauling', charge_scale=0.5,
         Cations get a Pauling effective charge q_eff = oxidation ×
         [1 − exp(−¼(χ_O − χ_M)²)] (e.g. Si +1.79, Al +1.70, Mg +1.36,
         Ti +2.38, Fe²⁺ +0.95 / Fe³⁺ +1.43). H is fixed at ``h_charge`` (+0.4,
-        the MINFF value). Anions (O, F, …) are then set by **charge balance** so
-        each framework stays neutral (distributed by |oxidation state|).
+        the MINFF value). Anion (O, F) charges follow the MINFF coordination
+        formula when ``Box`` is given — q_anion = oxidation + Σ_j (oxidation_j −
+        partial_j)/CN_j over the coordinating donors j (cations and H), with
+        CN_j the donor's anion coordination number. Without ``Box`` it falls
+        back to an |oxidation|-weighted charge balance. Either way the framework
+        is neutral.
     'half'
         Legacy: charge = ``charge_scale`` × oxidation state for every atom.
 
     Parameters
     ----------
     atoms : list of dict
+    Box : list or None
+        Simulation box (Cell or Box_dim). Enables the MINFF coordination-resolved
+        anion charges in 'pauling' mode. Strongly recommended.
     charge_mode : {'pauling', 'half'}
     charge_scale : float
         Multiplier for the 'half' mode (default 0.5).
@@ -152,12 +199,24 @@ def assign_dummy_mineral_params(atoms, charge_mode='pauling', charge_scale=0.5,
             atom['charge'] = 0.0
             anion_idx.append(i)
     if charge_mode != 'half' and anion_idx:
-        # Anions absorb the remainder so the framework is neutral, split by |ox|.
-        assigned = sum(a['charge'] for a in atoms)
-        weights = [abs(float(ox[i])) or 1.0 for i in anion_idx]
-        wsum = sum(weights) or 1.0
-        for i, w in zip(anion_idx, weights):
-            atoms[i]['charge'] = round(-assigned * w / wsum, 6)
+        used_minff = False
+        if Box is not None:
+            try:
+                # MINFF coordination-resolved anion charges (q_O = -2 + Σ deficits).
+                _anion_charges_minff(atoms, ox, anion_idx, Box, verbose)
+                used_minff = True
+            except Exception as exc:
+                if verbose:
+                    print(f"[dummy mineral] could not compute coordination ({exc}); "
+                          f"falling back to |oxidation|-weighted charge balance.")
+        if not used_minff:
+            # Fallback (no Box / no coordination): anions absorb the remainder,
+            # split by |oxidation| so the framework is neutral.
+            assigned = sum(a['charge'] for a in atoms)
+            weights = [abs(float(ox[i])) or 1.0 for i in anion_idx]
+            wsum = sum(weights) or 1.0
+            for i, w in zip(anion_idx, weights):
+                atoms[i]['charge'] = round(-assigned * w / wsum, 6)
 
     # --- LJ, type, mass, freeze ---
     non_minff = set()
