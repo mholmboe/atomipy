@@ -930,19 +930,30 @@ def _write_mineral_molecule_sections(f, atoms, itp_merged, box_merged, angle_ka=
     original_itps = itp_merged.get('_original_itps', [])
     if not original_itps:
         return
-        
+
+    # Track names so each mineral component gets a UNIQUE [ moleculetype ] name
+    # (MIN, MIN_1, ...). merge_top() already deduped the [ molecules ] entries and
+    # the atom resnames the same way; without matching it here, two different
+    # minerals both write [ moleculetype ] MIN while [ molecules ] references MIN_1
+    # -> GROMACS/OpenMM "molecule type 'MIN_1' not found" (and a duplicate 'MIN').
+    _seen_mineral_names: set = set()
     for itp in original_itps:
         if itp is None:
             continue
         # Skip if it is an organic included file
         if itp.get('_source_itp'):
             continue
-            
+
         mt = itp.get('moleculetype', {})
         if not mt or 'moleculetype' not in mt:
             continue
-            
+
         molname = mt['moleculetype'][0]
+        _base, _suf = molname, 1
+        while molname in _seen_mineral_names:
+            molname = f"{_base}_{_suf}"
+            _suf += 1
+        _seen_mineral_names.add(molname)
         nrexcl = mt['nrexcl'][0] if 'nrexcl' in mt else 3
         
         f.write('[ moleculetype ]\n')
