@@ -358,7 +358,8 @@ def _parse_itp_moltype(itp_path):
 
 
 def write_dummy_system_top(atoms, box, out_top, out_gro, water_model='spce',
-                           mol_name='DUM', dummy_itp='dummy.itp', organic_itps=None):
+                           mol_name='DUM', dummy_itp='dummy.itp', organic_itps=None,
+                           ion_model='SPCE_HFE_LM'):
     """Write a self-contained GROMACS .top (+ .gro) for a frozen dummy mineral
     plus optional organic molecules, water and monatomic ions — bypassing the
     MINFF mineral machinery.
@@ -444,6 +445,9 @@ def write_dummy_system_top(atoms, box, out_top, out_gro, water_model='spce',
     water_define = water_model.lower().replace('/', '').replace('-', '').upper()
     wm_file = _WATER_FILE.get(water_model.lower().replace('/', '').replace('-', ''), 'spce')
 
+    # Monatomic ions: count by resname, then resolve the MINFF ion #define and
+    # remap names to the ion block's moleculetype spelling (e.g. 'Na+' -> 'Na'),
+    # reusing the same logic as write_merged_top.
     ion_seq = []
     seen = set()
     for a in ions:
@@ -451,6 +455,13 @@ def write_dummy_system_top(atoms, box, out_top, out_gro, water_model='spce',
         if rn and rn not in seen:
             seen.add(rn)
             ion_seq.append((rn, sum(1 for b in ions if str(b.get('resname', '')).strip() == rn)))
+    ion_define = None
+    ion_seq_out = ion_seq
+    if ion_seq:
+        from .merge_top import _resolve_ion_define, _remap_ion_molnames
+        ion_define = _resolve_ion_define(ion_model, water_model,
+                                         ion_molnames=[n for n, _ in ion_seq])
+        ion_seq_out = _remap_ion_molnames(ion_seq, ion_define)
 
     with open(out_top, 'w', encoding='utf-8') as f:
         f.write('; Frozen dummy-mineral system written by atomipy (qualitative; EM/NVT only)\n\n')
@@ -463,6 +474,8 @@ def write_dummy_system_top(atoms, box, out_top, out_gro, water_model='spce',
         f.write('\n')
         if n_water or ion_seq:
             f.write(f'#define {water_define}\n')
+            if ion_define:
+                f.write(f'#define {ion_define}\n')   # activates ion atomtypes + moleculetypes
             f.write('#include "min.ff/ffnonbonded.itp"\n')
             if n_water:
                 f.write(f'#include "min.ff/{wm_file}.itp"\n')
@@ -472,14 +485,19 @@ def write_dummy_system_top(atoms, box, out_top, out_gro, water_model='spce',
         f.write('[ system ]\n')
         f.write('Frozen dummy mineral + solvent\n\n')
         f.write('[ molecules ]\n')
-        f.write('; Compound        nmols\n')
-        f.write(f' {mol_name:<15} 1\n')
+        f.write(';Compound          nmols\n')
+        # NOTE: molecule names MUST start at column 0 (no leading space). The
+        # OpenMM MINFF loader text-translates ' Na '->' Na+ ' (to fix MINFF ion
+        # atomtypes); a leading space here would mangle ' Na' in [ molecules ]
+        # into 'Na+' while the ions.itp moleculetype stays 'Na' -> "Unknown
+        # molecule type: Na+". Writing at column 0 (like write_merged_top) avoids it.
+        f.write(f'{mol_name:<18} 1\n')
         for mt, cnt in org_mol_counts.items():
-            f.write(f' {mt:<15} {cnt}\n')
+            f.write(f'{mt:<18} {cnt}\n')
         if n_water:
-            f.write(f' {"SOL":<15} {n_water}\n')
-        for name, cnt in ion_seq:
-            f.write(f' {name:<15} {cnt}\n')
+            f.write(f'{"SOL":<18} {n_water}\n')
+        for name, cnt in ion_seq_out:
+            f.write(f'{name:<18} {cnt}\n')
 
     ordered = frame + organic + water + ions
     _wc.gro(ordered, box, out_gro)
