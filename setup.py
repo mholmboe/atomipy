@@ -31,13 +31,14 @@ setup(
         "numpy>=1.18.0",
         "tqdm>=4.45.0",
         "numba>=0.50.0;python_version>='3.6'",  # Optional but recommended for performance
+        "gemmi>=0.7.0",  # CIF import + symmetry expansion (bundled inorganic crystal library)
     ],
     extras_require={
         "xrd": [
             "matplotlib>=3.3.0",
             "scipy>=1.5.0",
         ],
-        "cif": [
+        "cif": [  # kept for backward compatibility; gemmi is now a core dependency
             "gemmi>=0.7.0",
         ],
     },
