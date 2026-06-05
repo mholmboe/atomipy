@@ -406,15 +406,6 @@ def write_dummy_system_top(atoms, box, out_top, out_gro, water_model='spce',
     water = [a for a in rest if str(a.get('resname', '')).upper() in _SOLVENT_RES]
     nonwater = [a for a in rest if str(a.get('resname', '')).upper() not in _SOLVENT_RES]
 
-    # Distinguish organic molecules (multi-atom molid groups) from monatomic ions.
-    groups = OrderedDict()
-    for a in nonwater:
-        groups.setdefault(a.get('molid'), []).append(a)
-    organic = []
-    ions = []
-    for _mid, g in groups.items():
-        (organic if len(g) > 1 else ions).extend(g)
-
     # Map each organic .itp to (moltype name, atoms/molecule), and write the dummy itp.
     org_info = []
     for oi in organic_itps:
@@ -430,31 +421,35 @@ def write_dummy_system_top(atoms, box, out_top, out_gro, water_model='spce',
     itp_path = _os.path.join(out_dir, _os.path.basename(dummy_itp))
     write_dummy_mineral_itp(frame, itp_path, mol_name=mol_name)
 
-    # Organic [ molecules ] counts, by matching each molid group's size to a moltype.
-    org_mol_counts = OrderedDict()
+    # Bucket the non-water solute by molid group: multi-atom groups are organic
+    # molecules (keyed by their moleculetype), single-atom groups are monatomic
+    # ions (keyed by resname). Atoms of each kind are kept CONTIGUOUS so the .gro
+    # order matches [ molecules ] even with several different organics / ion types.
+    groups = OrderedDict()
+    for a in nonwater:
+        groups.setdefault(a.get('molid'), []).append(a)
+    org_by_type = OrderedDict()      # moltype -> atoms
+    org_mol_counts = OrderedDict()   # moltype -> n molecules
+    ion_by_res = OrderedDict()       # resname -> atoms
     for _mid, g in groups.items():
-        if len(g) <= 1:
-            continue
-        mt = natoms_to_moltype.get(len(g))
-        if mt is None and org_info:
-            mt = org_info[0][1]        # fall back to the first organic moltype
-        if mt:
-            org_mol_counts[mt] = org_mol_counts.get(mt, 0) + 1
+        if len(g) > 1:
+            mt = natoms_to_moltype.get(len(g)) or (org_info[0][1] if org_info else None)
+            if mt:
+                org_by_type.setdefault(mt, []).extend(g)
+                org_mol_counts[mt] = org_mol_counts.get(mt, 0) + 1
+        else:
+            rn = str(g[0].get('resname', '')).strip() or 'ION'
+            ion_by_res.setdefault(rn, []).extend(g)
+    organic = [a for v in org_by_type.values() for a in v]
+    ions = [a for v in ion_by_res.values() for a in v]
 
     n_water = len(water) // 3
     water_define = water_model.lower().replace('/', '').replace('-', '').upper()
     wm_file = _WATER_FILE.get(water_model.lower().replace('/', '').replace('-', ''), 'spce')
 
-    # Monatomic ions: count by resname, then resolve the MINFF ion #define and
-    # remap names to the ion block's moleculetype spelling (e.g. 'Na+' -> 'Na'),
-    # reusing the same logic as write_merged_top.
-    ion_seq = []
-    seen = set()
-    for a in ions:
-        rn = str(a.get('resname', '')).strip()
-        if rn and rn not in seen:
-            seen.add(rn)
-            ion_seq.append((rn, sum(1 for b in ions if str(b.get('resname', '')).strip() == rn)))
+    # Resolve the MINFF ion #define and remap names to the ion block's moleculetype
+    # spelling (e.g. 'Na+' -> 'Na'), reusing write_merged_top's logic.
+    ion_seq = [(rn, len(v)) for rn, v in ion_by_res.items()]
     ion_define = None
     ion_seq_out = ion_seq
     if ion_seq:
@@ -491,14 +486,16 @@ def write_dummy_system_top(atoms, box, out_top, out_gro, water_model='spce',
         # atomtypes); a leading space here would mangle ' Na' in [ molecules ]
         # into 'Na+' while the ions.itp moleculetype stays 'Na' -> "Unknown
         # molecule type: Na+". Writing at column 0 (like write_merged_top) avoids it.
+        # Order: framework, organics, ions, then water (SOL) last — the common
+        # convention. Each block is contiguous and matches the .gro atom order.
         f.write(f'{mol_name:<18} 1\n')
         for mt, cnt in org_mol_counts.items():
             f.write(f'{mt:<18} {cnt}\n')
-        if n_water:
-            f.write(f'{"SOL":<18} {n_water}\n')
         for name, cnt in ion_seq_out:
             f.write(f'{name:<18} {cnt}\n')
+        if n_water:
+            f.write(f'{"SOL":<18} {n_water}\n')
 
-    ordered = frame + organic + water + ions
+    ordered = frame + organic + ions + water
     _wc.gro(ordered, box, out_gro)
     return ordered, len(frame)
