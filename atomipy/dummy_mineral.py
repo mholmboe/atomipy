@@ -46,6 +46,27 @@ MINFF_LJ_SITES = {
 # F is supported (fluorite CaF2, F-hectorite); O/H are the framework non-metals.
 MINFF_FRAMEWORK_ELEMENTS = {'Si', 'Al', 'Mg', 'Fe', 'Ca', 'Ti', 'Li', 'O', 'H', 'F'}
 
+# Element-appropriate metal Lennard-Jones (sigma_nm, epsilon_kJ/mol), for *pure
+# metals / alloys* where the borrowed buried-cation site is inappropriate. The
+# face-centred-cubic metals use the well-validated 12-6 parameters of Heinz et
+# al., J. Phys. Chem. C 2008, 112, 17281 (good for metal–water/biomolecule
+# interfaces with Lorentz-Berthelot mixing); the remaining metals use UFF
+# (Rappe et al., JACS 1992) converted as sigma = x1 / 2^(1/6), eps = D1·4.184.
+# Generic/approximate — intended for a qualitative frozen wall, not energetics.
+ELEMENT_LJ = {
+    # fcc metals — Heinz 2008 12-6
+    'Al': (0.25527, 16.82), 'Ni': (0.22200, 23.64), 'Cu': (0.22770, 19.75),
+    'Pd': (0.24510, 25.73), 'Ag': (0.25740, 19.08), 'Pt': (0.24720, 32.64),
+    'Au': (0.25690, 22.13), 'Pb': (0.31190, 12.26),
+    # other common metals — UFF
+    'Li': (0.19457, 0.10460), 'Na': (0.23681, 0.12552), 'K': (0.30255, 0.14644),
+    'Mg': (0.23975, 0.46442), 'Ca': (0.26977, 0.99579), 'Sc': (0.26157, 0.07950),
+    'Ti': (0.25204, 0.07113), 'V': (0.24954, 0.06694), 'Cr': (0.23992, 0.06276),
+    'Mn': (0.23502, 0.05439), 'Fe': (0.23110, 0.05439), 'Co': (0.22798, 0.05858),
+    'Zn': (0.21934, 0.51882), 'Zr': (0.24793, 0.28886), 'Mo': (0.24224, 0.23430),
+    'Cd': (0.25373, 0.95395), 'W': (0.24358, 0.28033), 'Hg': (0.24099, 1.61084),
+}
+
 # Atomic masses (g/mol) for the topology. Frozen atoms get mass 0 in OpenMM, but
 # the .itp keeps real masses so the same topology is valid for a GROMACS export.
 _ATOMIC_MASS = {
@@ -138,8 +159,9 @@ def _anion_charges_minff(atoms, ox, anion_idx, Box, verbose, rmaxlong=2.45, rmax
 
 
 def assign_dummy_mineral_params(atoms, Box=None, charge_mode='pauling', charge_scale=0.5,
-                                h_charge=0.4, metal_site='Alo', resname='DUM',
-                                rmaxlong=2.45, rmaxH=1.2, freeze=True, verbose=True):
+                                h_charge=0.4, metal_site='Alo', metal_lj='auto',
+                                resname='DUM', rmaxlong=2.45, rmaxH=1.2,
+                                freeze=True, verbose=True):
     """Assign Dummy FF parameters to a mineral framework in place.
 
     Sets on every atom: ``charge``, ``sigma``/``epsilon`` (nm, kJ/mol),
@@ -174,6 +196,9 @@ def assign_dummy_mineral_params(atoms, Box=None, charge_mode='pauling', charge_s
         Fixed hydrogen charge in 'pauling' mode (default 0.4).
     metal_site : str
         MINFF LJ site borrowed for metal/cation atoms ('Alo' default, 'Sit', 'Mgo').
+    metal_lj : {'auto', 'element', 'site'}
+        Metal LJ source. 'auto' (default): element-appropriate LJ for a pure
+        metal/alloy (no anions), else the borrowed buried-cation site.
     rmaxlong : float
         Metal–anion coordination cutoff in Å for the MINFF charge formula
         (default 2.45 — the MINFF global cutoff).
@@ -232,6 +257,19 @@ def assign_dummy_mineral_params(atoms, Box=None, charge_mode='pauling', charge_s
                 atoms[i]['charge'] = round(-assigned * w / wsum, 6)
 
     # --- LJ, type, mass, freeze ---
+    # Metal LJ source. 'site' always uses the borrowed buried-cation site (good
+    # for oxide/halide frameworks, where the anions carry the steric bulk and the
+    # metal is screened). 'element' uses element-appropriate metal LJ. 'auto'
+    # (default) picks element LJ for a *pure metal/alloy* (no anions present) and
+    # the buried site otherwise.
+    if metal_lj == 'element':
+        _use_element_lj = True
+    elif metal_lj == 'site':
+        _use_element_lj = False
+    else:  # 'auto'
+        _use_element_lj = not any(float(o) < 0 for o in ox)
+    used_element_for = set()
+
     non_minff = set()
     for i, atom in enumerate(atoms):
         el = elements[i]
@@ -243,6 +281,9 @@ def assign_dummy_mineral_params(atoms, Box=None, charge_mode='pauling', charge_s
             atom['sigma'], atom['epsilon'] = MINFF_LJ_SITES['F_ion']
         elif el == 'H':
             atom['sigma'], atom['epsilon'] = MINFF_LJ_SITES['H']
+        elif _use_element_lj and el in ELEMENT_LJ:
+            atom['sigma'], atom['epsilon'] = ELEMENT_LJ[el]
+            used_element_for.add(el)
         else:
             atom['sigma'], atom['epsilon'] = metal_sigma, metal_eps
         atom['_dummy_type'] = f"{el}d"
@@ -253,11 +294,14 @@ def assign_dummy_mineral_params(atoms, Box=None, charge_mode='pauling', charge_s
             atom['frozen'] = True
 
     net_charge = round(sum(a['charge'] for a in atoms), 6)
+    _metal_lj_desc = (f"element-appropriate ({', '.join(sorted(used_element_for))})"
+                      if used_element_for else f"site '{metal_site}'")
     report = {
         'non_minff_elements': sorted(non_minff),
         'net_charge': net_charge,
         'n_atoms': len(atoms),
         'metal_site': metal_site,
+        'metal_lj': _metal_lj_desc,
         'charge_mode': charge_mode,
     }
     if verbose:
@@ -266,10 +310,10 @@ def assign_dummy_mineral_params(atoms, Box=None, charge_mode='pauling', charge_s
                   else f"{charge_scale}×oxidation state")
             print(f"WARNING: Dummy FF — element(s) {sorted(non_minff)} are not "
                   f"covered by the built-in force fields. Building a FROZEN DUMMY "
-                  f"model (charges = {_q}, O LJ = OPC3, metal LJ = {metal_site}). "
+                  f"model (charges = {_q}, O LJ = OPC3, metal LJ = {_metal_lj_desc}). "
                   f"Qualitative only; run EM/NVT, not NPT.")
         print(f"[dummy mineral] {len(atoms)} atoms, net charge {net_charge:+.3f} e, "
-              f"mode '{charge_mode}', metal site '{metal_site}'.")
+              f"mode '{charge_mode}', metal LJ = {_metal_lj_desc}.")
         if abs(net_charge) > 1e-3:
             print(f"  NOTE: net charge is non-zero ({net_charge:+.3f} e) — "
                   f"add neutralizing ions before production.")

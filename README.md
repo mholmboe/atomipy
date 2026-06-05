@@ -624,8 +624,11 @@ builds a crude qualitative model. Charges follow one of two modes:
   neutral (`ap.pauling_effective_charge(ox, element)` exposes the cation formula).
 - **`half`** — legacy `charge_scale × oxidation state` for every atom.
 
-LJ is borrowed (oxygen → OPC3-O, fluorine → F⁻, metals → a small buried site,
-default `Alo`; H → none), and the framework is flagged **frozen**. Freezing means
+LJ is borrowed: oxygen → OPC3-O, fluorine → F⁻, H → none. Metals use a small
+buried site (default `Alo`) inside oxides/halides; for a **pure metal/alloy**
+(no anions) each metal instead gets **element-appropriate LJ** (Heinz et al.
+2008 for fcc Cu/Ag/Au/Ni/Pd/Pt/Al/Pb; UFF for others) via `metal_lj='auto'`
+(override with `'element'`/`'site'`). The framework is flagged **frozen**. Freezing means
 **no bonded parameters are needed**, so only nonbonded terms remain — the
 material interacts with water/solutes via electrostatics + LJ.
 
