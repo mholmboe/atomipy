@@ -624,15 +624,20 @@ builds a crude qualitative model. Charges follow one of two modes:
   neutral (`ap.pauling_effective_charge(ox, element)` exposes the cation formula).
 - **`half`** — legacy `charge_scale × oxidation state` for every atom.
 
-LJ is borrowed: oxygen → OPC3-O, fluorine → F⁻, H → none. Metals use a small
-buried site (default `Alo`) inside oxides/halides; for a **pure metal/alloy**
-(no anions) each metal instead gets **element-appropriate LJ** (Heinz et al.
-2008 for fcc Cu/Ag/Au/Ni/Pd/Pt/Al/Pb; UFF for others) via `metal_lj='auto'`
-(override with `'element'`/`'site'`). The framework is flagged **frozen**. Freezing means
+Lennard-Jones parameters come from `lj_mode`:
+- **`element`** (default) — the Dummy FF computes its *own* per-element LJ from
+  van der Waals data: the curated `ELEMENT_LJ` (Heinz et al. 2008 fcc metals
+  Cu/Ag/Au/Ni/Pd/Pt/Al/Pb) for a **pure metal/alloy**, otherwise **UFF**
+  (`σ = x_i/2^(1/6)`, `ε = D_i`; Rappé 1992) for every element including O/F/H.
+  Each element gets its own size (Mn ≠ Al), no borrowing. `ap.uff_lj(element)`
+  exposes the conversion.
+- **`minff`** — borrow from MINFF: oxygen → OPC3-O, fluorine → F⁻, H → none,
+  metals → a small buried site (default `metal_site='Alo'`). Stronger O–water
+  attraction. The framework is flagged **frozen**. Freezing means
 **no bonded parameters are needed**, so only nonbonded terms remain — the
 material interacts with water/solutes via electrostatics + LJ.
 
-- `assign_dummy_mineral_params(atoms, Box=None, charge_mode='pauling', metal_site='Alo', rmaxlong=2.45, rmaxH=1.2)`: assign per-atom charge/LJ + the frozen flag (in place). Pass `Box` for the coordination-resolved oxygen charges. Returns `(atoms, report)`.
+- `assign_dummy_mineral_params(atoms, Box=None, charge_mode='pauling', lj_mode='element', metal_site='Alo', rmaxlong=2.45, rmaxH=1.2)`: assign per-atom charge/LJ + the frozen flag (in place). Pass `Box` for the coordination-resolved oxygen charges. Returns `(atoms, report)`.
 - `write_dummy_mineral_itp(atoms, 'dummy.itp', mol_name='DUM')`: a self-contained `.itp` (own `[ atomtypes ]` + bond-free `[ moleculetype ]`) that `#include`s like an organic itp.
 - `write_dummy_system_top(atoms, box, out_top, out_gro, water_model='spce', organic_itps=None)`: a complete `.top` + `.gro` for a frozen framework **plus organics, water and ions** — multiple dummy minerals, several different organics (each `#include`d), and Na/Cl etc. are all supported; returns `(ordered_atoms, n_frozen)` so the caller freezes the leading framework particles. Atoms are ordered framework → organics → ions → water (SOL last).
 
