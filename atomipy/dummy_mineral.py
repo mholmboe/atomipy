@@ -1,21 +1,21 @@
 """
-"Frozen dummy mineral" parameters for inorganics NOT supported by MINFF.
+"Frozen dummy mineral" parameters (the Dummy FF) for inorganics not covered by
+the built-in force fields (CLAYFF / MINFF).
 
-For a material whose framework atom types MINFF can't assign (e.g. MnO, NiO,
-Cr2O3, …), this builds a crude-but-usable model so it can still interact with
-water and solutes in a qualitative simulation:
+For a material whose framework atom types the built-in force fields can't assign
+(e.g. MnO, NiO, Cr2O3, …), this builds a crude-but-usable model so it can still
+interact with water and solutes in a qualitative simulation:
 
   * Partial charges  = ``charge_scale`` (default 0.5) × the guessed oxidation
     state (see :func:`atomipy.guess_oxidation_states`). Half the formal charge
     mirrors the reduced charges of CLAYFF / MINFF and keeps a neutral lattice
     neutral.
-  * Lennard-Jones    = borrowed from MINFF: every oxygen gets the MINFF/OPC3
-    oxygen (σ=0.31743 nm, ε=0.68369 kJ/mol — MINFF already uses OPC3-O for all
-    mineral oxygens), and every metal/cation gets a small buried metal site
-    (default ``Alo``, σ=0.14410 nm). Hydrogens get zero LJ (MINFF convention).
+  * Lennard-Jones    = borrowed: every oxygen gets the OPC3 water oxygen
+    (σ=0.31743 nm, ε=0.68369 kJ/mol), and every metal/cation gets a small buried
+    metal site (default ``Alo``, σ=0.14410 nm). Hydrogens get zero LJ.
   * The framework is **frozen** (atoms flagged ``frozen=True``; the OpenMM layer
     sets their mass to 0). Freezing removes the need for ANY bonded parameters —
-    exactly what MINFF lacks for the unsupported mineral — so only nonbonded
+    exactly what's missing for an unsupported framework — so only nonbonded
     (electrostatics + LJ) terms are needed. Run **EM and NVT only** (a frozen
     rigid body is incompatible with an NPT barostat).
 
@@ -140,7 +140,7 @@ def _anion_charges_minff(atoms, ox, anion_idx, Box, verbose, rmaxlong=2.45, rmax
 def assign_dummy_mineral_params(atoms, Box=None, charge_mode='pauling', charge_scale=0.5,
                                 h_charge=0.4, metal_site='Alo', resname='DUM',
                                 rmaxlong=2.45, rmaxH=1.2, freeze=True, verbose=True):
-    """Assign dummy (non-MINFF) parameters to a mineral framework in place.
+    """Assign Dummy FF parameters to a mineral framework in place.
 
     Sets on every atom: ``charge``, ``sigma``/``epsilon`` (nm, kJ/mol),
     ``_dummy_type`` (a synthetic GROMACS atomtype name), ``mass``, ``resname``,
@@ -264,9 +264,9 @@ def assign_dummy_mineral_params(atoms, Box=None, charge_mode='pauling', charge_s
         if non_minff:
             _q = (f"Pauling effective charges (H={h_charge:+g})" if charge_mode != 'half'
                   else f"{charge_scale}×oxidation state")
-            print(f"WARNING: not MINFF-compatible — element(s) {sorted(non_minff)} "
-                  f"have no MINFF framework type. Building a FROZEN DUMMY model "
-                  f"(charges = {_q}, O LJ = OPC3, metal LJ = {metal_site}). "
+            print(f"WARNING: Dummy FF — element(s) {sorted(non_minff)} are not "
+                  f"covered by the built-in force fields. Building a FROZEN DUMMY "
+                  f"model (charges = {_q}, O LJ = OPC3, metal LJ = {metal_site}). "
                   f"Qualitative only; run EM/NVT, not NPT.")
         print(f"[dummy mineral] {len(atoms)} atoms, net charge {net_charge:+.3f} e, "
               f"mode '{charge_mode}', metal site '{metal_site}'.")
@@ -302,7 +302,7 @@ def write_dummy_mineral_itp(atoms, file_path, mol_name='DUM'):
     """
     types = _unique_dummy_types(atoms)
     with open(file_path, 'w', encoding='utf-8') as f:
-        f.write(f"; Dummy (non-MINFF) mineral topology written by atomipy\n")
+        f.write(f"; Dummy FF mineral topology written by atomipy\n")
         f.write(f"; FROZEN framework — nonbonded only (EM/NVT). Qualitative model.\n\n")
 
         f.write("[ atomtypes ]\n")
