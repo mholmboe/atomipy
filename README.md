@@ -608,29 +608,36 @@ atoms, _ = ap.load_molecule('L-alanine')
 ap.guess_oxidation_states(atoms)        # methyl C=-3, alpha C=0, carboxyl C=+3, N=-3
 ```
 
-### Frozen "dummy mineral" for non-MINFF inorganics
+### The Dummy FF — frozen model for inorganics not covered by the built-in force fields
 
-For an inorganic whose framework MINFF can't type (e.g. MnO, NiO, Cr₂O₃),
+For an inorganic whose framework the built-in force fields (CLAYFF / MINFF)
+can't type (e.g. MnO, NiO, Cr₂O₃, Ag/As/Mn oxides),
 `assign_dummy_mineral_params(atoms, charge_mode='pauling', metal_site='Alo')`
 builds a crude qualitative model. Charges follow one of two modes:
 
 - **`pauling`** (default) — each cation gets a Pauling *effective* charge
   `q_eff = oxidation × [1 − exp(−¼(χ_O − χ_M)²)]` (the bracket is the bond's
   fractional ionic character): Si +1.79, Al +1.70, Mg +1.36, Ti +2.38, Fe²⁺
-  +0.95 / Fe³⁺ +1.43. Hydrogen is fixed at +0.4 (the MINFF value), and the
-  anions (O, F) are set by charge balance so each framework stays neutral
-  (`ap.pauling_effective_charge(ox, element)` exposes the formula).
+  +0.95 / Fe³⁺ +1.43. Hydrogen is fixed at +0.4, and the anion (O, F) charges
+  follow the coordination-resolved formula `q_O = oxidation + Σ_j (oxidation_j −
+  partial_j)/CN_j` over each coordinating cation/H, so each framework stays
+  neutral (`ap.pauling_effective_charge(ox, element)` exposes the cation formula).
 - **`half`** — legacy `charge_scale × oxidation state` for every atom.
 
-LJ is borrowed from MINFF (oxygen → OPC3-O, fluorine → MINFF F⁻, metals → a
-small buried site, default `Alo`; H → none), and the framework flagged **frozen**. Freezing means **no
-bonded parameters are needed** (the gap MINFF leaves), so only nonbonded terms
-remain — the material interacts with water/solutes via electrostatics + LJ.
-`write_dummy_mineral_itp(atoms, 'dummy.itp')` writes a self-contained GROMACS
-`.itp` (its own `[ atomtypes ]` + a bond-free `[ moleculetype ]`) that
-`#include`s like an organic itp. Run **EM/NVT only** (a frozen rigid body is
-incompatible with an NPT barostat). Intended for qualitative questions (wetting,
-ion adsorption), not quantitative energetics.
+LJ is borrowed (oxygen → OPC3-O, fluorine → F⁻, metals → a small buried site,
+default `Alo`; H → none), and the framework is flagged **frozen**. Freezing means
+**no bonded parameters are needed**, so only nonbonded terms remain — the
+material interacts with water/solutes via electrostatics + LJ.
+
+- `assign_dummy_mineral_params(atoms, Box=None, charge_mode='pauling', metal_site='Alo', rmaxlong=2.45, rmaxH=1.2)`: assign per-atom charge/LJ + the frozen flag (in place). Pass `Box` for the coordination-resolved oxygen charges. Returns `(atoms, report)`.
+- `write_dummy_mineral_itp(atoms, 'dummy.itp', mol_name='DUM')`: a self-contained `.itp` (own `[ atomtypes ]` + bond-free `[ moleculetype ]`) that `#include`s like an organic itp.
+- `write_dummy_system_top(atoms, box, out_top, out_gro, water_model='spce', organic_itps=None)`: a complete `.top` + `.gro` for a frozen framework **plus organics, water and ions** — multiple dummy minerals, several different organics (each `#include`d), and Na/Cl etc. are all supported; returns `(ordered_atoms, n_frozen)` so the caller freezes the leading framework particles. Atoms are ordered framework → organics → ions → water (SOL last).
+
+Run **EM / NVT only** (a frozen rigid body is incompatible with an NPT
+barostat). Intended for qualitative questions (wetting, ion adsorption), not
+quantitative energetics. In the web builder, select **Forcefield → Dummy FF**;
+the structure node's *Preview & Validate* scan flags elements with no built-in
+force-field type and steers you here.
 
 ## Data Structure
 
