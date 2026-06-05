@@ -1,0 +1,5122 @@
+{
+ "_source": "Avogadro2 crystals library (public domain; IZA zeolites + Crystallography Open Database)",
+ "categories": {
+  "antimonides": [
+   {
+    "name": "AlSb",
+    "file": "antimonides/AlSb.cif",
+    "formula": "AlSb",
+    "mineral": "",
+    "elements": [
+     "Al",
+     "Sb"
+    ]
+   },
+   {
+    "name": "GaSb",
+    "file": "antimonides/GaSb.cif",
+    "formula": "GaSb",
+    "mineral": "",
+    "elements": [
+     "Ga",
+     "Sb"
+    ]
+   },
+   {
+    "name": "InSb",
+    "file": "antimonides/InSb.cif",
+    "formula": "InSb",
+    "mineral": "",
+    "elements": [
+     "In",
+     "Sb"
+    ]
+   }
+  ],
+  "arsenides": [
+   {
+    "name": "AlAs",
+    "file": "arsenides/AlAs.cif",
+    "formula": "AlAs",
+    "mineral": "",
+    "elements": [
+     "Al",
+     "As"
+    ]
+   },
+   {
+    "name": "BAs",
+    "file": "arsenides/BAs.cif",
+    "formula": "BAs",
+    "mineral": "",
+    "elements": [
+     "As",
+     "B"
+    ]
+   },
+   {
+    "name": "Co.87Fe.11Ni.13As3-Skutterudite",
+    "file": "arsenides/Co.87Fe.11Ni.13As3-Skutterudite.cif",
+    "formula": "Co.87Fe.11Ni.13As3",
+    "mineral": "Skutterudite",
+    "elements": [
+     "As",
+     "Co",
+     "Fe",
+     "Ni"
+    ]
+   },
+   {
+    "name": "CoAs3-Skutterudite",
+    "file": "arsenides/CoAs3-Skutterudite.cif",
+    "formula": "CoAs3",
+    "mineral": "Skutterudite",
+    "elements": [
+     "As",
+     "Co"
+    ]
+   },
+   {
+    "name": "GaAs",
+    "file": "arsenides/GaAs.cif",
+    "formula": "GaAs",
+    "mineral": "",
+    "elements": [
+     "As",
+     "Ga"
+    ]
+   },
+   {
+    "name": "InAs",
+    "file": "arsenides/InAs.cif",
+    "formula": "InAs",
+    "mineral": "",
+    "elements": [
+     "As",
+     "In"
+    ]
+   },
+   {
+    "name": "NiAs-Nickeline",
+    "file": "arsenides/NiAs-Nickeline.cif",
+    "formula": "NiAs",
+    "mineral": "Nickeline",
+    "elements": [
+     "As",
+     "Ni"
+    ]
+   }
+  ],
+  "carbides": [
+   {
+    "name": "SiC-2H-Moissanite",
+    "file": "carbides/SiC-2H-Moissanite.cif",
+    "formula": "SiC",
+    "mineral": "2H-Moissanite",
+    "elements": [
+     "C",
+     "Si"
+    ]
+   },
+   {
+    "name": "SiC-3C-beta",
+    "file": "carbides/SiC-3C-beta.cif",
+    "formula": "SiC",
+    "mineral": "3C-beta",
+    "elements": [
+     "C",
+     "Si"
+    ]
+   },
+   {
+    "name": "SiC-6H-alpha",
+    "file": "carbides/SiC-6H-alpha.cif",
+    "formula": "SiC",
+    "mineral": "6H-alpha",
+    "elements": [
+     "C",
+     "Si"
+    ]
+   },
+   {
+    "name": "SiC-Moissanite",
+    "file": "carbides/SiC-Moissanite.cif",
+    "formula": "SiC",
+    "mineral": "Moissanite",
+    "elements": [
+     "C",
+     "Si"
+    ]
+   },
+   {
+    "name": "SiC",
+    "file": "carbides/SiC.cif",
+    "formula": "SiC",
+    "mineral": "",
+    "elements": [
+     "C",
+     "Si"
+    ]
+   },
+   {
+    "name": "W2C",
+    "file": "carbides/W2C.cif",
+    "formula": "W2C",
+    "mineral": "",
+    "elements": []
+   },
+   {
+    "name": "WC",
+    "file": "carbides/WC.cif",
+    "formula": "WC",
+    "mineral": "",
+    "elements": [
+     "C",
+     "W"
+    ]
+   }
+  ],
+  "carbonates": [
+   {
+    "name": "CaCO3-Calcite",
+    "file": "carbonates/CaCO3-Calcite.cif",
+    "formula": "CaCO3",
+    "mineral": "Calcite",
+    "elements": [
+     "C",
+     "Ca",
+     "O"
+    ]
+   },
+   {
+    "name": "CaMgC2O6-Dolomite",
+    "file": "carbonates/CaMgC2O6-Dolomite.cif",
+    "formula": "CaMgC2O6",
+    "mineral": "Dolomite",
+    "elements": [
+     "C",
+     "Ca",
+     "Mg",
+     "O"
+    ]
+   },
+   {
+    "name": "FeCO3-Siderte",
+    "file": "carbonates/FeCO3-Siderte.cif",
+    "formula": "FeCO3",
+    "mineral": "Siderte",
+    "elements": [
+     "C",
+     "Fe",
+     "O"
+    ]
+   },
+   {
+    "name": "Li2CO3-Zabuyelite",
+    "file": "carbonates/Li2CO3-Zabuyelite.cif",
+    "formula": "Li2CO3",
+    "mineral": "Zabuyelite",
+    "elements": [
+     "C",
+     "Li",
+     "O"
+    ]
+   },
+   {
+    "name": "MgCO3-Magnesite",
+    "file": "carbonates/MgCO3-Magnesite.cif",
+    "formula": "MgCO3",
+    "mineral": "Magnesite",
+    "elements": []
+   },
+   {
+    "name": "Na2CO3-Natrite",
+    "file": "carbonates/Na2CO3-Natrite.cif",
+    "formula": "Na2CO3",
+    "mineral": "Natrite",
+    "elements": [
+     "C",
+     "Na",
+     "O"
+    ]
+   },
+   {
+    "name": "NaHCO3-Nahcolite",
+    "file": "carbonates/NaHCO3-Nahcolite.cif",
+    "formula": "NaHCO3",
+    "mineral": "Nahcolite",
+    "elements": [
+     "C",
+     "H",
+     "Na",
+     "O"
+    ]
+   }
+  ],
+  "clays": [
+   {
+    "name": "Al2Si2O9H4-Dickite",
+    "file": "clays/Al2Si2O9H4-Dickite.cif",
+    "formula": "Al2Si2O9H4",
+    "mineral": "Dickite",
+    "elements": [
+     "Al",
+     "O",
+     "Si"
+    ]
+   },
+   {
+    "name": "Al2Si2O9H4-Kaolinite",
+    "file": "clays/Al2Si2O9H4-Kaolinite.cif",
+    "formula": "Al2Si2O9H4",
+    "mineral": "Kaolinite",
+    "elements": [
+     "Al",
+     "O",
+     "Si"
+    ]
+   },
+   {
+    "name": "Al2Si2O9H4-Nacrite",
+    "file": "clays/Al2Si2O9H4-Nacrite.cif",
+    "formula": "Al2Si2O9H4",
+    "mineral": "Nacrite",
+    "elements": [
+     "Al",
+     "H",
+     "O",
+     "Si"
+    ]
+   },
+   {
+    "name": "Al2Si4O12Ca0.5-Montmorillonite",
+    "file": "clays/Al2Si4O12Ca0.5-Montmorillonite.cif",
+    "formula": "Al2Si4O12Ca0.5",
+    "mineral": "Montmorillonite",
+    "elements": [
+     "Al",
+     "Ca",
+     "O",
+     "Si"
+    ]
+   },
+   {
+    "name": "Al4KSi2O12-Illite",
+    "file": "clays/Al4KSi2O12-Illite.cif",
+    "formula": "Al4KSi2O12",
+    "mineral": "Illite",
+    "elements": [
+     "Al",
+     "K",
+     "O",
+     "Si"
+    ]
+   },
+   {
+    "name": "AlSi2O6H-Pyrophyllite",
+    "file": "clays/AlSi2O6H-Pyrophyllite.cif",
+    "formula": "AlSi2O6H",
+    "mineral": "Pyrophyllite",
+    "elements": [
+     "Al",
+     "O",
+     "Ob",
+     "Si"
+    ]
+   },
+   {
+    "name": "Fe2.25Cl0.5H2.75-Fougerite",
+    "file": "clays/Fe2.25Cl0.5H2.75-Fougerite.cif",
+    "formula": "Fe2.25Cl0.5H2.75",
+    "mineral": "Fougerite",
+    "elements": [
+     "Cl",
+     "Fe"
+    ]
+   },
+   {
+    "name": "FeSi2O6H-Nontronite",
+    "file": "clays/FeSi2O6H-Nontronite.cif",
+    "formula": "FeSi2O6H",
+    "mineral": "Nontronite",
+    "elements": [
+     "O"
+    ]
+   },
+   {
+    "name": "Lepidolite",
+    "file": "clays/Lepidolite.cif",
+    "formula": "Lepidolite",
+    "mineral": "",
+    "elements": [
+     "Ca",
+     "F",
+     "K",
+     "Na",
+     "O",
+     "Rb"
+    ]
+   },
+   {
+    "name": "Mg2Al2SiO9H4-Amesite",
+    "file": "clays/Mg2Al2SiO9H4-Amesite.cif",
+    "formula": "Mg2Al2SiO9H4",
+    "mineral": "Amesite",
+    "elements": [
+     "H",
+     "O"
+    ]
+   },
+   {
+    "name": "Mg3(O12Si4)H2-Vermiculite",
+    "file": "clays/Mg3(O12Si4)H2-Vermiculite.cif",
+    "formula": "Mg3(O12Si4)H2",
+    "mineral": "Vermiculite",
+    "elements": [
+     "Mg",
+     "O",
+     "Si"
+    ]
+   },
+   {
+    "name": "Mg4Si6O22.82H13.64-Sepiolite",
+    "file": "clays/Mg4Si6O22.82H13.64-Sepiolite.cif",
+    "formula": "Mg4Si6O22.82H13.64",
+    "mineral": "Sepiolite",
+    "elements": [
+     "Mg",
+     "O",
+     "Si"
+    ]
+   },
+   {
+    "name": "Mn1.854Fe1.656Mg0.537Si0.953O9H4-Guidottiite",
+    "file": "clays/Mn1.854Fe1.656Mg0.537Si0.953O9H4-Guidottiite.cif",
+    "formula": "Mn1.854Fe1.656Mg0.537Si0.953O9H4",
+    "mineral": "Guidottiite",
+    "elements": [
+     "O"
+    ]
+   },
+   {
+    "name": "Zn2SiO5H2-Hemimorphite",
+    "file": "clays/Zn2SiO5H2-Hemimorphite.cif",
+    "formula": "Zn2SiO5H2",
+    "mineral": "Hemimorphite",
+    "elements": [
+     "O",
+     "Si",
+     "Zn"
+    ]
+   }
+  ],
+  "elements": [
+   {
+    "name": "Ac-Actinium",
+    "file": "elements/Ac-Actinium.cif",
+    "formula": "Ac",
+    "mineral": "Actinium",
+    "elements": [
+     "Ac"
+    ]
+   },
+   {
+    "name": "Ag-Silver",
+    "file": "elements/Ag-Silver.cif",
+    "formula": "Ag",
+    "mineral": "Silver",
+    "elements": [
+     "Ag"
+    ]
+   },
+   {
+    "name": "Al-Aluminum",
+    "file": "elements/Al-Aluminum.cif",
+    "formula": "Al",
+    "mineral": "Aluminum",
+    "elements": [
+     "Al"
+    ]
+   },
+   {
+    "name": "Am-Americium",
+    "file": "elements/Am-Americium.cif",
+    "formula": "Am",
+    "mineral": "Americium",
+    "elements": [
+     "Am"
+    ]
+   },
+   {
+    "name": "Ar-Argon",
+    "file": "elements/Ar-Argon.cif",
+    "formula": "Ar",
+    "mineral": "Argon",
+    "elements": [
+     "Ar"
+    ]
+   },
+   {
+    "name": "As-Arsenic",
+    "file": "elements/As-Arsenic.cif",
+    "formula": "As",
+    "mineral": "Arsenic",
+    "elements": [
+     "As"
+    ]
+   },
+   {
+    "name": "As-Arsenolamprite",
+    "file": "elements/As-Arsenolamprite.cif",
+    "formula": "As",
+    "mineral": "Arsenolamprite",
+    "elements": [
+     "As"
+    ]
+   },
+   {
+    "name": "Au-Gold",
+    "file": "elements/Au-Gold.cif",
+    "formula": "Au",
+    "mineral": "Gold",
+    "elements": [
+     "Au"
+    ]
+   },
+   {
+    "name": "B-Boron",
+    "file": "elements/B-Boron.cif",
+    "formula": "B",
+    "mineral": "Boron",
+    "elements": [
+     "B"
+    ]
+   },
+   {
+    "name": "Ba-Barium",
+    "file": "elements/Ba-Barium.cif",
+    "formula": "Ba",
+    "mineral": "Barium",
+    "elements": [
+     "Ba"
+    ]
+   },
+   {
+    "name": "Be-Beryllium",
+    "file": "elements/Be-Beryllium.cif",
+    "formula": "Be",
+    "mineral": "Beryllium",
+    "elements": [
+     "Be"
+    ]
+   },
+   {
+    "name": "Bi-Bismuth",
+    "file": "elements/Bi-Bismuth.cif",
+    "formula": "Bi",
+    "mineral": "Bismuth",
+    "elements": [
+     "Bi"
+    ]
+   },
+   {
+    "name": "Br-Bromine",
+    "file": "elements/Br-Bromine.cif",
+    "formula": "Br",
+    "mineral": "Bromine",
+    "elements": [
+     "Br"
+    ]
+   },
+   {
+    "name": "C-Diamond",
+    "file": "elements/C-Diamond.cif",
+    "formula": "C",
+    "mineral": "Diamond",
+    "elements": [
+     "C"
+    ]
+   },
+   {
+    "name": "C-Graphite",
+    "file": "elements/C-Graphite.cif",
+    "formula": "C",
+    "mineral": "Graphite",
+    "elements": [
+     "C"
+    ]
+   },
+   {
+    "name": "C-Lonsdaleite",
+    "file": "elements/C-Lonsdaleite.cif",
+    "formula": "C",
+    "mineral": "Lonsdaleite",
+    "elements": [
+     "C"
+    ]
+   },
+   {
+    "name": "Ca-Calcium-alpha",
+    "file": "elements/Ca-Calcium-alpha.cif",
+    "formula": "Ca",
+    "mineral": "Calcium-alpha",
+    "elements": [
+     "Ca"
+    ]
+   },
+   {
+    "name": "Ca-Calcium-beta",
+    "file": "elements/Ca-Calcium-beta.cif",
+    "formula": "Ca",
+    "mineral": "Calcium-beta",
+    "elements": [
+     "Ca"
+    ]
+   },
+   {
+    "name": "Ca-Calcium-gamma",
+    "file": "elements/Ca-Calcium-gamma.cif",
+    "formula": "Ca",
+    "mineral": "Calcium-gamma",
+    "elements": [
+     "Ca"
+    ]
+   },
+   {
+    "name": "Cd-Cadmium",
+    "file": "elements/Cd-Cadmium.cif",
+    "formula": "Cd",
+    "mineral": "Cadmium",
+    "elements": [
+     "Cd"
+    ]
+   },
+   {
+    "name": "Ce-Cerium",
+    "file": "elements/Ce-Cerium.cif",
+    "formula": "Ce",
+    "mineral": "Cerium",
+    "elements": [
+     "Ce"
+    ]
+   },
+   {
+    "name": "Cl-Chlorine",
+    "file": "elements/Cl-Chlorine.cif",
+    "formula": "Cl",
+    "mineral": "Chlorine",
+    "elements": [
+     "Cl"
+    ]
+   },
+   {
+    "name": "Co-Cobalt",
+    "file": "elements/Co-Cobalt.cif",
+    "formula": "Co",
+    "mineral": "Cobalt",
+    "elements": [
+     "Co"
+    ]
+   },
+   {
+    "name": "Cr-Chromium",
+    "file": "elements/Cr-Chromium.cif",
+    "formula": "Cr",
+    "mineral": "Chromium",
+    "elements": [
+     "Cr"
+    ]
+   },
+   {
+    "name": "Cs-Cesium",
+    "file": "elements/Cs-Cesium.cif",
+    "formula": "Cs",
+    "mineral": "Cesium",
+    "elements": [
+     "Cs"
+    ]
+   },
+   {
+    "name": "Cu-Copper",
+    "file": "elements/Cu-Copper.cif",
+    "formula": "Cu",
+    "mineral": "Copper",
+    "elements": [
+     "Cu"
+    ]
+   },
+   {
+    "name": "Dy-Dysprosium",
+    "file": "elements/Dy-Dysprosium.cif",
+    "formula": "Dy",
+    "mineral": "Dysprosium",
+    "elements": [
+     "Dy"
+    ]
+   },
+   {
+    "name": "Er-Erbium",
+    "file": "elements/Er-Erbium.cif",
+    "formula": "Er",
+    "mineral": "Erbium",
+    "elements": [
+     "Er"
+    ]
+   },
+   {
+    "name": "Eu-Europium",
+    "file": "elements/Eu-Europium.cif",
+    "formula": "Eu",
+    "mineral": "Europium",
+    "elements": [
+     "Eu"
+    ]
+   },
+   {
+    "name": "Fe-Iron-alpha",
+    "file": "elements/Fe-Iron-alpha.cif",
+    "formula": "Fe",
+    "mineral": "Iron-alpha",
+    "elements": [
+     "Fe"
+    ]
+   },
+   {
+    "name": "Fe-Iron-beta",
+    "file": "elements/Fe-Iron-beta.cif",
+    "formula": "Fe",
+    "mineral": "Iron-beta",
+    "elements": [
+     "Fe"
+    ]
+   },
+   {
+    "name": "Fe-Iron-delta",
+    "file": "elements/Fe-Iron-delta.cif",
+    "formula": "Fe",
+    "mineral": "Iron-delta",
+    "elements": [
+     "Fe"
+    ]
+   },
+   {
+    "name": "Fe-Iron-gamma",
+    "file": "elements/Fe-Iron-gamma.cif",
+    "formula": "Fe",
+    "mineral": "Iron-gamma",
+    "elements": [
+     "Fe"
+    ]
+   },
+   {
+    "name": "Ga-Gallium",
+    "file": "elements/Ga-Gallium.cif",
+    "formula": "Ga",
+    "mineral": "Gallium",
+    "elements": [
+     "Ga"
+    ]
+   },
+   {
+    "name": "Gd-Gadolinium",
+    "file": "elements/Gd-Gadolinium.cif",
+    "formula": "Gd",
+    "mineral": "Gadolinium",
+    "elements": [
+     "Gd"
+    ]
+   },
+   {
+    "name": "Ge-Germanium",
+    "file": "elements/Ge-Germanium.cif",
+    "formula": "Ge",
+    "mineral": "Germanium",
+    "elements": [
+     "Ge"
+    ]
+   },
+   {
+    "name": "He-Helium",
+    "file": "elements/He-Helium.cif",
+    "formula": "He",
+    "mineral": "Helium",
+    "elements": [
+     "He"
+    ]
+   },
+   {
+    "name": "Hf-Hafnium",
+    "file": "elements/Hf-Hafnium.cif",
+    "formula": "Hf",
+    "mineral": "Hafnium",
+    "elements": [
+     "Hf"
+    ]
+   },
+   {
+    "name": "Ho-Holmium",
+    "file": "elements/Ho-Holmium.cif",
+    "formula": "Ho",
+    "mineral": "Holmium",
+    "elements": [
+     "Ho"
+    ]
+   },
+   {
+    "name": "I-Iodine",
+    "file": "elements/I-Iodine.cif",
+    "formula": "I",
+    "mineral": "Iodine",
+    "elements": [
+     "I"
+    ]
+   },
+   {
+    "name": "In-Indium",
+    "file": "elements/In-Indium.cif",
+    "formula": "In",
+    "mineral": "Indium",
+    "elements": []
+   },
+   {
+    "name": "Ir-Iridium",
+    "file": "elements/Ir-Iridium.cif",
+    "formula": "Ir",
+    "mineral": "Iridium",
+    "elements": [
+     "Ir"
+    ]
+   },
+   {
+    "name": "K-Potassium",
+    "file": "elements/K-Potassium.cif",
+    "formula": "K",
+    "mineral": "Potassium",
+    "elements": [
+     "K"
+    ]
+   },
+   {
+    "name": "Kr-Krypton",
+    "file": "elements/Kr-Krypton.cif",
+    "formula": "Kr",
+    "mineral": "Krypton",
+    "elements": [
+     "Kr"
+    ]
+   },
+   {
+    "name": "La-Lanthanum",
+    "file": "elements/La-Lanthanum.cif",
+    "formula": "La",
+    "mineral": "Lanthanum",
+    "elements": [
+     "La"
+    ]
+   },
+   {
+    "name": "Li-Lithium",
+    "file": "elements/Li-Lithium.cif",
+    "formula": "Li",
+    "mineral": "Lithium",
+    "elements": [
+     "Li"
+    ]
+   },
+   {
+    "name": "Lu-Lutetium",
+    "file": "elements/Lu-Lutetium.cif",
+    "formula": "Lu",
+    "mineral": "Lutetium",
+    "elements": [
+     "Lu"
+    ]
+   },
+   {
+    "name": "Mg-Magnesium",
+    "file": "elements/Mg-Magnesium.cif",
+    "formula": "Mg",
+    "mineral": "Magnesium",
+    "elements": [
+     "Mg"
+    ]
+   },
+   {
+    "name": "Mn-Manganese-alpha",
+    "file": "elements/Mn-Manganese-alpha.cif",
+    "formula": "Mn",
+    "mineral": "Manganese-alpha",
+    "elements": [
+     "Mn"
+    ]
+   },
+   {
+    "name": "Mn-Manganese-delta",
+    "file": "elements/Mn-Manganese-delta.cif",
+    "formula": "Mn",
+    "mineral": "Manganese-delta",
+    "elements": [
+     "Mn"
+    ]
+   },
+   {
+    "name": "Mn-Manganese-gamma",
+    "file": "elements/Mn-Manganese-gamma.cif",
+    "formula": "Mn",
+    "mineral": "Manganese-gamma",
+    "elements": [
+     "Mn"
+    ]
+   },
+   {
+    "name": "Mo-Molybdenum",
+    "file": "elements/Mo-Molybdenum.cif",
+    "formula": "Mo",
+    "mineral": "Molybdenum",
+    "elements": [
+     "Mo"
+    ]
+   },
+   {
+    "name": "N-Nitrogen",
+    "file": "elements/N-Nitrogen.cif",
+    "formula": "N",
+    "mineral": "Nitrogen",
+    "elements": [
+     "N"
+    ]
+   },
+   {
+    "name": "Na-Sodium",
+    "file": "elements/Na-Sodium.cif",
+    "formula": "Na",
+    "mineral": "Sodium",
+    "elements": [
+     "Na"
+    ]
+   },
+   {
+    "name": "Nb-Niobium",
+    "file": "elements/Nb-Niobium.cif",
+    "formula": "Nb",
+    "mineral": "Niobium",
+    "elements": [
+     "Nb"
+    ]
+   },
+   {
+    "name": "Nd-Neodymium",
+    "file": "elements/Nd-Neodymium.cif",
+    "formula": "Nd",
+    "mineral": "Neodymium",
+    "elements": [
+     "Nd"
+    ]
+   },
+   {
+    "name": "Ne-Neon",
+    "file": "elements/Ne-Neon.cif",
+    "formula": "Ne",
+    "mineral": "Neon",
+    "elements": [
+     "Ne"
+    ]
+   },
+   {
+    "name": "Ni-Nickel",
+    "file": "elements/Ni-Nickel.cif",
+    "formula": "Ni",
+    "mineral": "Nickel",
+    "elements": [
+     "Ni"
+    ]
+   },
+   {
+    "name": "Np-Neptunium-alpha",
+    "file": "elements/Np-Neptunium-alpha.cif",
+    "formula": "Np",
+    "mineral": "Neptunium-alpha",
+    "elements": [
+     "Np"
+    ]
+   },
+   {
+    "name": "Np-Neptunium-beta",
+    "file": "elements/Np-Neptunium-beta.cif",
+    "formula": "Np",
+    "mineral": "Neptunium-beta",
+    "elements": [
+     "Np"
+    ]
+   },
+   {
+    "name": "Np-Neptunium-gamma",
+    "file": "elements/Np-Neptunium-gamma.cif",
+    "formula": "Np",
+    "mineral": "Neptunium-gamma",
+    "elements": [
+     "Np"
+    ]
+   },
+   {
+    "name": "Os-Osmium",
+    "file": "elements/Os-Osmium.cif",
+    "formula": "Os",
+    "mineral": "Osmium",
+    "elements": [
+     "Os"
+    ]
+   },
+   {
+    "name": "P-Phosphorus-black",
+    "file": "elements/P-Phosphorus-black.cif",
+    "formula": "P",
+    "mineral": "Phosphorus-black",
+    "elements": [
+     "P"
+    ]
+   },
+   {
+    "name": "P-Phosphorus",
+    "file": "elements/P-Phosphorus.cif",
+    "formula": "P",
+    "mineral": "Phosphorus",
+    "elements": [
+     "P"
+    ]
+   },
+   {
+    "name": "Pb-Lead",
+    "file": "elements/Pb-Lead.cif",
+    "formula": "Pb",
+    "mineral": "Lead",
+    "elements": [
+     "Pb"
+    ]
+   },
+   {
+    "name": "Pd-Palladium",
+    "file": "elements/Pd-Palladium.cif",
+    "formula": "Pd",
+    "mineral": "Palladium",
+    "elements": [
+     "Pd"
+    ]
+   },
+   {
+    "name": "Pr-Praseodymium",
+    "file": "elements/Pr-Praseodymium.cif",
+    "formula": "Pr",
+    "mineral": "Praseodymium",
+    "elements": [
+     "Pr"
+    ]
+   },
+   {
+    "name": "Pt-Platinum",
+    "file": "elements/Pt-Platinum.cif",
+    "formula": "Pt",
+    "mineral": "Platinum",
+    "elements": [
+     "Pt"
+    ]
+   },
+   {
+    "name": "Pu-Plutonium-alpha",
+    "file": "elements/Pu-Plutonium-alpha.cif",
+    "formula": "Pu",
+    "mineral": "Plutonium-alpha",
+    "elements": [
+     "Pu"
+    ]
+   },
+   {
+    "name": "Pu-Plutonium-epsilon",
+    "file": "elements/Pu-Plutonium-epsilon.cif",
+    "formula": "Pu",
+    "mineral": "Plutonium-epsilon",
+    "elements": [
+     "Pu"
+    ]
+   },
+   {
+    "name": "Pu-Plutonium-gamma",
+    "file": "elements/Pu-Plutonium-gamma.cif",
+    "formula": "Pu",
+    "mineral": "Plutonium-gamma",
+    "elements": [
+     "Pu"
+    ]
+   },
+   {
+    "name": "Rb-Rubidium",
+    "file": "elements/Rb-Rubidium.cif",
+    "formula": "Rb",
+    "mineral": "Rubidium",
+    "elements": [
+     "Rb"
+    ]
+   },
+   {
+    "name": "Re-Rhenium",
+    "file": "elements/Re-Rhenium.cif",
+    "formula": "Re",
+    "mineral": "Rhenium",
+    "elements": [
+     "Re"
+    ]
+   },
+   {
+    "name": "Rh-Rhodium",
+    "file": "elements/Rh-Rhodium.cif",
+    "formula": "Rh",
+    "mineral": "Rhodium",
+    "elements": [
+     "Rh"
+    ]
+   },
+   {
+    "name": "Ru-Ruthenium",
+    "file": "elements/Ru-Ruthenium.cif",
+    "formula": "Ru",
+    "mineral": "Ruthenium",
+    "elements": [
+     "Ru"
+    ]
+   },
+   {
+    "name": "S6-Sulfur",
+    "file": "elements/S6-Sulfur.cif",
+    "formula": "S6",
+    "mineral": "Sulfur",
+    "elements": [
+     "S"
+    ]
+   },
+   {
+    "name": "S8-Sulfur-alpha",
+    "file": "elements/S8-Sulfur-alpha.cif",
+    "formula": "S8",
+    "mineral": "Sulfur-alpha",
+    "elements": [
+     "S"
+    ]
+   },
+   {
+    "name": "S8-Sulfur-beta",
+    "file": "elements/S8-Sulfur-beta.cif",
+    "formula": "S8",
+    "mineral": "Sulfur-beta",
+    "elements": [
+     "S"
+    ]
+   },
+   {
+    "name": "S8-Sulfur-gamma",
+    "file": "elements/S8-Sulfur-gamma.cif",
+    "formula": "S8",
+    "mineral": "Sulfur-gamma",
+    "elements": []
+   },
+   {
+    "name": "Sb-Antimony",
+    "file": "elements/Sb-Antimony.cif",
+    "formula": "Sb",
+    "mineral": "Antimony",
+    "elements": [
+     "Sb"
+    ]
+   },
+   {
+    "name": "Sc-Scandium",
+    "file": "elements/Sc-Scandium.cif",
+    "formula": "Sc",
+    "mineral": "Scandium",
+    "elements": [
+     "Sc"
+    ]
+   },
+   {
+    "name": "Se-Selenium",
+    "file": "elements/Se-Selenium.cif",
+    "formula": "Se",
+    "mineral": "Selenium",
+    "elements": [
+     "Se"
+    ]
+   },
+   {
+    "name": "Si-Silicon",
+    "file": "elements/Si-Silicon.cif",
+    "formula": "Si",
+    "mineral": "Silicon",
+    "elements": [
+     "Si"
+    ]
+   },
+   {
+    "name": "Sm-Samarium",
+    "file": "elements/Sm-Samarium.cif",
+    "formula": "Sm",
+    "mineral": "Samarium",
+    "elements": [
+     "Sm"
+    ]
+   },
+   {
+    "name": "Sn-Tin-alpha",
+    "file": "elements/Sn-Tin-alpha.cif",
+    "formula": "Sn",
+    "mineral": "Tin-alpha",
+    "elements": [
+     "Sn"
+    ]
+   },
+   {
+    "name": "Sn-Tin-beta",
+    "file": "elements/Sn-Tin-beta.cif",
+    "formula": "Sn",
+    "mineral": "Tin-beta",
+    "elements": [
+     "Sn"
+    ]
+   },
+   {
+    "name": "Sr-Strontium",
+    "file": "elements/Sr-Strontium.cif",
+    "formula": "Sr",
+    "mineral": "Strontium",
+    "elements": [
+     "Sr"
+    ]
+   },
+   {
+    "name": "Ta-Tantalum",
+    "file": "elements/Ta-Tantalum.cif",
+    "formula": "Ta",
+    "mineral": "Tantalum",
+    "elements": [
+     "Ta"
+    ]
+   },
+   {
+    "name": "Tb-Terbium",
+    "file": "elements/Tb-Terbium.cif",
+    "formula": "Tb",
+    "mineral": "Terbium",
+    "elements": [
+     "Tb"
+    ]
+   },
+   {
+    "name": "Te-Tellurium",
+    "file": "elements/Te-Tellurium.cif",
+    "formula": "Te",
+    "mineral": "Tellurium",
+    "elements": [
+     "Te"
+    ]
+   },
+   {
+    "name": "Th-Thorium",
+    "file": "elements/Th-Thorium.cif",
+    "formula": "Th",
+    "mineral": "Thorium",
+    "elements": [
+     "Th"
+    ]
+   },
+   {
+    "name": "Ti-Titanium-alpha",
+    "file": "elements/Ti-Titanium-alpha.cif",
+    "formula": "Ti",
+    "mineral": "Titanium-alpha",
+    "elements": [
+     "Ti"
+    ]
+   },
+   {
+    "name": "Ti-Titanium-beta",
+    "file": "elements/Ti-Titanium-beta.cif",
+    "formula": "Ti",
+    "mineral": "Titanium-beta",
+    "elements": [
+     "Ti"
+    ]
+   },
+   {
+    "name": "Tl-Thallium",
+    "file": "elements/Tl-Thallium.cif",
+    "formula": "Tl",
+    "mineral": "Thallium",
+    "elements": [
+     "Tl"
+    ]
+   },
+   {
+    "name": "Tm-Thulium",
+    "file": "elements/Tm-Thulium.cif",
+    "formula": "Tm",
+    "mineral": "Thulium",
+    "elements": [
+     "Tm"
+    ]
+   },
+   {
+    "name": "U-Uranium-alpha",
+    "file": "elements/U-Uranium-alpha.cif",
+    "formula": "U",
+    "mineral": "Uranium-alpha",
+    "elements": [
+     "U"
+    ]
+   },
+   {
+    "name": "U-Uranium-gamma",
+    "file": "elements/U-Uranium-gamma.cif",
+    "formula": "U",
+    "mineral": "Uranium-gamma",
+    "elements": [
+     "U"
+    ]
+   },
+   {
+    "name": "V-Vanadium",
+    "file": "elements/V-Vanadium.cif",
+    "formula": "V",
+    "mineral": "Vanadium",
+    "elements": [
+     "V"
+    ]
+   },
+   {
+    "name": "W-Tungsten",
+    "file": "elements/W-Tungsten.cif",
+    "formula": "W",
+    "mineral": "Tungsten",
+    "elements": [
+     "W"
+    ]
+   },
+   {
+    "name": "Xe-Xenon",
+    "file": "elements/Xe-Xenon.cif",
+    "formula": "Xe",
+    "mineral": "Xenon",
+    "elements": [
+     "Xe"
+    ]
+   },
+   {
+    "name": "Y-Yttrium",
+    "file": "elements/Y-Yttrium.cif",
+    "formula": "Y",
+    "mineral": "Yttrium",
+    "elements": [
+     "Y"
+    ]
+   },
+   {
+    "name": "Yb-Ytterbium",
+    "file": "elements/Yb-Ytterbium.cif",
+    "formula": "Yb",
+    "mineral": "Ytterbium",
+    "elements": [
+     "Yb"
+    ]
+   },
+   {
+    "name": "Zn-Zinc",
+    "file": "elements/Zn-Zinc.cif",
+    "formula": "Zn",
+    "mineral": "Zinc",
+    "elements": [
+     "Zn"
+    ]
+   },
+   {
+    "name": "Zr-Zirconium",
+    "file": "elements/Zr-Zirconium.cif",
+    "formula": "Zr",
+    "mineral": "Zirconium",
+    "elements": [
+     "Zr"
+    ]
+   }
+  ],
+  "halides": [
+   {
+    "name": "AgBr-Bromargyrite",
+    "file": "halides/AgBr-Bromargyrite.cif",
+    "formula": "AgBr",
+    "mineral": "Bromargyrite",
+    "elements": [
+     "Ag",
+     "Br"
+    ]
+   },
+   {
+    "name": "AgCl-Chlorargyrite",
+    "file": "halides/AgCl-Chlorargyrite.cif",
+    "formula": "AgCl",
+    "mineral": "Chlorargyrite",
+    "elements": [
+     "Ag",
+     "Cl"
+    ]
+   },
+   {
+    "name": "AlCl3",
+    "file": "halides/AlCl3.cif",
+    "formula": "AlCl3",
+    "mineral": "",
+    "elements": []
+   },
+   {
+    "name": "AlNa3F6-Cryolite",
+    "file": "halides/AlNa3F6-Cryolite.cif",
+    "formula": "AlNa3F6",
+    "mineral": "Cryolite",
+    "elements": [
+     "Al",
+     "F",
+     "Na"
+    ]
+   },
+   {
+    "name": "CaCl2-Hydrophilite",
+    "file": "halides/CaCl2-Hydrophilite.cif",
+    "formula": "CaCl2",
+    "mineral": "Hydrophilite",
+    "elements": [
+     "Ca",
+     "Cl"
+    ]
+   },
+   {
+    "name": "CaF2-Fluorite",
+    "file": "halides/CaF2-Fluorite.cif",
+    "formula": "CaF2",
+    "mineral": "Fluorite",
+    "elements": [
+     "Ca",
+     "F"
+    ]
+   },
+   {
+    "name": "CdCl2",
+    "file": "halides/CdCl2.cif",
+    "formula": "CdCl2",
+    "mineral": "",
+    "elements": [
+     "Cd",
+     "Cl"
+    ]
+   },
+   {
+    "name": "CdI2",
+    "file": "halides/CdI2.cif",
+    "formula": "CdI2",
+    "mineral": "",
+    "elements": [
+     "Cd",
+     "I"
+    ]
+   },
+   {
+    "name": "CrCl2",
+    "file": "halides/CrCl2.cif",
+    "formula": "CrCl2",
+    "mineral": "",
+    "elements": [
+     "Cl",
+     "Cr"
+    ]
+   },
+   {
+    "name": "CrCl3",
+    "file": "halides/CrCl3.cif",
+    "formula": "CrCl3",
+    "mineral": "",
+    "elements": [
+     "Cl",
+     "Cr"
+    ]
+   },
+   {
+    "name": "CsCl",
+    "file": "halides/CsCl.cif",
+    "formula": "CsCl",
+    "mineral": "",
+    "elements": [
+     "Cl",
+     "Cs"
+    ]
+   },
+   {
+    "name": "FeCl3-Molysite",
+    "file": "halides/FeCl3-Molysite.cif",
+    "formula": "FeCl3",
+    "mineral": "Molysite",
+    "elements": []
+   },
+   {
+    "name": "HgCl-Calomel",
+    "file": "halides/HgCl-Calomel.cif",
+    "formula": "HgCl",
+    "mineral": "Calomel",
+    "elements": [
+     "Cl",
+     "Hg"
+    ]
+   },
+   {
+    "name": "KBr",
+    "file": "halides/KBr.cif",
+    "formula": "KBr",
+    "mineral": "",
+    "elements": [
+     "Br",
+     "K"
+    ]
+   },
+   {
+    "name": "KCl-Sylvite",
+    "file": "halides/KCl-Sylvite.cif",
+    "formula": "KCl",
+    "mineral": "Sylvite",
+    "elements": [
+     "Cl",
+     "K"
+    ]
+   },
+   {
+    "name": "LiCl",
+    "file": "halides/LiCl.cif",
+    "formula": "LiCl",
+    "mineral": "",
+    "elements": [
+     "Cl",
+     "Li"
+    ]
+   },
+   {
+    "name": "NaCl-Halite",
+    "file": "halides/NaCl-Halite.cif",
+    "formula": "NaCl",
+    "mineral": "Halite",
+    "elements": [
+     "Cl",
+     "Na"
+    ]
+   },
+   {
+    "name": "PbFCl-Matlockite",
+    "file": "halides/PbFCl-Matlockite.cif",
+    "formula": "PbFCl",
+    "mineral": "Matlockite",
+    "elements": [
+     "Cl",
+     "F",
+     "Pb"
+    ]
+   }
+  ],
+  "hydrides": [
+   {
+    "name": "KH",
+    "file": "hydrides/KH.cif",
+    "formula": "KH",
+    "mineral": "",
+    "elements": [
+     "H",
+     "K"
+    ]
+   },
+   {
+    "name": "LiH",
+    "file": "hydrides/LiH.cif",
+    "formula": "LiH",
+    "mineral": "",
+    "elements": [
+     "H",
+     "Li"
+    ]
+   },
+   {
+    "name": "NaH",
+    "file": "hydrides/NaH.cif",
+    "formula": "NaH",
+    "mineral": "",
+    "elements": [
+     "H",
+     "Na"
+    ]
+   },
+   {
+    "name": "PdH",
+    "file": "hydrides/PdH.cif",
+    "formula": "PdH",
+    "mineral": "",
+    "elements": [
+     "H",
+     "Pd"
+    ]
+   }
+  ],
+  "hydroxides": [
+   {
+    "name": "Ca(OH)2-Portlandite",
+    "file": "hydroxides/Ca(OH)2-Portlandite.cif",
+    "formula": "Ca(OH)2",
+    "mineral": "Portlandite",
+    "elements": [
+     "Ca"
+    ]
+   },
+   {
+    "name": "KOH",
+    "file": "hydroxides/KOH.cif",
+    "formula": "KOH",
+    "mineral": "",
+    "elements": [
+     "K"
+    ]
+   },
+   {
+    "name": "LiOH",
+    "file": "hydroxides/LiOH.cif",
+    "formula": "LiOH",
+    "mineral": "",
+    "elements": [
+     "H",
+     "Li",
+     "O"
+    ]
+   },
+   {
+    "name": "Mg(OH)2-Brucite",
+    "file": "hydroxides/Mg(OH)2-Brucite.cif",
+    "formula": "Mg(OH)2",
+    "mineral": "Brucite",
+    "elements": [
+     "Mg",
+     "O"
+    ]
+   },
+   {
+    "name": "Ni(OH)2-Theophrastite",
+    "file": "hydroxides/Ni(OH)2-Theophrastite.cif",
+    "formula": "Ni(OH)2",
+    "mineral": "Theophrastite",
+    "elements": [
+     "Ni"
+    ]
+   }
+  ],
+  "ice": [
+   {
+    "name": "H2O-Ice-II",
+    "file": "ice/H2O-Ice-II.cif",
+    "formula": "H2O",
+    "mineral": "Ice-II",
+    "elements": [
+     "H",
+     "O"
+    ]
+   },
+   {
+    "name": "H2O-Ice-III",
+    "file": "ice/H2O-Ice-III.cif",
+    "formula": "H2O",
+    "mineral": "Ice-III",
+    "elements": [
+     "H",
+     "O"
+    ]
+   },
+   {
+    "name": "H2O-Ice-IV",
+    "file": "ice/H2O-Ice-IV.cif",
+    "formula": "H2O",
+    "mineral": "Ice-IV",
+    "elements": [
+     "H",
+     "O"
+    ]
+   },
+   {
+    "name": "H2O-Ice-Ih",
+    "file": "ice/H2O-Ice-Ih.cif",
+    "formula": "H2O",
+    "mineral": "Ice-Ih",
+    "elements": [
+     "H",
+     "O"
+    ]
+   },
+   {
+    "name": "H2O-Ice-VI",
+    "file": "ice/H2O-Ice-VI.cif",
+    "formula": "H2O",
+    "mineral": "Ice-VI",
+    "elements": []
+   },
+   {
+    "name": "H2O-Ice-VII",
+    "file": "ice/H2O-Ice-VII.cif",
+    "formula": "H2O",
+    "mineral": "Ice-VII",
+    "elements": [
+     "H",
+     "O"
+    ]
+   },
+   {
+    "name": "H2O-Ice",
+    "file": "ice/H2O-Ice.cif",
+    "formula": "H2O",
+    "mineral": "Ice",
+    "elements": [
+     "H",
+     "O"
+    ]
+   }
+  ],
+  "intermetallics": [
+   {
+    "name": "(Cu0.5Fe0.5)Pt-Tulameenite",
+    "file": "intermetallics/(Cu0.5Fe0.5)Pt-Tulameenite.cif",
+    "formula": "(Cu0.5Fe0.5)Pt",
+    "mineral": "Tulameenite",
+    "elements": [
+     "Cu",
+     "Fe",
+     "Pt"
+    ]
+   },
+   {
+    "name": "(Ni0.5Fe0.5)Pt-Ferronickelplatinum",
+    "file": "intermetallics/(Ni0.5Fe0.5)Pt-Ferronickelplatinum.cif",
+    "formula": "(Ni0.5Fe0.5)Pt",
+    "mineral": "Ferronickelplatinum",
+    "elements": [
+     "Fe",
+     "Ni",
+     "Pt"
+    ]
+   },
+   {
+    "name": "Au3Cu-Bogdanovite",
+    "file": "intermetallics/Au3Cu-Bogdanovite.cif",
+    "formula": "Au3Cu",
+    "mineral": "Bogdanovite",
+    "elements": [
+     "Au",
+     "Cu"
+    ]
+   },
+   {
+    "name": "AuCu-Tetraauricupride",
+    "file": "intermetallics/AuCu-Tetraauricupride.cif",
+    "formula": "AuCu",
+    "mineral": "Tetraauricupride",
+    "elements": [
+     "Au",
+     "Cu"
+    ]
+   },
+   {
+    "name": "BiPd-Sobolevskite",
+    "file": "intermetallics/BiPd-Sobolevskite.cif",
+    "formula": "BiPd",
+    "mineral": "Sobolevskite",
+    "elements": [
+     "Bi",
+     "Pd"
+    ]
+   },
+   {
+    "name": "CoFe-Wairauite",
+    "file": "intermetallics/CoFe-Wairauite.cif",
+    "formula": "CoFe",
+    "mineral": "Wairauite",
+    "elements": [
+     "Co",
+     "Fe"
+    ]
+   },
+   {
+    "name": "Cu2MnAl-Heusler",
+    "file": "intermetallics/Cu2MnAl-Heusler.cif",
+    "formula": "Cu2MnAl",
+    "mineral": "Heusler",
+    "elements": []
+   },
+   {
+    "name": "FePt-Tetraferroplatinum",
+    "file": "intermetallics/FePt-Tetraferroplatinum.cif",
+    "formula": "FePt",
+    "mineral": "Tetraferroplatinum",
+    "elements": [
+     "Fe",
+     "Pt"
+    ]
+   },
+   {
+    "name": "PtBi",
+    "file": "intermetallics/PtBi.cif",
+    "formula": "PtBi",
+    "mineral": "",
+    "elements": [
+     "Bi",
+     "Pt"
+    ]
+   }
+  ],
+  "nitrides": [
+   {
+    "name": "AlN",
+    "file": "nitrides/AlN.cif",
+    "formula": "AlN",
+    "mineral": "",
+    "elements": [
+     "Al",
+     "N"
+    ]
+   },
+   {
+    "name": "BN",
+    "file": "nitrides/BN.cif",
+    "formula": "BN",
+    "mineral": "",
+    "elements": []
+   },
+   {
+    "name": "GaN",
+    "file": "nitrides/GaN.cif",
+    "formula": "GaN",
+    "mineral": "",
+    "elements": [
+     "Ga",
+     "N"
+    ]
+   },
+   {
+    "name": "InN",
+    "file": "nitrides/InN.cif",
+    "formula": "InN",
+    "mineral": "",
+    "elements": [
+     "In",
+     "N"
+    ]
+   },
+   {
+    "name": "Si3N4-beta",
+    "file": "nitrides/Si3N4-beta.cif",
+    "formula": "Si3N4",
+    "mineral": "beta",
+    "elements": [
+     "N",
+     "Si"
+    ]
+   },
+   {
+    "name": "TiN-Osbornite",
+    "file": "nitrides/TiN-Osbornite.cif",
+    "formula": "TiN",
+    "mineral": "Osbornite",
+    "elements": [
+     "N",
+     "Ti"
+    ]
+   }
+  ],
+  "other": [
+   {
+    "name": "(NH4)MgPO4-6(H2O)-Struvite",
+    "file": "other/(NH4)MgPO4-6(H2O)-Struvite.cif",
+    "formula": "(NH4)MgPO4",
+    "mineral": "6(H2O)-Struvite",
+    "elements": [
+     "H",
+     "Mg",
+     "N",
+     "O",
+     "P"
+    ]
+   },
+   {
+    "name": "C10H10Fe-Ferrocene",
+    "file": "other/C10H10Fe-Ferrocene.cif",
+    "formula": "C10H10Fe",
+    "mineral": "Ferrocene",
+    "elements": [
+     "Fe"
+    ]
+   },
+   {
+    "name": "Ca2C4O10H2.57-Oxalate-Whewellite",
+    "file": "other/Ca2C4O10H2.57-Oxalate-Whewellite.cif",
+    "formula": "Ca2C4O10H2.57",
+    "mineral": "Oxalate-Whewellite",
+    "elements": [
+     "C",
+     "Ca",
+     "H",
+     "O"
+    ]
+   },
+   {
+    "name": "CaC2O6.375H6-Oxalate-Weddellite",
+    "file": "other/CaC2O6.375H6-Oxalate-Weddellite.cif",
+    "formula": "CaC2O6.375H6",
+    "mineral": "Oxalate-Weddellite",
+    "elements": [
+     "C",
+     "Ca",
+     "H",
+     "O"
+    ]
+   },
+   {
+    "name": "FeMnO3-Bixbyite",
+    "file": "other/FeMnO3-Bixbyite.cif",
+    "formula": "FeMnO3",
+    "mineral": "Bixbyite",
+    "elements": [
+     "Fe",
+     "Mn",
+     "O"
+    ]
+   },
+   {
+    "name": "H3N-Ammonia",
+    "file": "other/H3N-Ammonia.cif",
+    "formula": "H3N",
+    "mineral": "Ammonia",
+    "elements": [
+     "H",
+     "N"
+    ]
+   },
+   {
+    "name": "LaAlO3",
+    "file": "other/LaAlO3.cif",
+    "formula": "LaAlO3",
+    "mineral": "",
+    "elements": []
+   },
+   {
+    "name": "LiNbO3-LithiumNiobate",
+    "file": "other/LiNbO3-LithiumNiobate.cif",
+    "formula": "LiNbO3",
+    "mineral": "LithiumNiobate",
+    "elements": [
+     "Li",
+     "Nb"
+    ]
+   },
+   {
+    "name": "Pb1Ti0.35Zr0.65O3-PZT-cub",
+    "file": "other/Pb1Ti0.35Zr0.65O3-PZT-cub.cif",
+    "formula": "Pb1Ti0.35Zr0.65O3",
+    "mineral": "PZT-cub",
+    "elements": [
+     "O",
+     "Pb",
+     "Ti",
+     "Zr"
+    ]
+   },
+   {
+    "name": "Pb1Ti0.35Zr0.65O3-PZT-rhomb",
+    "file": "other/Pb1Ti0.35Zr0.65O3-PZT-rhomb.cif",
+    "formula": "Pb1Ti0.35Zr0.65O3",
+    "mineral": "PZT-rhomb",
+    "elements": [
+     "O",
+     "Pb",
+     "Ti",
+     "Zr"
+    ]
+   },
+   {
+    "name": "YBa2Cu3O6.9-YBCO",
+    "file": "other/YBa2Cu3O6.9-YBCO.cif",
+    "formula": "YBa2Cu3O6.9",
+    "mineral": "YBCO",
+    "elements": [
+     "Ba",
+     "Cu",
+     "O",
+     "Y"
+    ]
+   }
+  ],
+  "oxides": [
+   {
+    "name": "(MgAl2)O4-Spinel",
+    "file": "oxides/(MgAl2)O4-Spinel.cif",
+    "formula": "(MgAl2)O4",
+    "mineral": "Spinel",
+    "elements": [
+     "Al",
+     "Mg",
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "Ag2O",
+    "file": "oxides/Ag2O.cif",
+    "formula": "Ag2O",
+    "mineral": "",
+    "elements": [
+     "Ag",
+     "O"
+    ]
+   },
+   {
+    "name": "AgO",
+    "file": "oxides/AgO.cif",
+    "formula": "AgO",
+    "mineral": "",
+    "elements": [
+     "Ag",
+     "O"
+    ]
+   },
+   {
+    "name": "Al2O3-Corundum",
+    "file": "oxides/Al2O3-Corundum.cif",
+    "formula": "Al2O3",
+    "mineral": "Corundum",
+    "elements": [
+     "Al",
+     "O"
+    ]
+   },
+   {
+    "name": "B2O3",
+    "file": "oxides/B2O3.cif",
+    "formula": "B2O3",
+    "mineral": "",
+    "elements": [
+     "B",
+     "O"
+    ]
+   },
+   {
+    "name": "B6O",
+    "file": "oxides/B6O.cif",
+    "formula": "B6O",
+    "mineral": "",
+    "elements": [
+     "B",
+     "O"
+    ]
+   },
+   {
+    "name": "BaO",
+    "file": "oxides/BaO.cif",
+    "formula": "BaO",
+    "mineral": "",
+    "elements": [
+     "Ba",
+     "O"
+    ]
+   },
+   {
+    "name": "CaO-Lime",
+    "file": "oxides/CaO-Lime.cif",
+    "formula": "CaO",
+    "mineral": "Lime",
+    "elements": [
+     "Ca",
+     "O"
+    ]
+   },
+   {
+    "name": "CdO-Monteponite",
+    "file": "oxides/CdO-Monteponite.cif",
+    "formula": "CdO",
+    "mineral": "Monteponite",
+    "elements": [
+     "Cd",
+     "O"
+    ]
+   },
+   {
+    "name": "CeO2-Cerianite",
+    "file": "oxides/CeO2-Cerianite.cif",
+    "formula": "CeO2",
+    "mineral": "Cerianite",
+    "elements": [
+     "Ce",
+     "O"
+    ]
+   },
+   {
+    "name": "CoFe2O4",
+    "file": "oxides/CoFe2O4.cif",
+    "formula": "CoFe2O4",
+    "mineral": "",
+    "elements": []
+   },
+   {
+    "name": "CoO",
+    "file": "oxides/CoO.cif",
+    "formula": "CoO",
+    "mineral": "",
+    "elements": [
+     "Co",
+     "O"
+    ]
+   },
+   {
+    "name": "Cr2O3-Eskolaite",
+    "file": "oxides/Cr2O3-Eskolaite.cif",
+    "formula": "Cr2O3",
+    "mineral": "Eskolaite",
+    "elements": [
+     "Cr",
+     "O"
+    ]
+   },
+   {
+    "name": "Cu2O-Cuprite",
+    "file": "oxides/Cu2O-Cuprite.cif",
+    "formula": "Cu2O",
+    "mineral": "Cuprite",
+    "elements": [
+     "Cu",
+     "O"
+    ]
+   },
+   {
+    "name": "CuO-Tenorite",
+    "file": "oxides/CuO-Tenorite.cif",
+    "formula": "CuO",
+    "mineral": "Tenorite",
+    "elements": [
+     "Cu",
+     "O"
+    ]
+   },
+   {
+    "name": "Fe2O3-Hematite",
+    "file": "oxides/Fe2O3-Hematite.cif",
+    "formula": "Fe2O3",
+    "mineral": "Hematite",
+    "elements": [
+     "Fe",
+     "O"
+    ]
+   },
+   {
+    "name": "Fe3O4-Magnetite",
+    "file": "oxides/Fe3O4-Magnetite.cif",
+    "formula": "Fe3O4",
+    "mineral": "Magnetite",
+    "elements": [
+     "O"
+    ]
+   },
+   {
+    "name": "FeO-Wustite",
+    "file": "oxides/FeO-Wustite.cif",
+    "formula": "FeO",
+    "mineral": "Wustite",
+    "elements": [
+     "Fe",
+     "O"
+    ]
+   },
+   {
+    "name": "GeO2-Argutite-tetrag",
+    "file": "oxides/GeO2-Argutite-tetrag.cif",
+    "formula": "GeO2",
+    "mineral": "Argutite-tetrag",
+    "elements": [
+     "Ge",
+     "O"
+    ]
+   },
+   {
+    "name": "GeO2-Argutite",
+    "file": "oxides/GeO2-Argutite.cif",
+    "formula": "GeO2",
+    "mineral": "Argutite",
+    "elements": [
+     "Ge",
+     "O"
+    ]
+   },
+   {
+    "name": "GeO2",
+    "file": "oxides/GeO2.cif",
+    "formula": "GeO2",
+    "mineral": "",
+    "elements": [
+     "Ge",
+     "O"
+    ]
+   },
+   {
+    "name": "HfO2",
+    "file": "oxides/HfO2.cif",
+    "formula": "HfO2",
+    "mineral": "",
+    "elements": [
+     "Hf",
+     "O"
+    ]
+   },
+   {
+    "name": "In2O3-IndiumOxide",
+    "file": "oxides/In2O3-IndiumOxide.cif",
+    "formula": "In2O3",
+    "mineral": "IndiumOxide",
+    "elements": [
+     "In",
+     "O"
+    ]
+   },
+   {
+    "name": "In2O3",
+    "file": "oxides/In2O3.cif",
+    "formula": "In2O3",
+    "mineral": "",
+    "elements": [
+     "In",
+     "O"
+    ]
+   },
+   {
+    "name": "IrO2",
+    "file": "oxides/IrO2.cif",
+    "formula": "IrO2",
+    "mineral": "",
+    "elements": []
+   },
+   {
+    "name": "K2O",
+    "file": "oxides/K2O.cif",
+    "formula": "K2O",
+    "mineral": "",
+    "elements": [
+     "K",
+     "O"
+    ]
+   },
+   {
+    "name": "La2O3-LanthanumOxide-A",
+    "file": "oxides/La2O3-LanthanumOxide-A.cif",
+    "formula": "La2O3",
+    "mineral": "LanthanumOxide-A",
+    "elements": [
+     "La",
+     "O"
+    ]
+   },
+   {
+    "name": "Li2O",
+    "file": "oxides/Li2O.cif",
+    "formula": "Li2O",
+    "mineral": "",
+    "elements": [
+     "Li",
+     "O"
+    ]
+   },
+   {
+    "name": "MgO-Periclase",
+    "file": "oxides/MgO-Periclase.cif",
+    "formula": "MgO",
+    "mineral": "Periclase",
+    "elements": [
+     "Mg",
+     "O"
+    ]
+   },
+   {
+    "name": "MnO-Manganosite",
+    "file": "oxides/MnO-Manganosite.cif",
+    "formula": "MnO",
+    "mineral": "Manganosite",
+    "elements": [
+     "Mn",
+     "O"
+    ]
+   },
+   {
+    "name": "MnO2-Pyrolusite",
+    "file": "oxides/MnO2-Pyrolusite.cif",
+    "formula": "MnO2",
+    "mineral": "Pyrolusite",
+    "elements": [
+     "Mn",
+     "O"
+    ]
+   },
+   {
+    "name": "MoO2-Tugarinovite",
+    "file": "oxides/MoO2-Tugarinovite.cif",
+    "formula": "MoO2",
+    "mineral": "Tugarinovite",
+    "elements": [
+     "Mo",
+     "O"
+    ]
+   },
+   {
+    "name": "MoO3-Molybdite",
+    "file": "oxides/MoO3-Molybdite.cif",
+    "formula": "MoO3",
+    "mineral": "Molybdite",
+    "elements": [
+     "Mo",
+     "O"
+    ]
+   },
+   {
+    "name": "Na2O",
+    "file": "oxides/Na2O.cif",
+    "formula": "Na2O",
+    "mineral": "",
+    "elements": [
+     "Na",
+     "O"
+    ]
+   },
+   {
+    "name": "NbO",
+    "file": "oxides/NbO.cif",
+    "formula": "NbO",
+    "mineral": "",
+    "elements": [
+     "Nb",
+     "O"
+    ]
+   },
+   {
+    "name": "NbO2",
+    "file": "oxides/NbO2.cif",
+    "formula": "NbO2",
+    "mineral": "",
+    "elements": [
+     "Nb",
+     "O"
+    ]
+   },
+   {
+    "name": "NiFe2O4",
+    "file": "oxides/NiFe2O4.cif",
+    "formula": "NiFe2O4",
+    "mineral": "",
+    "elements": []
+   },
+   {
+    "name": "NiO-Bunsenite",
+    "file": "oxides/NiO-Bunsenite.cif",
+    "formula": "NiO",
+    "mineral": "Bunsenite",
+    "elements": [
+     "Ni",
+     "O"
+    ]
+   },
+   {
+    "name": "PbO",
+    "file": "oxides/PbO.cif",
+    "formula": "PbO",
+    "mineral": "",
+    "elements": [
+     "O",
+     "Pb"
+    ]
+   },
+   {
+    "name": "PbO2-Scrutinyite",
+    "file": "oxides/PbO2-Scrutinyite.cif",
+    "formula": "PbO2",
+    "mineral": "Scrutinyite",
+    "elements": [
+     "O",
+     "Pb"
+    ]
+   },
+   {
+    "name": "PdO",
+    "file": "oxides/PdO.cif",
+    "formula": "PdO",
+    "mineral": "",
+    "elements": [
+     "O",
+     "Pd"
+    ]
+   },
+   {
+    "name": "PtO2-beta",
+    "file": "oxides/PtO2-beta.cif",
+    "formula": "PtO2",
+    "mineral": "beta",
+    "elements": [
+     "O",
+     "Pt"
+    ]
+   },
+   {
+    "name": "Rb2O",
+    "file": "oxides/Rb2O.cif",
+    "formula": "Rb2O",
+    "mineral": "",
+    "elements": [
+     "O",
+     "Rb"
+    ]
+   },
+   {
+    "name": "Rh2O3",
+    "file": "oxides/Rh2O3.cif",
+    "formula": "Rh2O3",
+    "mineral": "",
+    "elements": [
+     "O",
+     "Rh"
+    ]
+   },
+   {
+    "name": "RuO2",
+    "file": "oxides/RuO2.cif",
+    "formula": "RuO2",
+    "mineral": "",
+    "elements": [
+     "O",
+     "Ru"
+    ]
+   },
+   {
+    "name": "Sc2O3",
+    "file": "oxides/Sc2O3.cif",
+    "formula": "Sc2O3",
+    "mineral": "",
+    "elements": [
+     "O",
+     "Sc"
+    ]
+   },
+   {
+    "name": "SiO2-Coesite",
+    "file": "oxides/SiO2-Coesite.cif",
+    "formula": "SiO2",
+    "mineral": "Coesite",
+    "elements": [
+     "O",
+     "P",
+     "Si"
+    ]
+   },
+   {
+    "name": "SiO2-Cristobalite",
+    "file": "oxides/SiO2-Cristobalite.cif",
+    "formula": "SiO2",
+    "mineral": "Cristobalite",
+    "elements": [
+     "O",
+     "Si"
+    ]
+   },
+   {
+    "name": "SiO2-Quartz-alpha",
+    "file": "oxides/SiO2-Quartz-alpha.cif",
+    "formula": "SiO2",
+    "mineral": "Quartz-alpha",
+    "elements": [
+     "O",
+     "Si"
+    ]
+   },
+   {
+    "name": "SiO2-Quartz-beta",
+    "file": "oxides/SiO2-Quartz-beta.cif",
+    "formula": "SiO2",
+    "mineral": "Quartz-beta",
+    "elements": [
+     "O",
+     "Si"
+    ]
+   },
+   {
+    "name": "SiO2-Stishovite",
+    "file": "oxides/SiO2-Stishovite.cif",
+    "formula": "SiO2",
+    "mineral": "Stishovite",
+    "elements": [
+     "O",
+     "Si"
+    ]
+   },
+   {
+    "name": "SmO",
+    "file": "oxides/SmO.cif",
+    "formula": "SmO",
+    "mineral": "",
+    "elements": [
+     "O",
+     "Sm"
+    ]
+   },
+   {
+    "name": "SnO",
+    "file": "oxides/SnO.cif",
+    "formula": "SnO",
+    "mineral": "",
+    "elements": [
+     "O",
+     "Sn"
+    ]
+   },
+   {
+    "name": "SnO2-Cassiterite",
+    "file": "oxides/SnO2-Cassiterite.cif",
+    "formula": "SnO2",
+    "mineral": "Cassiterite",
+    "elements": [
+     "O",
+     "Sn"
+    ]
+   },
+   {
+    "name": "SrO",
+    "file": "oxides/SrO.cif",
+    "formula": "SrO",
+    "mineral": "",
+    "elements": [
+     "O",
+     "Sr"
+    ]
+   },
+   {
+    "name": "TaO",
+    "file": "oxides/TaO.cif",
+    "formula": "TaO",
+    "mineral": "",
+    "elements": [
+     "O",
+     "Ta"
+    ]
+   },
+   {
+    "name": "TiO2-Anatase",
+    "file": "oxides/TiO2-Anatase.cif",
+    "formula": "TiO2",
+    "mineral": "Anatase",
+    "elements": [
+     "O",
+     "Ti"
+    ]
+   },
+   {
+    "name": "TiO2-Brookite",
+    "file": "oxides/TiO2-Brookite.cif",
+    "formula": "TiO2",
+    "mineral": "Brookite",
+    "elements": [
+     "O",
+     "Ti"
+    ]
+   },
+   {
+    "name": "TiO2-Rutile",
+    "file": "oxides/TiO2-Rutile.cif",
+    "formula": "TiO2",
+    "mineral": "Rutile",
+    "elements": [
+     "O",
+     "Ti"
+    ]
+   },
+   {
+    "name": "UO",
+    "file": "oxides/UO.cif",
+    "formula": "UO",
+    "mineral": "",
+    "elements": [
+     "O",
+     "U"
+    ]
+   },
+   {
+    "name": "UO2-Uraninite",
+    "file": "oxides/UO2-Uraninite.cif",
+    "formula": "UO2",
+    "mineral": "Uraninite",
+    "elements": [
+     "O",
+     "U"
+    ]
+   },
+   {
+    "name": "V2O3-Karelianite",
+    "file": "oxides/V2O3-Karelianite.cif",
+    "formula": "V2O3",
+    "mineral": "Karelianite",
+    "elements": [
+     "O",
+     "V"
+    ]
+   },
+   {
+    "name": "V2O5-Shcherbinaite",
+    "file": "oxides/V2O5-Shcherbinaite.cif",
+    "formula": "V2O5",
+    "mineral": "Shcherbinaite",
+    "elements": [
+     "O",
+     "V"
+    ]
+   },
+   {
+    "name": "VO",
+    "file": "oxides/VO.cif",
+    "formula": "VO",
+    "mineral": "",
+    "elements": [
+     "O",
+     "V"
+    ]
+   },
+   {
+    "name": "VO2",
+    "file": "oxides/VO2.cif",
+    "formula": "VO2",
+    "mineral": "",
+    "elements": [
+     "O",
+     "V"
+    ]
+   },
+   {
+    "name": "WO2",
+    "file": "oxides/WO2.cif",
+    "formula": "WO2",
+    "mineral": "",
+    "elements": []
+   },
+   {
+    "name": "Y2O3",
+    "file": "oxides/Y2O3.cif",
+    "formula": "Y2O3",
+    "mineral": "",
+    "elements": [
+     "O",
+     "Y"
+    ]
+   },
+   {
+    "name": "YbO",
+    "file": "oxides/YbO.cif",
+    "formula": "YbO",
+    "mineral": "",
+    "elements": [
+     "O",
+     "Yb"
+    ]
+   },
+   {
+    "name": "ZnO-Zincite",
+    "file": "oxides/ZnO-Zincite.cif",
+    "formula": "ZnO",
+    "mineral": "Zincite",
+    "elements": [
+     "O",
+     "Zn"
+    ]
+   },
+   {
+    "name": "ZrO",
+    "file": "oxides/ZrO.cif",
+    "formula": "ZrO",
+    "mineral": "",
+    "elements": [
+     "O",
+     "Zr"
+    ]
+   },
+   {
+    "name": "ZrO2-Cubic",
+    "file": "oxides/ZrO2-Cubic.cif",
+    "formula": "ZrO2",
+    "mineral": "Cubic",
+    "elements": [
+     "O",
+     "Zr"
+    ]
+   }
+  ],
+  "phosphides": [
+   {
+    "name": "AlP",
+    "file": "phosphides/AlP.cif",
+    "formula": "AlP",
+    "mineral": "",
+    "elements": [
+     "Al",
+     "P"
+    ]
+   },
+   {
+    "name": "BP",
+    "file": "phosphides/BP.cif",
+    "formula": "BP",
+    "mineral": "",
+    "elements": [
+     "B",
+     "P"
+    ]
+   },
+   {
+    "name": "GaP",
+    "file": "phosphides/GaP.cif",
+    "formula": "GaP",
+    "mineral": "",
+    "elements": [
+     "Ga",
+     "P"
+    ]
+   },
+   {
+    "name": "InP",
+    "file": "phosphides/InP.cif",
+    "formula": "InP",
+    "mineral": "",
+    "elements": [
+     "In",
+     "P"
+    ]
+   }
+  ],
+  "selenides": [
+   {
+    "name": "Bi2Se3",
+    "file": "selenides/Bi2Se3.cif",
+    "formula": "Bi2Se3",
+    "mineral": "",
+    "elements": [
+     "Bi",
+     "Se"
+    ]
+   },
+   {
+    "name": "BiSe",
+    "file": "selenides/BiSe.cif",
+    "formula": "BiSe",
+    "mineral": "",
+    "elements": [
+     "Bi",
+     "Se"
+    ]
+   },
+   {
+    "name": "CdSe-Cadmoselite",
+    "file": "selenides/CdSe-Cadmoselite.cif",
+    "formula": "CdSe",
+    "mineral": "Cadmoselite",
+    "elements": [
+     "Cd",
+     "Se"
+    ]
+   },
+   {
+    "name": "HgSe-Tiemannite",
+    "file": "selenides/HgSe-Tiemannite.cif",
+    "formula": "HgSe",
+    "mineral": "Tiemannite",
+    "elements": [
+     "Hg",
+     "Se"
+    ]
+   },
+   {
+    "name": "PbSe-Clausthalite",
+    "file": "selenides/PbSe-Clausthalite.cif",
+    "formula": "PbSe",
+    "mineral": "Clausthalite",
+    "elements": [
+     "Pb",
+     "Se"
+    ]
+   },
+   {
+    "name": "Sb2Se3-Antimonselite",
+    "file": "selenides/Sb2Se3-Antimonselite.cif",
+    "formula": "Sb2Se3",
+    "mineral": "Antimonselite",
+    "elements": [
+     "Sb",
+     "Se"
+    ]
+   },
+   {
+    "name": "ZnSe",
+    "file": "selenides/ZnSe.cif",
+    "formula": "ZnSe",
+    "mineral": "",
+    "elements": [
+     "Se",
+     "Zn"
+    ]
+   }
+  ],
+  "silicates": [
+   {
+    "name": "Be3Al2(SiO3)6-Beryl",
+    "file": "silicates/Be3Al2(SiO3)6-Beryl.cif",
+    "formula": "Be3Al2(SiO3)6",
+    "mineral": "Beryl",
+    "elements": [
+     "Al",
+     "Be",
+     "O",
+     "Si"
+    ]
+   }
+  ],
+  "sulfates": [
+   {
+    "name": "BaSO4-Barite",
+    "file": "sulfates/BaSO4-Barite.cif",
+    "formula": "BaSO4",
+    "mineral": "Barite",
+    "elements": [
+     "Ba",
+     "O",
+     "S"
+    ]
+   },
+   {
+    "name": "CaSO4-2(H2O)-Gypsum",
+    "file": "sulfates/CaSO4-2(H2O)-Gypsum.cif",
+    "formula": "CaSO4",
+    "mineral": "2(H2O)-Gypsum",
+    "elements": [
+     "Ca",
+     "S"
+    ]
+   },
+   {
+    "name": "CaSO4-Anhydrite",
+    "file": "sulfates/CaSO4-Anhydrite.cif",
+    "formula": "CaSO4",
+    "mineral": "Anhydrite",
+    "elements": [
+     "Ca",
+     "O",
+     "S"
+    ]
+   },
+   {
+    "name": "CoSO4",
+    "file": "sulfates/CoSO4.cif",
+    "formula": "CoSO4",
+    "mineral": "",
+    "elements": []
+   },
+   {
+    "name": "CuSO4",
+    "file": "sulfates/CuSO4.cif",
+    "formula": "CuSO4",
+    "mineral": "",
+    "elements": []
+   },
+   {
+    "name": "H4SO5",
+    "file": "sulfates/H4SO5.cif",
+    "formula": "H4SO5",
+    "mineral": "",
+    "elements": [
+     "H",
+     "O",
+     "S"
+    ]
+   },
+   {
+    "name": "MgSO4",
+    "file": "sulfates/MgSO4.cif",
+    "formula": "MgSO4",
+    "mineral": "",
+    "elements": [
+     "Mg",
+     "O",
+     "S"
+    ]
+   },
+   {
+    "name": "Na2SO4",
+    "file": "sulfates/Na2SO4.cif",
+    "formula": "Na2SO4",
+    "mineral": "",
+    "elements": [
+     "Na",
+     "O",
+     "S"
+    ]
+   },
+   {
+    "name": "PbSO4-Anglesite",
+    "file": "sulfates/PbSO4-Anglesite.cif",
+    "formula": "PbSO4",
+    "mineral": "Anglesite",
+    "elements": [
+     "O",
+     "Pb",
+     "S"
+    ]
+   },
+   {
+    "name": "SrSO4-Celestine",
+    "file": "sulfates/SrSO4-Celestine.cif",
+    "formula": "SrSO4",
+    "mineral": "Celestine",
+    "elements": [
+     "O",
+     "S",
+     "Sr"
+    ]
+   }
+  ],
+  "sulfides": [
+   {
+    "name": "Bi2S3-Bismuthinite",
+    "file": "sulfides/Bi2S3-Bismuthinite.cif",
+    "formula": "Bi2S3",
+    "mineral": "Bismuthinite",
+    "elements": [
+     "Bi",
+     "S"
+    ]
+   },
+   {
+    "name": "CdS-Greenockite",
+    "file": "sulfides/CdS-Greenockite.cif",
+    "formula": "CdS",
+    "mineral": "Greenockite",
+    "elements": [
+     "Cd",
+     "S"
+    ]
+   },
+   {
+    "name": "CdS-Hawleyite",
+    "file": "sulfides/CdS-Hawleyite.cif",
+    "formula": "CdS",
+    "mineral": "Hawleyite",
+    "elements": [
+     "Cd",
+     "S"
+    ]
+   },
+   {
+    "name": "FeS",
+    "file": "sulfides/FeS.cif",
+    "formula": "FeS",
+    "mineral": "",
+    "elements": [
+     "Fe",
+     "S"
+    ]
+   },
+   {
+    "name": "FeS2-Pyrite",
+    "file": "sulfides/FeS2-Pyrite.cif",
+    "formula": "FeS2",
+    "mineral": "Pyrite",
+    "elements": [
+     "Fe",
+     "S"
+    ]
+   },
+   {
+    "name": "HgS-Metacinnabar",
+    "file": "sulfides/HgS-Metacinnabar.cif",
+    "formula": "HgS",
+    "mineral": "Metacinnabar",
+    "elements": [
+     "Hg",
+     "S"
+    ]
+   },
+   {
+    "name": "PbS-Galena",
+    "file": "sulfides/PbS-Galena.cif",
+    "formula": "PbS",
+    "mineral": "Galena",
+    "elements": [
+     "Pb",
+     "S"
+    ]
+   },
+   {
+    "name": "Sb2S3-Stibnite",
+    "file": "sulfides/Sb2S3-Stibnite.cif",
+    "formula": "Sb2S3",
+    "mineral": "Stibnite",
+    "elements": [
+     "S",
+     "Sb"
+    ]
+   },
+   {
+    "name": "SnS-Herzenbergite",
+    "file": "sulfides/SnS-Herzenbergite.cif",
+    "formula": "SnS",
+    "mineral": "Herzenbergite",
+    "elements": [
+     "S",
+     "Sn"
+    ]
+   },
+   {
+    "name": "ZnS-Sphalerite",
+    "file": "sulfides/ZnS-Sphalerite.cif",
+    "formula": "ZnS",
+    "mineral": "Sphalerite",
+    "elements": [
+     "S",
+     "Zn"
+    ]
+   },
+   {
+    "name": "ZnS-Wurtzite-2H",
+    "file": "sulfides/ZnS-Wurtzite-2H.cif",
+    "formula": "ZnS",
+    "mineral": "Wurtzite-2H",
+    "elements": [
+     "S",
+     "Zn"
+    ]
+   },
+   {
+    "name": "ZnS-Zincblende",
+    "file": "sulfides/ZnS-Zincblende.cif",
+    "formula": "ZnS",
+    "mineral": "Zincblende",
+    "elements": [
+     "S",
+     "Zn"
+    ]
+   }
+  ],
+  "telurides": [
+   {
+    "name": "Bi2Te3",
+    "file": "telurides/Bi2Te3.cif",
+    "formula": "Bi2Te3",
+    "mineral": "",
+    "elements": [
+     "Bi",
+     "Te"
+    ]
+   },
+   {
+    "name": "BiTe",
+    "file": "telurides/BiTe.cif",
+    "formula": "BiTe",
+    "mineral": "",
+    "elements": [
+     "Bi",
+     "Te"
+    ]
+   },
+   {
+    "name": "CdTe",
+    "file": "telurides/CdTe.cif",
+    "formula": "CdTe",
+    "mineral": "",
+    "elements": [
+     "Cd",
+     "Te"
+    ]
+   },
+   {
+    "name": "PbTe-Altaite",
+    "file": "telurides/PbTe-Altaite.cif",
+    "formula": "PbTe",
+    "mineral": "Altaite",
+    "elements": [
+     "Pb",
+     "Te"
+    ]
+   },
+   {
+    "name": "ZnTe",
+    "file": "telurides/ZnTe.cif",
+    "formula": "ZnTe",
+    "mineral": "",
+    "elements": [
+     "Te",
+     "Zn"
+    ]
+   }
+  ],
+  "titanates": [
+   {
+    "name": "BaTiO3",
+    "file": "titanates/BaTiO3.cif",
+    "formula": "BaTiO3",
+    "mineral": "",
+    "elements": []
+   },
+   {
+    "name": "CaTiO3-Perovskite",
+    "file": "titanates/CaTiO3-Perovskite.cif",
+    "formula": "CaTiO3",
+    "mineral": "Perovskite",
+    "elements": [
+     "Ca",
+     "O",
+     "Ti"
+    ]
+   },
+   {
+    "name": "Mg2TiO4-Qandilite-cubic",
+    "file": "titanates/Mg2TiO4-Qandilite-cubic.cif",
+    "formula": "Mg2TiO4",
+    "mineral": "Qandilite-cubic",
+    "elements": [
+     "Mg",
+     "O",
+     "Ti"
+    ]
+   },
+   {
+    "name": "Mg2TiO4-Qandilite-tetrag",
+    "file": "titanates/Mg2TiO4-Qandilite-tetrag.cif",
+    "formula": "Mg2TiO4",
+    "mineral": "Qandilite-tetrag",
+    "elements": [
+     "Mg",
+     "O",
+     "Ti"
+    ]
+   },
+   {
+    "name": "MgTiO3",
+    "file": "titanates/MgTiO3.cif",
+    "formula": "MgTiO3",
+    "mineral": "",
+    "elements": []
+   },
+   {
+    "name": "PbZr0.1Ti0.9O3",
+    "file": "titanates/PbZr0.1Ti0.9O3.cif",
+    "formula": "PbZr0.1Ti0.9O3",
+    "mineral": "",
+    "elements": [
+     "O",
+     "Pb",
+     "Ti",
+     "Zr"
+    ]
+   },
+   {
+    "name": "SrTiO3-Tausonite",
+    "file": "titanates/SrTiO3-Tausonite.cif",
+    "formula": "SrTiO3",
+    "mineral": "Tausonite",
+    "elements": [
+     "O",
+     "Ti"
+    ]
+   }
+  ],
+  "zeolites": [
+   {
+    "name": "ABW",
+    "file": "zeolites/ABW.cif",
+    "formula": "ABW",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "ACO",
+    "file": "zeolites/ACO.cif",
+    "formula": "ACO",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "AEI",
+    "file": "zeolites/AEI.cif",
+    "formula": "AEI",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "AEL",
+    "file": "zeolites/AEL.cif",
+    "formula": "AEL",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "AEN",
+    "file": "zeolites/AEN.cif",
+    "formula": "AEN",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "AET",
+    "file": "zeolites/AET.cif",
+    "formula": "AET",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "AFG",
+    "file": "zeolites/AFG.cif",
+    "formula": "AFG",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "AFI",
+    "file": "zeolites/AFI.cif",
+    "formula": "AFI",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "AFN",
+    "file": "zeolites/AFN.cif",
+    "formula": "AFN",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "AFO",
+    "file": "zeolites/AFO.cif",
+    "formula": "AFO",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "AFR",
+    "file": "zeolites/AFR.cif",
+    "formula": "AFR",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "AFS",
+    "file": "zeolites/AFS.cif",
+    "formula": "AFS",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "AFT",
+    "file": "zeolites/AFT.cif",
+    "formula": "AFT",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "AFX",
+    "file": "zeolites/AFX.cif",
+    "formula": "AFX",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "AFY",
+    "file": "zeolites/AFY.cif",
+    "formula": "AFY",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "AHT",
+    "file": "zeolites/AHT.cif",
+    "formula": "AHT",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "ANA",
+    "file": "zeolites/ANA.cif",
+    "formula": "ANA",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "APC",
+    "file": "zeolites/APC.cif",
+    "formula": "APC",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "APD",
+    "file": "zeolites/APD.cif",
+    "formula": "APD",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "AST",
+    "file": "zeolites/AST.cif",
+    "formula": "AST",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "ASV",
+    "file": "zeolites/ASV.cif",
+    "formula": "ASV",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "ATN",
+    "file": "zeolites/ATN.cif",
+    "formula": "ATN",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "ATO",
+    "file": "zeolites/ATO.cif",
+    "formula": "ATO",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "ATS",
+    "file": "zeolites/ATS.cif",
+    "formula": "ATS",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "ATT",
+    "file": "zeolites/ATT.cif",
+    "formula": "ATT",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "ATV",
+    "file": "zeolites/ATV.cif",
+    "formula": "ATV",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "AWO",
+    "file": "zeolites/AWO.cif",
+    "formula": "AWO",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "AWW",
+    "file": "zeolites/AWW.cif",
+    "formula": "AWW",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "BCT",
+    "file": "zeolites/BCT.cif",
+    "formula": "BCT",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "BEA",
+    "file": "zeolites/BEA.cif",
+    "formula": "BEA",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "BEC",
+    "file": "zeolites/BEC.cif",
+    "formula": "BEC",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "BIK",
+    "file": "zeolites/BIK.cif",
+    "formula": "BIK",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "BOF",
+    "file": "zeolites/BOF.cif",
+    "formula": "BOF",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "BOG",
+    "file": "zeolites/BOG.cif",
+    "formula": "BOG",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "BPH",
+    "file": "zeolites/BPH.cif",
+    "formula": "BPH",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "BRE",
+    "file": "zeolites/BRE.cif",
+    "formula": "BRE",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "BSV",
+    "file": "zeolites/BSV.cif",
+    "formula": "BSV",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "CAN",
+    "file": "zeolites/CAN.cif",
+    "formula": "CAN",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "CAS",
+    "file": "zeolites/CAS.cif",
+    "formula": "CAS",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "CDO",
+    "file": "zeolites/CDO.cif",
+    "formula": "CDO",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "CFI",
+    "file": "zeolites/CFI.cif",
+    "formula": "CFI",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "CGF",
+    "file": "zeolites/CGF.cif",
+    "formula": "CGF",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "CGS",
+    "file": "zeolites/CGS.cif",
+    "formula": "CGS",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "CHA",
+    "file": "zeolites/CHA.cif",
+    "formula": "CHA",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "CHI",
+    "file": "zeolites/CHI.cif",
+    "formula": "CHI",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "CLO",
+    "file": "zeolites/CLO.cif",
+    "formula": "CLO",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "CONt",
+    "file": "zeolites/CONt.cif",
+    "formula": "CONt",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "CZP",
+    "file": "zeolites/CZP.cif",
+    "formula": "CZP",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "DAC",
+    "file": "zeolites/DAC.cif",
+    "formula": "DAC",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "DDR",
+    "file": "zeolites/DDR.cif",
+    "formula": "DDR",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "DFO",
+    "file": "zeolites/DFO.cif",
+    "formula": "DFO",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "DFT",
+    "file": "zeolites/DFT.cif",
+    "formula": "DFT",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "DOH",
+    "file": "zeolites/DOH.cif",
+    "formula": "DOH",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "DON",
+    "file": "zeolites/DON.cif",
+    "formula": "DON",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "EAB",
+    "file": "zeolites/EAB.cif",
+    "formula": "EAB",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "EDI",
+    "file": "zeolites/EDI.cif",
+    "formula": "EDI",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "EMT",
+    "file": "zeolites/EMT.cif",
+    "formula": "EMT",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "EON",
+    "file": "zeolites/EON.cif",
+    "formula": "EON",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "EPI",
+    "file": "zeolites/EPI.cif",
+    "formula": "EPI",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "ERI",
+    "file": "zeolites/ERI.cif",
+    "formula": "ERI",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "ESV",
+    "file": "zeolites/ESV.cif",
+    "formula": "ESV",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "ETR",
+    "file": "zeolites/ETR.cif",
+    "formula": "ETR",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "EUO",
+    "file": "zeolites/EUO.cif",
+    "formula": "EUO",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "EZT",
+    "file": "zeolites/EZT.cif",
+    "formula": "EZT",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "FAR",
+    "file": "zeolites/FAR.cif",
+    "formula": "FAR",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "FAU",
+    "file": "zeolites/FAU.cif",
+    "formula": "FAU",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "FER",
+    "file": "zeolites/FER.cif",
+    "formula": "FER",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "FRA",
+    "file": "zeolites/FRA.cif",
+    "formula": "FRA",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "GIS",
+    "file": "zeolites/GIS.cif",
+    "formula": "GIS",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "GIU",
+    "file": "zeolites/GIU.cif",
+    "formula": "GIU",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "GME",
+    "file": "zeolites/GME.cif",
+    "formula": "GME",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "GON",
+    "file": "zeolites/GON.cif",
+    "formula": "GON",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "GOO",
+    "file": "zeolites/GOO.cif",
+    "formula": "GOO",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "HEU",
+    "file": "zeolites/HEU.cif",
+    "formula": "HEU",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "IFR",
+    "file": "zeolites/IFR.cif",
+    "formula": "IFR",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "IHW",
+    "file": "zeolites/IHW.cif",
+    "formula": "IHW",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "IMF",
+    "file": "zeolites/IMF.cif",
+    "formula": "IMF",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "IRR",
+    "file": "zeolites/IRR.cif",
+    "formula": "IRR",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "ISV",
+    "file": "zeolites/ISV.cif",
+    "formula": "ISV",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "ITE",
+    "file": "zeolites/ITE.cif",
+    "formula": "ITE",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "ITH",
+    "file": "zeolites/ITH.cif",
+    "formula": "ITH",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "ITR",
+    "file": "zeolites/ITR.cif",
+    "formula": "ITR",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "ITV",
+    "file": "zeolites/ITV.cif",
+    "formula": "ITV",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "ITW",
+    "file": "zeolites/ITW.cif",
+    "formula": "ITW",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "IWR",
+    "file": "zeolites/IWR.cif",
+    "formula": "IWR",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "IWS",
+    "file": "zeolites/IWS.cif",
+    "formula": "IWS",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "IWV",
+    "file": "zeolites/IWV.cif",
+    "formula": "IWV",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "IWW",
+    "file": "zeolites/IWW.cif",
+    "formula": "IWW",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "JBW",
+    "file": "zeolites/JBW.cif",
+    "formula": "JBW",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "JRY",
+    "file": "zeolites/JRY.cif",
+    "formula": "JRY",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "KFI",
+    "file": "zeolites/KFI.cif",
+    "formula": "KFI",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "LAU",
+    "file": "zeolites/LAU.cif",
+    "formula": "LAU",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "LEV",
+    "file": "zeolites/LEV.cif",
+    "formula": "LEV",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "LIO",
+    "file": "zeolites/LIO.cif",
+    "formula": "LIO",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "LIT",
+    "file": "zeolites/LIT.cif",
+    "formula": "LIT",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "LOS",
+    "file": "zeolites/LOS.cif",
+    "formula": "LOS",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "LOV",
+    "file": "zeolites/LOV.cif",
+    "formula": "LOV",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "LTA",
+    "file": "zeolites/LTA.cif",
+    "formula": "LTA",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "LTF",
+    "file": "zeolites/LTF.cif",
+    "formula": "LTF",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "LTL",
+    "file": "zeolites/LTL.cif",
+    "formula": "LTL",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "LTN",
+    "file": "zeolites/LTN.cif",
+    "formula": "LTN",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "MAR",
+    "file": "zeolites/MAR.cif",
+    "formula": "MAR",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "MAZ",
+    "file": "zeolites/MAZ.cif",
+    "formula": "MAZ",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "MEI",
+    "file": "zeolites/MEI.cif",
+    "formula": "MEI",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "MEL",
+    "file": "zeolites/MEL.cif",
+    "formula": "MEL",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "MEP",
+    "file": "zeolites/MEP.cif",
+    "formula": "MEP",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "MER",
+    "file": "zeolites/MER.cif",
+    "formula": "MER",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "MFI",
+    "file": "zeolites/MFI.cif",
+    "formula": "MFI",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "MFS",
+    "file": "zeolites/MFS.cif",
+    "formula": "MFS",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "MON",
+    "file": "zeolites/MON.cif",
+    "formula": "MON",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "MOR",
+    "file": "zeolites/MOR.cif",
+    "formula": "MOR",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "MOZ",
+    "file": "zeolites/MOZ.cif",
+    "formula": "MOZ",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "MRE",
+    "file": "zeolites/MRE.cif",
+    "formula": "MRE",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "MSE",
+    "file": "zeolites/MSE.cif",
+    "formula": "MSE",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "MSO",
+    "file": "zeolites/MSO.cif",
+    "formula": "MSO",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "MTF",
+    "file": "zeolites/MTF.cif",
+    "formula": "MTF",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "MTN",
+    "file": "zeolites/MTN.cif",
+    "formula": "MTN",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "MTT",
+    "file": "zeolites/MTT.cif",
+    "formula": "MTT",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "MTW",
+    "file": "zeolites/MTW.cif",
+    "formula": "MTW",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "MVY",
+    "file": "zeolites/MVY.cif",
+    "formula": "MVY",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "MWW",
+    "file": "zeolites/MWW.cif",
+    "formula": "MWW",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "NAB",
+    "file": "zeolites/NAB.cif",
+    "formula": "NAB",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "NAT",
+    "file": "zeolites/NAT.cif",
+    "formula": "NAT",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "NES",
+    "file": "zeolites/NES.cif",
+    "formula": "NES",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "NON",
+    "file": "zeolites/NON.cif",
+    "formula": "NON",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "NPO",
+    "file": "zeolites/NPO.cif",
+    "formula": "NPO",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "NSI",
+    "file": "zeolites/NSI.cif",
+    "formula": "NSI",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "OBW",
+    "file": "zeolites/OBW.cif",
+    "formula": "OBW",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "OFF",
+    "file": "zeolites/OFF.cif",
+    "formula": "OFF",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "OSI",
+    "file": "zeolites/OSI.cif",
+    "formula": "OSI",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "OSO",
+    "file": "zeolites/OSO.cif",
+    "formula": "OSO",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "OWE",
+    "file": "zeolites/OWE.cif",
+    "formula": "OWE",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "PAR",
+    "file": "zeolites/PAR.cif",
+    "formula": "PAR",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "PAU",
+    "file": "zeolites/PAU.cif",
+    "formula": "PAU",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "PHI",
+    "file": "zeolites/PHI.cif",
+    "formula": "PHI",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "PON",
+    "file": "zeolites/PON.cif",
+    "formula": "PON",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "PUN",
+    "file": "zeolites/PUN.cif",
+    "formula": "PUN",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "RHO",
+    "file": "zeolites/RHO.cif",
+    "formula": "RHO",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "RON",
+    "file": "zeolites/RON.cif",
+    "formula": "RON",
+    "mineral": "",
+    "elements": [
+     "H",
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "RRO",
+    "file": "zeolites/RRO.cif",
+    "formula": "RRO",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "RSN",
+    "file": "zeolites/RSN.cif",
+    "formula": "RSN",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "RTE",
+    "file": "zeolites/RTE.cif",
+    "formula": "RTE",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "RTH",
+    "file": "zeolites/RTH.cif",
+    "formula": "RTH",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "RUT",
+    "file": "zeolites/RUT.cif",
+    "formula": "RUT",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "RWR",
+    "file": "zeolites/RWR.cif",
+    "formula": "RWR",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "RWY",
+    "file": "zeolites/RWY.cif",
+    "formula": "RWY",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "SAF",
+    "file": "zeolites/SAF.cif",
+    "formula": "SAF",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "SAO",
+    "file": "zeolites/SAO.cif",
+    "formula": "SAO",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "SAS",
+    "file": "zeolites/SAS.cif",
+    "formula": "SAS",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "SAT",
+    "file": "zeolites/SAT.cif",
+    "formula": "SAT",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "SAV",
+    "file": "zeolites/SAV.cif",
+    "formula": "SAV",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "SBE",
+    "file": "zeolites/SBE.cif",
+    "formula": "SBE",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "SBN",
+    "file": "zeolites/SBN.cif",
+    "formula": "SBN",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "SBS",
+    "file": "zeolites/SBS.cif",
+    "formula": "SBS",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "SBT",
+    "file": "zeolites/SBT.cif",
+    "formula": "SBT",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "SFE",
+    "file": "zeolites/SFE.cif",
+    "formula": "SFE",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "SFF",
+    "file": "zeolites/SFF.cif",
+    "formula": "SFF",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "SFG",
+    "file": "zeolites/SFG.cif",
+    "formula": "SFG",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "SFH",
+    "file": "zeolites/SFH.cif",
+    "formula": "SFH",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "SFN",
+    "file": "zeolites/SFN.cif",
+    "formula": "SFN",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "SFO",
+    "file": "zeolites/SFO.cif",
+    "formula": "SFO",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "SFS",
+    "file": "zeolites/SFS.cif",
+    "formula": "SFS",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "SGT",
+    "file": "zeolites/SGT.cif",
+    "formula": "SGT",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "SIV",
+    "file": "zeolites/SIV.cif",
+    "formula": "SIV",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "SOD",
+    "file": "zeolites/SOD.cif",
+    "formula": "SOD",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "SOF",
+    "file": "zeolites/SOF.cif",
+    "formula": "SOF",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "SOS",
+    "file": "zeolites/SOS.cif",
+    "formula": "SOS",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "SSF",
+    "file": "zeolites/SSF.cif",
+    "formula": "SSF",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "SSY",
+    "file": "zeolites/SSY.cif",
+    "formula": "SSY",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "STF",
+    "file": "zeolites/STF.cif",
+    "formula": "STF",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "STI",
+    "file": "zeolites/STI.cif",
+    "formula": "STI",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "STO",
+    "file": "zeolites/STO.cif",
+    "formula": "STO",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "STT",
+    "file": "zeolites/STT.cif",
+    "formula": "STT",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "STW",
+    "file": "zeolites/STW.cif",
+    "formula": "STW",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "SVR",
+    "file": "zeolites/SVR.cif",
+    "formula": "SVR",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "SZR",
+    "file": "zeolites/SZR.cif",
+    "formula": "SZR",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "TER",
+    "file": "zeolites/TER.cif",
+    "formula": "TER",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "THO",
+    "file": "zeolites/THO.cif",
+    "formula": "THO",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "TOL",
+    "file": "zeolites/TOL.cif",
+    "formula": "TOL",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "TON",
+    "file": "zeolites/TON.cif",
+    "formula": "TON",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "TSC",
+    "file": "zeolites/TSC.cif",
+    "formula": "TSC",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "TUN",
+    "file": "zeolites/TUN.cif",
+    "formula": "TUN",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "UEI",
+    "file": "zeolites/UEI.cif",
+    "formula": "UEI",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "UFI",
+    "file": "zeolites/UFI.cif",
+    "formula": "UFI",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "UOS",
+    "file": "zeolites/UOS.cif",
+    "formula": "UOS",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "UOZ",
+    "file": "zeolites/UOZ.cif",
+    "formula": "UOZ",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "USI",
+    "file": "zeolites/USI.cif",
+    "formula": "USI",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "UTL",
+    "file": "zeolites/UTL.cif",
+    "formula": "UTL",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "UWY",
+    "file": "zeolites/UWY.cif",
+    "formula": "UWY",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "VET",
+    "file": "zeolites/VET.cif",
+    "formula": "VET",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "VFI",
+    "file": "zeolites/VFI.cif",
+    "formula": "VFI",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "VNI",
+    "file": "zeolites/VNI.cif",
+    "formula": "VNI",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "VSV",
+    "file": "zeolites/VSV.cif",
+    "formula": "VSV",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "WEI",
+    "file": "zeolites/WEI.cif",
+    "formula": "WEI",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "WEN",
+    "file": "zeolites/WEN.cif",
+    "formula": "WEN",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "YUG",
+    "file": "zeolites/YUG.cif",
+    "formula": "YUG",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "ZON",
+    "file": "zeolites/ZON.cif",
+    "formula": "ZON",
+    "mineral": "",
+    "elements": [
+     "O",
+     "T"
+    ]
+   },
+   {
+    "name": "ZSM-5",
+    "file": "zeolites/ZSM-5.cif",
+    "formula": "ZSM",
+    "mineral": "5",
+    "elements": [
+     "Al",
+     "Ca",
+     "O",
+     "Si"
+    ]
+   }
+  ]
+ }
+}
