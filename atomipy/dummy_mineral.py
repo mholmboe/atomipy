@@ -274,13 +274,30 @@ def assign_dummy_mineral_params(atoms, Box=None, charge_mode='pauling', charge_s
 
     metal_sigma, metal_eps = MINFF_LJ_SITES[metal_site]
 
-    # Oxidation states (ionic engine, neutral lattice by default).
-    ox = guess_oxidation_states(atoms, method='ionic', write=True)
-    elements = [_norm_element(a) for a in atoms]
+    # Only the (non-MINFF) mineral FRAMEWORK is dummy-parameterised. Water, ions
+    # and organic molecules are left EXACTLY untouched — they keep the standard
+    # MINFF/min.ff water & ion parameters and their own GAFF/OpenFF itps, i.e. the
+    # identical force field they'd have in a mixed MINFF simulation.
+    from .composition import classify_atom
+    _skip = {'water', 'ion', 'organic'}
+    framework = [a for a in atoms if classify_atom(a) not in _skip]
+    n_skipped = len(atoms) - len(framework)
+    if not framework:
+        if verbose:
+            print("[dummy mineral] no framework atoms to parameterise "
+                  "(all atoms are water/ions/organics — left untouched).")
+        return atoms, {'non_minff_elements': [], 'net_charge': 0.0, 'n_atoms': 0,
+                       'n_skipped': n_skipped, 'lj_mode': lj_mode,
+                       'lj_source': 'n/a', 'metal_site': metal_site,
+                       'charge_mode': charge_mode}
+
+    # Oxidation states (ionic engine, neutral lattice by default) — framework only.
+    ox = guess_oxidation_states(framework, method='ionic', write=True)
+    elements = [_norm_element(a) for a in framework]
 
     # --- Charges ---
     anion_idx = []
-    for i, (atom, o) in enumerate(zip(atoms, ox)):
+    for i, (atom, o) in enumerate(zip(framework, ox)):
         el = elements[i]
         if charge_mode == 'half':
             atom['charge'] = round(charge_scale * float(o), 6)
@@ -296,7 +313,7 @@ def assign_dummy_mineral_params(atoms, Box=None, charge_mode='pauling', charge_s
         if Box is not None:
             try:
                 # MINFF coordination-resolved anion charges (q_O = -2 + Σ deficits).
-                _anion_charges_minff(atoms, ox, anion_idx, Box, verbose,
+                _anion_charges_minff(framework, ox, anion_idx, Box, verbose,
                                      rmaxlong=rmaxlong, rmaxH=rmaxH)
                 used_minff = True
             except Exception as exc:
@@ -306,11 +323,11 @@ def assign_dummy_mineral_params(atoms, Box=None, charge_mode='pauling', charge_s
         if not used_minff:
             # Fallback (no Box / no coordination): anions absorb the remainder,
             # split by |oxidation| so the framework is neutral.
-            assigned = sum(a['charge'] for a in atoms)
+            assigned = sum(a['charge'] for a in framework)
             weights = [abs(float(ox[i])) or 1.0 for i in anion_idx]
             wsum = sum(weights) or 1.0
             for i, w in zip(anion_idx, weights):
-                atoms[i]['charge'] = round(-assigned * w / wsum, 6)
+                framework[i]['charge'] = round(-assigned * w / wsum, 6)
 
     # --- LJ, type, mass, freeze ---
     # lj_mode controls where Lennard-Jones parameters come from:
@@ -326,7 +343,7 @@ def assign_dummy_mineral_params(atoms, Box=None, charge_mode='pauling', charge_s
     _pure_metal = not any(float(o) < 0 for o in ox)
     non_minff = set()
     fallback_elems = set()
-    for i, atom in enumerate(atoms):
+    for i, atom in enumerate(framework):
         el = elements[i]
         if el not in MINFF_FRAMEWORK_ELEMENTS:
             non_minff.add(el)
@@ -352,7 +369,7 @@ def assign_dummy_mineral_params(atoms, Box=None, charge_mode='pauling', charge_s
         if freeze:
             atom['frozen'] = True
 
-    net_charge = round(sum(a['charge'] for a in atoms), 6)
+    net_charge = round(sum(a['charge'] for a in framework), 6)
     if lj_mode == 'minff':
         _lj_desc = f"MINFF-borrowed (O=OPC3, F=F⁻, metals=site '{metal_site}')"
     else:
@@ -362,7 +379,8 @@ def assign_dummy_mineral_params(atoms, Box=None, charge_mode='pauling', charge_s
     report = {
         'non_minff_elements': sorted(non_minff),
         'net_charge': net_charge,
-        'n_atoms': len(atoms),
+        'n_atoms': len(framework),
+        'n_skipped': n_skipped,
         'lj_mode': lj_mode,
         'lj_source': _lj_desc,
         'metal_site': metal_site,
@@ -376,8 +394,10 @@ def assign_dummy_mineral_params(atoms, Box=None, charge_mode='pauling', charge_s
                   f"covered by the built-in force fields. Building a FROZEN DUMMY "
                   f"model (charges = {_q}, LJ = {_lj_desc}). "
                   f"Qualitative only; run EM/NVT, not NPT.")
-        print(f"[dummy mineral] {len(atoms)} atoms, net charge {net_charge:+.3f} e, "
-              f"charge '{charge_mode}', LJ = {_lj_desc}.")
+        _skip_note = (f"; {n_skipped} water/ion/organic atom(s) left untouched (MINFF)"
+                      if n_skipped else "")
+        print(f"[dummy mineral] {len(framework)} framework atoms, net charge "
+              f"{net_charge:+.3f} e, charge '{charge_mode}', LJ = {_lj_desc}{_skip_note}.")
         if abs(net_charge) > 1e-3:
             print(f"  NOTE: net charge is non-zero ({net_charge:+.3f} e) — "
                   f"add neutralizing ions before production.")
