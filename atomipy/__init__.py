@@ -49,6 +49,11 @@ from . import molecule_library
 list_molecules = molecule_library.list_molecules
 load_molecule = molecule_library.load_molecule
 molecule_categories = molecule_library.molecule_categories
+
+from . import crystal_library
+list_crystals = crystal_library.list_crystals
+load_crystal = crystal_library.load_crystal
+crystal_categories = crystal_library.crystal_categories
 write_poscar = write_conf.poscar
 write_sdf = write_conf.sdf
 write_traj = write_conf.write_traj
@@ -230,6 +235,7 @@ __all__ = [
     'import_pdb', 'import_gro', 'import_xyz', 'import_cif', 'import_mmcif', 'import_cjson', 'import_pqr', 'import_poscar', 'import_traj', 'import_auto',
     'write_pdb', 'write_gro', 'write_xyz', 'write_cif', 'write_cjson', 'write_pqr', 'write_poscar', 'write_sdf', 'write_traj', 'write_auto',
     'list_molecules', 'load_molecule', 'molecule_categories',
+    'list_crystals', 'load_crystal', 'crystal_categories',
     'write_itp', 'write_gmx_top', 'write_psf', 'write_lmp', 'import_itp_topology',
     'topology', 'write_topology',
     'import_gaff_top', 'import_gro_coords',
