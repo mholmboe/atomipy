@@ -143,6 +143,7 @@ substitute = build.substitute
 molecule = build.molecule
 merge = build.merge
 slice = build.slice
+fit_box = build.fit_box
 remove = build.remove
 delete_sites = build.delete_sites
 fuse_atoms = build.fuse_atoms
@@ -248,7 +249,7 @@ __all__ = [
     'triclinic_to_orthogonal', 'orthogonal_to_triclinic', 'get_orthogonal_box', 'get_cell_vectors',
     'direct_cartesian_to_fractional', 'direct_fractional_to_cartesian',
     'replicate_system', 'translate', 'rotate', 'place', 'center', 'update', 'scale', 'bend',
-    'substitute', 'molecule', 'merge', 'slice', 'remove', 'delete_sites', 'fuse_atoms', 'solvate', 'ionize', 'insert',
+    'substitute', 'molecule', 'merge', 'slice', 'fit_box', 'remove', 'delete_sites', 'fuse_atoms', 'solvate', 'ionize', 'insert',
     'add_H_atom', 'adjust_H_atom', 'adjust_Hw_atom', 'reorder', 'condense', 'create_grid', 'join_and_reorder',
     'is_centrosymmetric_along_z',
     'assign_resname', 'spc2tip4p', 'tip3p2tip4p',
