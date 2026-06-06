@@ -30,7 +30,8 @@ atoms = ap.element(atoms)
 # Separate water, ions, and minerals
 SOL, noSOL = ap.find_H2O(atoms, Box_dim)
 noSOL = ap.assign_resname(noSOL)
-IONS = [a for a in noSOL if a.get('resname') == 'ION']
+# assign_resname maps sodium ions to 'Na' rather than 'ION'
+IONS = [a for a in noSOL if a.get('resname') in ['ION', 'Na', 'Cl']]
 MIN = [a for a in noSOL if a.get('resname') == 'MIN']
 
 # Combine into full system for charge assignment

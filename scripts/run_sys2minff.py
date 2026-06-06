@@ -47,11 +47,11 @@ if MIN:
 # Assemble system robustly (preserve all atoms)
 System = ap.update(MIN, OTHER, SOL)
 
-# Restore original layout order
-System = sorted(System, key=lambda a: a.get('_orig_index', 0))
-for a in System:
-    a.pop('_orig_index', None)
-System = ap.update(System)
+# # Restore original layout order
+# System = sorted(System, key=lambda a: a.get('_orig_index') if a.get('_orig_index') is not None else 0)
+# for a in System:
+#     a.pop('_orig_index', None)
+# System = ap.update(System)
 
 # Assign MINFF atom types to the entire system
 System = ap.minff(System, Box_dim)
