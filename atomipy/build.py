@@ -617,6 +617,64 @@ def _print_composition(atoms):
         print(f"  {atom_type}: {count} ({percentage:.1f}%)")
 
 
+def fit_box(atoms, padding=10.0, cubic=False, center=True):
+    """Size an orthogonal box to the atoms' bounding box plus a margin.
+
+    The equivalent of ``gmx editconf -d``: the returned box is the molecule's
+    extent plus ``padding`` Angstrom of empty space on every side. Useful to
+    shrink the oversized box that organic parametrization (GAFF/Sage) assigns to
+    a lone molecule, or to wrap any structure tightly before solvation/packing.
+
+    Parameters
+    ----------
+    atoms : list of dict
+        Atoms with 'x','y','z' (Angstrom).
+    padding : float
+        Empty margin added on EACH side, in Angstrom (default 10.0).
+    cubic : bool
+        If True, make all three edges equal to the largest required edge
+        (a cubic box). Default False (a snug orthorhombic box).
+    center : bool
+        If True (default), translate the atoms in place so they sit centered in
+        the new box (so there's `padding` clearance on every side).
+
+    Returns
+    -------
+    Box : list
+        Cell parameters ``[a, b, c, 90.0, 90.0, 90.0]`` (Angstrom). Pass to
+        ``ap.Cell2Box_dim`` if a Box_dim is needed.
+
+    Examples
+    --------
+    atoms, _ = ap.load_molecule('L-alanine')
+    box = ap.fit_box(atoms, padding=12.0)          # snug box, 12 Å margin
+    box = ap.fit_box(atoms, padding=10.0, cubic=True)
+    """
+    if not atoms:
+        return [2 * padding, 2 * padding, 2 * padding, 90.0, 90.0, 90.0]
+
+    xs = [float(a.get('x', 0.0)) for a in atoms]
+    ys = [float(a.get('y', 0.0)) for a in atoms]
+    zs = [float(a.get('z', 0.0)) for a in atoms]
+    mn = (min(xs), min(ys), min(zs))
+    mx = (max(xs), max(ys), max(zs))
+    ext = (mx[0] - mn[0], mx[1] - mn[1], mx[2] - mn[2])
+
+    edges = [ext[0] + 2 * padding, ext[1] + 2 * padding, ext[2] + 2 * padding]
+    if cubic:
+        e = max(edges)
+        edges = [e, e, e]
+
+    if center:
+        for i, axis in enumerate(('x', 'y', 'z')):
+            # shift so the molecule's centre lands at the box centre
+            shift = edges[i] / 2.0 - (mn[i] + ext[i] / 2.0)
+            for a in atoms:
+                a[axis] = float(a.get(axis, 0.0)) + shift
+
+    return [edges[0], edges[1], edges[2], 90.0, 90.0, 90.0]
+
+
 def molecule(atoms, molid=1, resname=None):
     """
     Assign molecule ID (and optionally residue name) to atoms.
