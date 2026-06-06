@@ -71,10 +71,12 @@ def main():
     # then converts back to cartesian coordinates
     # Calculate replication based on desired size (approximately 30 Å in each dimension)
     target_size = 30  # Target size in Angstroms
-    # Use the first 3 values from Box_dim which represent x, y, z dimensions
-    replicate_dims = np.ceil(np.array([target_size / Box_dim[0], 
-                                       target_size / Box_dim[1], 
-                                       target_size / Box_dim[2]])).astype(int)
+    # Ensure Box_dim is not None and has at least 3 dimensions to satisfy type checking
+    box = Box_dim if Box_dim is not None and len(Box_dim) >= 3 else [10.0, 10.0, 10.0]
+    
+    replicate_dims = np.ceil(np.array([target_size / box[0], 
+                                       target_size / box[1], 
+                                       target_size / box[2]])).astype(int)
     print(f"Replicate dimensions: {replicate_dims} (target size: {target_size} Å)")
     print(f"\nCreating a {replicate_dims[0]}x{replicate_dims[1]}x{replicate_dims[2]} supercell...")
     
