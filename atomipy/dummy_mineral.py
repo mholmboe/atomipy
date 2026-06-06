@@ -31,6 +31,7 @@ import math
 import re
 
 from .oxidation import guess_oxidation_states, _norm_element, PAULING_EN
+from ._provenance import provenance_string
 
 # Borrowable MINFF Lennard-Jones sites: (sigma_nm, epsilon_kJ_per_mol).
 MINFF_LJ_SITES = {
@@ -430,7 +431,7 @@ def write_dummy_mineral_itp(atoms, file_path, mol_name='DUM'):
     """
     types = _unique_dummy_types(atoms)
     with open(file_path, 'w', encoding='utf-8') as f:
-        f.write(f"; Dummy FF mineral topology written by atomipy\n")
+        f.write(f"; {provenance_string()} — Dummy FF mineral topology\n")
         f.write(f"; FROZEN framework — nonbonded only (EM/NVT). Qualitative model.\n\n")
 
         f.write("[ atomtypes ]\n")
@@ -587,7 +588,7 @@ def write_dummy_system_top(atoms, box, out_top, out_gro, water_model='spce',
         ion_seq_out = _remap_ion_molnames(ion_seq, ion_define)
 
     with open(out_top, 'w', encoding='utf-8') as f:
-        f.write('; Frozen dummy-mineral system written by atomipy (qualitative; EM/NVT only)\n\n')
+        f.write(f'; {provenance_string()} — frozen dummy-mineral system (qualitative; EM/NVT only)\n\n')
         f.write('[ defaults ]\n')
         f.write('; nbfunc   comb-rule   gen-pairs   fudgeLJ   fudgeQQ\n')
         f.write('  1        2           yes         0.5       0.8333333333\n\n')
