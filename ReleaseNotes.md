@@ -1,80 +1,67 @@
-# Release Notes: atomipy v0.98 (from v0.97)
-
-We are thrilled to release **atomipy v0.98**! This release introduces robust topology merging, advanced composition analysis, and a suite of interactive visual MD improvements in the builder interface.
-
----
-
-## 🧬 Core Package & Engine Improvements (`atomipy`)
-
-### 1. 🔀 Multi-Component Topology Merging & System Composition
-* **Advanced Topology Merging (`atomipy.merge_top`)**: Added `merge_top.py` for merging multiple complex topologies and itp file linkages cleanly.
-* **System Composition Analysis (`atomipy.composition`)**: Added `composition.py` to analyze molecular composition, count residues/components, and calculate system masses.
-* **OpenMM Force Unit Compatibility**: Refactored OpenMM force calculation to utilize native `unit.md_unit_system` compatibility, avoiding platform-specific unit dictionary lookup crashes during energy calculations.
-
-### 2. 🌀 Molecular Dynamics & Energy Minimization Refinements
-* **Step-by-Step Energy Minimization Trajectories**: Implemented iterative L-BFGS energy minimization chunks allowing real-time trajectory recording and energy relaxation tracking.
-* **Max Force Norm Auditing**: Enhanced energy minimization stdout logging to dynamically compute and print maximum Euclidean force norm vectors in standard GROMACS/MD units (`kJ/mol/nm`).
-
----
-
-## 🌐 Web Visual Builder Improvements (`atomipy-web-module`)
-
-### 1. 🎛️ Unified Configurable Reporting & Visualizing
-* **Decoupled Log and PDB Frequencies**: Re-engineered the UI to allow configuring **Log frequency** and **PDB trajectory frequency** independently for both Energy Minimization and MD simulations.
-* **Fluctuating Bounding Box Rendering**: Enabled dynamic unit cell/periodic box sizing in the 3Dmol trajectory viewer (supporting NPT simulation box expansion and contraction).
-* **Clean Log Header Interceptor**: Injected an output stream interceptor wrapper (`CleanHeaderStream`) that cleanly filters quotation marks (`"`) and comment hashes (`#`) from CSV output logs.
-* **Top-Left Warnings Position**: Repositioned the Workflow Warnings panel to the top-left corner of the canvas to optimize editor space and avoid overlapping bottom docks.
-
----
-
-# Release Notes: atomipy v0.97 (from v0.96)
-
-We are excited to announce **atomipy v0.97**! This major release brings **mixed organic-mineral simulations** to the platform. By introducing advanced bridges to ParmEd and the OpenFF ecosystem, users can now parametrize organic molecules via SMILES and seamlessly merge them into complex mineral models.
-
----
-
-## 🧬 Mixed Organic/Mineral Forcefields & Topologies
-
-### 1. ParmEd Bridge (`atomipy.parmed_bridge`)
-* **Dynamic Organic Parametrization**: Parametrize any organic molecule from a SMILES string directly using GAFF-2.11 or CGenFF forcefields without leaving Python.
-* **Mixed System Topology Engine**: Safely merge complex CLAYFF/MINFF mineral structures with parametrized organic molecules. The engine handles combination rule alignment and intelligently merges structures into a unified configuration.
-* **Universal Export formats**: Export the resulting mixed topology to AMBER (`.prmtop`), NAMD (`.psf`), GROMACS (`.itp`), and LAMMPS (`.data`).
-
-### 2. Standalone OpenFF Worker Microservice
-* **Dockerized SMIRNOFF Engine**: Introduced an isolated FastAPI microservice for OpenFF Sage, Parsley, and Rosemary parametrizations to avoid dependency conflicts with ParmEd.
-
----
-
-## 🌐 Web Visual Builder Improvements (`atomipy-web-module`)
-
-### 1. Organic Molecular Generation Node
-* **SMILES Node Integration**: A brand new interactive `OrganicNode` added to the Visual Builder. Users can inject organic components into their mineral workflows, preview conformations on-the-fly, and select target forcefields visually.
-* **Advanced Code Generation (`graphExecution.ts`)**: The visual node compiler was re-engineered to recognize organic and mixed topologies and automatically configure downstream export tools for unified formats like AMBER prmtop.
-
----
-
 # Release Notes: atomipy v0.96 (from v0.95)
 
-## 🛠️ Core Package & Engine Improvements (`atomipy`)
+*Released 2026-06-06*
 
-### 1. 🧪 Integrated Molecular Dynamics Simulations with OpenMM
-* **GROMACS-to-OpenMM Bridge**: Added the `atomipy.openmm_interface` module containing the `load_minff_into_openmm` parser. It dynamically links GROMACS `.top`/`.itp` files directly into OpenMM topology and system objects, allowing seamless MD execution from Python.
-* **Auto-Platform Selector**: Implemented an automated hardware platform detection selector. Simulations will run on the fastest available platform (prioritizing **CUDA** or **OpenCL** GPU platforms for maximum performance, then seamlessly falling back to CPU or Reference platforms).
-* **Dynamic Parameter Injection**: Automatically handles forcefield constraints (e.g. flexible water models OPC3/SPC/TIP3P, custom mineral bond/angle parameters, and ion corrections) dynamically at load time.
-* **Unicode/Encoding Safety**: Updated all trajectory and PDB reading/writing interfaces to use strict UTF-8 mode, resolving encoding crashes on systems default-locale-configured as ASCII when writing unicode ion labels (`Cl−`).
+atomipy **v0.96** is a large consolidation release gathering everything developed
+since v0.95. Highlights: an OpenMM simulation bridge, a hub-and-spoke topology
+interchange and multi-component merging engine, mixed organic/mineral systems via
+GAFF (ACPYPE) and OpenFF Sage, a new **Dummy FF** for non-MINFF inorganics, a
+rules-based oxidation-state guesser, Chemical-JSON I/O, bundled organic (428) and
+inorganic-crystal (517) libraries, and provenance headers on every exported file.
 
-### 2. 🛡️ Robust Edge Case Handling & Empty Box Safety
-* **Dummy Atom Instantiation**: Introduced a safe-fallback protocol for empty box configurations. If a box has zero atoms, `atomipy` instantiates a single `Dummy` atom at `(0,0,0)` with zero charge and mass to guarantee compatibility with visualization tools and molecular physics engines.
-
----
-
-## 🌐 Web Visual Builder Improvements (`atomipy-web-module`)
-
-### 1. 🎛️ Node-based Interactive MD Simulations
-* **Simulation Node**: Added a draggable visual `SimulationNode` allowing researchers to set time steps, temperatures, and run NVT molecular dynamics simulations directly from the workflow graph.
-* **Live Progress Plots**: Integrated real-time potential energy and temperature trajectory charts that update dynamically as the simulation runs in the background.
-* **Auto-Unzipping Download Bundle**: Refactored the bundle export feature to package completed trajectories, GROMACS topologies, and system coordinates into a single download that auto-unzips locally.
+> **Note:** ParmEd is no longer a dependency. Mixed organic/mineral parametrization
+> now runs entirely through ACPYPE (GAFF) and the pure-Python OpenFF Interchange stack.
 
 ---
 
-*Thank you to all our users and contributors! For the full source code and visual builder guides, visit the [atomipy GitHub Repository](https://github.com/mholmboe/atomipy).*
+## 🧪 Molecular Dynamics with OpenMM
+* **GROMACS → OpenMM bridge** (`atomipy.openmm_interface`, `load_minff_into_openmm`): links GROMACS `.top`/`.itp` files directly into OpenMM `System`/`Topology` objects for MD from Python. Falls back to a PDB coordinate file when no GRO is present.
+* **Auto platform selection**: prefers CUDA/OpenCL GPUs, falling back to CPU/Reference.
+* **Dynamic parameter injection**: flexible water models (OPC3/SPC(/E)/TIP3P), custom mineral bond/angle parameters, and ion corrections handled at load time.
+* **Iterative L-BFGS energy minimization** with real-time trajectory recording and maximum-force-norm logging (kJ/mol/nm).
+* **UTF-8-safe** trajectory/PDB I/O (handles unicode ion labels such as `Cl⁻`).
+
+## 🔀 Topology Interchange & Multi-Component Merging
+* **Hub-and-spoke topology interchange** package: a `Topology` object exports to GROMACS `.itp`/`.top`, LAMMPS `.data`, CHARMM `.psf`/`.prm`, and JSON/XML.
+* **`atomipy.merge_top`**: merge multiple CLAYFF/MINFF mineral + organic/ion/water topologies into one consistent system, with combination-rule alignment, water-model `#define` emission, and ion-model `#define` resolution.
+* **`atomipy.composition`** engine: classify atoms (water/ion/organic/mineral), count residues/components and system mass; recognize amino-acid, DNA/RNA-nucleotide, and zeolite residue names.
+* **Nameable minerals**: mineral `moleculetype` follows the residue name, with uniquified names (`MIN`, `MIN_1`, …).
+* **Explicit O–M–O / M–O–H angles** generated in merged mineral topologies (with a flag to omit `[angles]`).
+* API: the GROMACS `.top` writer is exposed as **`write_gmx_top`**.
+* Ion-spelling tolerance (`Na` vs `Na+`, `Ca` vs `Ca2+`).
+
+## 🧬 Mixed Organic / Mineral Systems
+* Parametrize organics from **SMILES or file** via **GAFF-2.11 / GAFF-1** (ACPYPE, bundles antechamber — no separate AmberTools install) or **OpenFF Sage / Parsley** (pure-Python OpenFF Interchange).
+* Standalone, dockerized **OpenFF worker** microservice that isolates the OpenFF stack.
+* Merge parametrized organics into mineral models seamlessly via `merge_top`.
+
+## 🧱 Dummy FF — qualitative model for non-MINFF inorganics
+* **`assign_dummy_mineral_params`**: a frozen-framework model that lets MINFF-unsupported inorganics interact with water/solutes electrostatically (EM/NVT only).
+* **Pauling effective charges** `q_eff = q_formal·[1 − exp(−¼(χ_O − χ_M)²)]`; H fixed at **+0.4**; **F** supported.
+* **MINFF coordination-resolved oxygen charges** `q_O = −2.0 + Σⱼ (Formalⱼ − Partialⱼ)/CNⱼ`.
+* **Self-calculated per-element LJ** from vdW radii (UFF) by default; element-appropriate LJ for pure metals (Heinz).
+* Exposes MINFF global cutoffs (`rmaxlong`, `rmaxH`); coordination typing is purely geometric (ignores molids).
+* Self-contained dummy+water topology writer; supports organics/ions; **water/ions/organics are left untouched** (identical to a mixed MINFF run).
+
+## ⚛️ Oxidation States & Charges
+* **`guess_oxidation_states`**: a rules-based oxidation/formal-charge guesser (H +1, O −2, Si +4, Al +3, Mg +2, Ti +4, alkali +1, alkaline-earth +2, halogens −1, …) with ionic and electronegativity engines — a fast alternative to BVS.
+
+## 📁 File Formats & I/O
+* **Chemical JSON (`.cjson`)** import *and* export.
+* **Bundled organic molecule library** (428 molecules: amino acids, nucleotides, sugars, alcohols, …) with **L-before-D** enantiomer ordering.
+* **Bundled inorganic crystal library** (517 CIFs) with a gemmi-based CIF/mmCIF reader (symmetry expansion). **gemmi is now a core dependency.**
+* `write_sdf` emits a proper **V2000 bonds block** with bond orders.
+* **`fit_box(atoms, padding, cubic, center)`**: size an orthogonal box to the molecule + margin (equivalent to `gmx editconf -d`).
+* Clarified/expanded import support via `import_auto`: `.pdb`, `.gro`, `.xyz`, `.cif`/`.mmcif`, `.poscar`/`.contcar`, `.pqr`, `.cjson`.
+* **Provenance headers**: every written structure (`.pdb`/`.gro`/`.xyz`/`.cif`/`.poscar`/`.sdf`/`.pqr`) and topology (`.itp`/`.top`/`.psf`/`.data`/`.prm`) file now carries a `Generated by atomipy 0.96 on <date>` comment (a `_generator` key for JSON/cjson, which cannot hold comments).
+
+## 🛡️ Robustness
+* **Empty-box safety**: a single zero-charge/zero-mass `Dummy` atom is instantiated for empty configurations to keep visualization/physics engines happy.
+* Robust CIF parsing; PBC/MIC neighbour-list fixes for skewed cells; replication off-by-one fix; `fuse_atoms` deepcopy fix.
+
+## 🌐 Ecosystem
+* See the dedicated release notes for the web **Visual Builder** (`atomipy-web-module` v0.4.0) and the **Topology Generator** (`atomipy-topology-generator` v0.1.0), both of which embed atomipy 0.96.
+
+---
+
+*Thank you to all our users and contributors! For the full source code and guides, visit the [atomipy GitHub repository](https://github.com/mholmboe/atomipy).*
