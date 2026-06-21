@@ -143,23 +143,14 @@ def _intersect_polygon(FromFrac, hkl, s, exclude_boundary):
     return (FromFrac @ P.T).T  # fractional -> Cartesian
 
 
-def cut_miller(
-    atoms,
-    Box,
-    h,
-    k,
-    l,
-    level="auto",
-    offset=0.0,
-    side="below",
-    whole_molecules=False,
-    reindex=True,
-):
-    """Keep only the atoms on one side of the (h, k, l) Miller plane.
+def cut_planes(atoms, Box, planes, whole_molecules=False, reindex=True):
+    """Keep only atoms that satisfy ALL given Miller half-spaces (intersection).
 
-    The clever part: in fractional coordinates the plane h·x+k·y+l·z = s is a
-    plain linear threshold on f = h·xf + k·yf + l·zf, so cutting is just a
-    comparison — no rotation needed, works for any (hkl) and triclinic cell.
+    Each plane carves a half-space; intersecting several carves a convex region
+    — e.g. 6 side planes (60° apart) cut a **hexagonal column** out of a clay
+    layer, optionally capped by 2 basal planes. In fractional coordinates each
+    plane is a linear threshold f = h·xf + k·yf + l·zf = s, so the whole cut is
+    a logical AND of comparisons (works for any (hkl) and triclinic cell).
 
     Parameters
     ----------
@@ -167,69 +158,81 @@ def cut_miller(
         Atom records with 'x', 'y', 'z' (Cartesian, Angstrom).
     Box : sequence
         3/6/9-element cell (see :func:`miller_planes`).
-    h, k, l : int
-        Miller indices (at least one non-zero).
-    level : float or 'auto'
-        Threshold s (in fractional plane-level units). 'auto' (default) uses the
-        midpoint of the atoms' f-range, i.e. the plane that splits the structure.
-    offset : float
-        Shift the cut plane along its normal, in Angstrom (Δs = offset / d_hkl).
-    side : {'below', 'above'}
-        'below' (default) keeps f <= s (the side toward the origin / cell
-        interior — the 'inner' side); 'above' keeps f >= s.
+    planes : list of dict
+        Each plane: ``{'h','k','l', 'side': 'below'|'above', 'level': 'auto'|float,
+        'offset': float}``. 'below' keeps f <= s, 'above' keeps f >= s; 'auto'
+        level = midpoint of the structure along that normal; offset shifts the
+        plane along its normal in Angstrom (Δs = offset / d_hkl).
     whole_molecules : bool
-        If True, keep/drop whole molecules by their centroid's f (uses 'molid');
-        avoids slicing a molecule in half.
+        Keep/drop whole molecules by centroid (uses 'molid') so molecules aren't
+        sliced.
     reindex : bool
-        Renumber the surviving atoms' 'index' field 1..N (default True).
+        Renumber surviving atoms' 'index' 1..N (default True).
 
     Returns
     -------
     list of dict
-        The surviving atoms (new list; same dict objects).
+        Surviving atoms (new list; originals untouched).
     """
-    h, k, l = int(round(h)), int(round(k)), int(round(l))
-    if h == 0 and k == 0 and l == 0:
-        raise ValueError("At least one of h, k, l must be non-zero.")
     if not atoms:
         return []
+    if not planes:
+        return [dict(a) for a in atoms]
 
     M = _from_frac_matrix(Box)
     Minv = np.linalg.inv(M)
-    hkl = np.array([h, k, l], dtype=float)
-
     cart = np.array([[float(a.get("x", 0.0)), float(a.get("y", 0.0)), float(a.get("z", 0.0))] for a in atoms])
-    frac = cart @ Minv.T          # Cartesian -> fractional
-    f = frac @ hkl                # plane coordinate per atom
+    frac = cart @ Minv.T
+    tol = 1e-9  # atoms exactly on a plane (and cos(90°)≈1e-16 noise) stay on the kept side
+    molids = np.array([a.get("molid", i) for i, a in enumerate(atoms)]) if whole_molecules else None
 
-    if isinstance(level, str):    # 'auto' -> midpoint of the structure
-        s = 0.5 * (float(f.min()) + float(f.max()))
-    else:
-        s = float(level)
-    if offset:
-        d = d_spacing(h, k, l, Box)
-        if np.isfinite(d) and d > 0:
-            s += offset / d
+    mask = np.ones(len(atoms), dtype=bool)
+    for pl in planes:
+        h, k, l = int(round(pl["h"])), int(round(pl["k"])), int(round(pl["l"]))
+        if h == 0 and k == 0 and l == 0:
+            continue
+        hkl = np.array([h, k, l], dtype=float)
+        f = frac @ hkl
+        level = pl.get("level", "auto")
+        s = 0.5 * (float(f.min()) + float(f.max())) if isinstance(level, str) else float(level)
+        off = pl.get("offset", 0.0)
+        if off:
+            d = d_spacing(h, k, l, Box)
+            if np.isfinite(d) and d > 0:
+                s += off / d
+        side = pl.get("side", "below")
+        if whole_molecules:
+            pm = np.zeros(len(atoms), dtype=bool)
+            for mid in np.unique(molids):
+                sel = molids == mid
+                mf = float(f[sel].mean())
+                pm[sel] = (mf <= s + tol) if side == "below" else (mf >= s - tol)
+            mask &= pm
+        else:
+            mask &= (f <= s + tol) if side == "below" else (f >= s - tol)
 
-    # Small tolerance so atoms lying exactly on the plane (and float noise from
-    # cos(90°)≈1e-16 in skewed/orthogonal cells) fall consistently on the kept side.
-    tol = 1e-9
-    if whole_molecules:
-        molids = np.array([a.get("molid", i) for i, a in enumerate(atoms)])
-        keep_mol = {}
-        for mid in np.unique(molids):
-            mean_f = float(f[molids == mid].mean())
-            keep_mol[mid] = (mean_f <= s + tol) if side == "below" else (mean_f >= s - tol)
-        mask = np.array([keep_mol[m] for m in molids])
-    else:
-        mask = (f <= s + tol) if side == "below" else (f >= s - tol)
-
-    # Copy kept atoms so the caller's original list/dicts are left untouched.
     kept = [dict(a) for a, m in zip(atoms, mask) if m]
     if reindex:
         for i, a in enumerate(kept):
             a["index"] = i + 1
     return kept
+
+
+def cut_miller(atoms, Box, h, k, l, level="auto", offset=0.0, side="below",
+               whole_molecules=False, reindex=True):
+    """Keep atoms on one side of a single (h, k, l) Miller plane.
+
+    Convenience wrapper around :func:`cut_planes` for the common single-plane
+    case. 'below' keeps the inner side (f <= s), 'above' the outer side. See
+    :func:`cut_planes` for cutting a convex region with several planes.
+    """
+    if int(round(h)) == 0 and int(round(k)) == 0 and int(round(l)) == 0:
+        raise ValueError("At least one of h, k, l must be non-zero.")
+    return cut_planes(
+        atoms, Box,
+        [{"h": h, "k": k, "l": l, "side": side, "level": level, "offset": offset}],
+        whole_molecules=whole_molecules, reindex=reindex,
+    )
 
 
 def miller_planes(
