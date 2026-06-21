@@ -143,6 +143,95 @@ def _intersect_polygon(FromFrac, hkl, s, exclude_boundary):
     return (FromFrac @ P.T).T  # fractional -> Cartesian
 
 
+def cut_miller(
+    atoms,
+    Box,
+    h,
+    k,
+    l,
+    level="auto",
+    offset=0.0,
+    side="below",
+    whole_molecules=False,
+    reindex=True,
+):
+    """Keep only the atoms on one side of the (h, k, l) Miller plane.
+
+    The clever part: in fractional coordinates the plane h·x+k·y+l·z = s is a
+    plain linear threshold on f = h·xf + k·yf + l·zf, so cutting is just a
+    comparison — no rotation needed, works for any (hkl) and triclinic cell.
+
+    Parameters
+    ----------
+    atoms : list of dict
+        Atom records with 'x', 'y', 'z' (Cartesian, Angstrom).
+    Box : sequence
+        3/6/9-element cell (see :func:`miller_planes`).
+    h, k, l : int
+        Miller indices (at least one non-zero).
+    level : float or 'auto'
+        Threshold s (in fractional plane-level units). 'auto' (default) uses the
+        midpoint of the atoms' f-range, i.e. the plane that splits the structure.
+    offset : float
+        Shift the cut plane along its normal, in Angstrom (Δs = offset / d_hkl).
+    side : {'below', 'above'}
+        'below' (default) keeps f <= s (the side toward the origin / cell
+        interior — the 'inner' side); 'above' keeps f >= s.
+    whole_molecules : bool
+        If True, keep/drop whole molecules by their centroid's f (uses 'molid');
+        avoids slicing a molecule in half.
+    reindex : bool
+        Renumber the surviving atoms' 'index' field 1..N (default True).
+
+    Returns
+    -------
+    list of dict
+        The surviving atoms (new list; same dict objects).
+    """
+    h, k, l = int(round(h)), int(round(k)), int(round(l))
+    if h == 0 and k == 0 and l == 0:
+        raise ValueError("At least one of h, k, l must be non-zero.")
+    if not atoms:
+        return []
+
+    M = _from_frac_matrix(Box)
+    Minv = np.linalg.inv(M)
+    hkl = np.array([h, k, l], dtype=float)
+
+    cart = np.array([[float(a.get("x", 0.0)), float(a.get("y", 0.0)), float(a.get("z", 0.0))] for a in atoms])
+    frac = cart @ Minv.T          # Cartesian -> fractional
+    f = frac @ hkl                # plane coordinate per atom
+
+    if isinstance(level, str):    # 'auto' -> midpoint of the structure
+        s = 0.5 * (float(f.min()) + float(f.max()))
+    else:
+        s = float(level)
+    if offset:
+        d = d_spacing(h, k, l, Box)
+        if np.isfinite(d) and d > 0:
+            s += offset / d
+
+    # Small tolerance so atoms lying exactly on the plane (and float noise from
+    # cos(90°)≈1e-16 in skewed/orthogonal cells) fall consistently on the kept side.
+    tol = 1e-9
+    if whole_molecules:
+        molids = np.array([a.get("molid", i) for i, a in enumerate(atoms)])
+        keep_mol = {}
+        for mid in np.unique(molids):
+            mean_f = float(f[molids == mid].mean())
+            keep_mol[mid] = (mean_f <= s + tol) if side == "below" else (mean_f >= s - tol)
+        mask = np.array([keep_mol[m] for m in molids])
+    else:
+        mask = (f <= s + tol) if side == "below" else (f >= s - tol)
+
+    # Copy kept atoms so the caller's original list/dicts are left untouched.
+    kept = [dict(a) for a, m in zip(atoms, mask) if m]
+    if reindex:
+        for i, a in enumerate(kept):
+            a["index"] = i + 1
+    return kept
+
+
 def miller_planes(
     h,
     k,
