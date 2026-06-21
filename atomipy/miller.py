@@ -64,6 +64,26 @@ def _from_frac_matrix(Box):
     )
 
 
+def hkil_to_hkl(h, k, i=None, l=0):
+    """Convert hexagonal Miller-Bravais (h k i l) PLANE indices to Miller (h k l).
+
+    For planes the third index is redundant: i = -(h + k). It is simply dropped
+    (the hexagonal cell geometry is carried by the Box). If ``i`` is supplied and
+    inconsistent, a ValueError is raised.
+
+    Example: quartz (10-10) -> (100), (10-11) -> (101), (11-20) -> (110),
+    (0001) -> (001).
+    """
+    h, k, l = int(round(h)), int(round(k)), int(round(l))
+    if i is not None:
+        i = int(round(i))
+        if i != -(h + k):
+            raise ValueError(
+                f"Inconsistent Miller-Bravais indices: i must equal -(h+k) = {-(h + k)}, got {i}."
+            )
+    return (h, k, l)
+
+
 def d_spacing(h, k, l, Box):
     """Interplanar spacing d_hkl (Angstrom) for the (h, k, l) family.
 

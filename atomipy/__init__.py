@@ -224,7 +224,7 @@ except ImportError:
     pass
 
 # ===== Miller-plane geometry =====
-from .miller import miller_planes, d_spacing, cut_miller, cut_planes
+from .miller import miller_planes, d_spacing, cut_miller, cut_planes, hkil_to_hkl
 
 # ===== OpenMM Interface =====
 try:
@@ -268,5 +268,5 @@ __all__ = [
     'get_radius', 'bond_distance',
     'unwrap_coordinates', 'calculate_rdf', 'coordination_number', 'closest_atom', 'min_distances',
     'xrd', 'occupancy_atom', 'atomic_scattering_factors', 'calculate_multiplicity', 'bragg_law',
-    'miller_planes', 'd_spacing', 'cut_miller', 'cut_planes',
+    'miller_planes', 'd_spacing', 'cut_miller', 'cut_planes', 'hkil_to_hkl',
 ]
