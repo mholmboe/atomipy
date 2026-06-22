@@ -25,8 +25,12 @@ Sit		Osih	1   	0.160   441050
 H       Oh      Alo     1       110.0   125.52  ; Al(oct)-O-H
 H       Oh      Mgh     1       110.0   125.52  ; Mg(hyd)-O-H
 H       Oh      Mgo     1       110.0   125.52  ; Mg(oct)-O-H
+#ifndef CLAYFF_EXT
+; GMINFF splits octahedral iron into Fe2+/Fe3+ (Feo2/Feo3). CLAYFF_EXT declares a
+; single generic Feo, so these GMINFF-only types are skipped under CLAYFF.
 H       Oh      Feo2    1       110.0   125.52  ; Fe2+(oct)-O-H
 H       Oh      Feo3    1       110.0   125.52  ; Fe3+(oct)-O-H
+#endif
 H       Oh      Cah     1       110.0   125.52  ; Ca(hyd)-O-H
 H       Ohmg    Mgh     1       110.0   125.52  ; Mg-Ohmg-H (isomorphic subst)
 H       Ohmg    Mgo     1       110.0   125.52  ; Mg-Ohmg-H
@@ -34,7 +38,10 @@ H       Ohmg    Alo     1       110.0   125.52  ; Al-Ohmg-H
 H       Oalh    Alo     1       110.0   125.52  ; Al-Oalh-H (edge)
 H       Oalhh   Alo     1       110.0   125.52  ; Al-Oalhh-H (edge dihydroxyl)
 H       Osih    Sit     1       110.0   125.52  ; Si-Osih-H (silanol)
-; Water angles (OPC3 model - rigid). Commented out: Ow/Hw are only valid if water
-; is part of a mineral molecule .itp; with water as its own .itp (opc3.itp/spc.itp,
-; which use OW_opc3/HW_spc) these generic types are undeclared and grompp errors.
-; Hw      Ow      Hw      1       109.47  383.0   ; H-O-H water angle
+; Water angle (OPC3 model - rigid). Active only with -DMINERAL_WATER, i.e. when
+; water is part of a mineral molecule .itp using generic Ow/Hw types. With water as
+; its own .itp (opc3.itp/spc.itp -> OW_opc3/HW_spc) these generic types are
+; undeclared, so by default this is skipped to keep grompp happy.
+#ifdef MINERAL_WATER
+Hw      Ow      Hw      1       109.47  383.0   ; H-O-H water angle
+#endif

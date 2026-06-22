@@ -89,14 +89,35 @@ def _sanitize_minff(ffdir, defines=None):
     if not fb.exists():
         return 0
     active = _active_atomtypes(ffdir, defines) if defines else None
-    out, n = [], 0
+    defset = {(d[2:] if d.startswith("-D") else d) for d in (defines or [])}
+    out, n, stack = [], 0, []  # stack: (kind, name) for #ifdef/#ifndef
+
+    def guards_ok():
+        # Mirror grompp's preprocessor: only consider a line if its enclosing
+        # #ifdef/#ifndef guards are satisfied by the active defines. So a properly
+        # #ifdef-guarded orphan is left alone (grompp already skips it).
+        for kind, name in stack:
+            if kind == "ifdef" and name not in defset:
+                return False
+            if kind == "ifndef" and name in defset:
+                return False
+        return True
+
     for ln in fb.read_text().splitlines():
         s = ln.strip()
-        if s and not s.startswith(";") and not s.startswith("[") and not s.startswith("#"):
+        if s.startswith("#ifdef"):
+            stack.append(("ifdef", s.split()[1])); out.append(ln); continue
+        if s.startswith("#ifndef"):
+            stack.append(("ifndef", s.split()[1])); out.append(ln); continue
+        if s.startswith("#else") and stack:
+            k, nm = stack[-1]; stack[-1] = ("ifndef" if k == "ifdef" else "ifdef", nm); out.append(ln); continue
+        if s.startswith("#endif"):
+            if stack: stack.pop()
+            out.append(ln); continue
+        if s and not s.startswith(";") and not s.startswith("[") and not s.startswith("#") and guards_ok():
             toks = re.split(r"\s+", s)
-            # leading non-integer tokens are the atom-type names (before the funct)
             type_toks = []
-            for t in toks:
+            for t in toks:                       # leading non-integer tokens = atom types
                 if re.fullmatch(r"-?\d+", t):
                     break
                 type_toks.append(t)
