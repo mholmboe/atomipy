@@ -1263,10 +1263,9 @@ def clayff(atoms, Box, ffname='clayff', rmaxlong=2.45, rmaxH=1.2, log=False, log
                 avg_bond_dist = atom.get('avg_bond_dist', 0)
                 
                 if o_neighbors == 6:  # Octahedral Fe
-                    if avg_bond_dist < 2.07:  # Fe3+ site
-                        atom['fftype'] = 'Fe3o'
-                    else:  # Fe2+ site
-                        atom['fftype'] = 'Fe2o'
+                    # CLAYFF (Cygan 2004) uses a single generic octahedral iron type
+                    # (Feo, q=+1.575), not a Fe2+/Fe3+ split. CLAYFF_EXT declares Feo.
+                    atom['fftype'] = 'Feo'
                 elif o_neighbors == 4:  # Tetrahedral Fe
                     if avg_bond_dist < 2.0:  # Fe3+ site (typical distance cutoff for tetrahedral)
                         atom['fftype'] = 'Fe3t'
@@ -1450,8 +1449,10 @@ def clayff(atoms, Box, ffname='clayff', rmaxlong=2.45, rmaxH=1.2, log=False, log
             atom['type'] = atom['fftype']
     
     # Apply charges based on the clayff forcefield after atom typing is complete
-    atom_labels = ['Alo', 'Alt', 'Ale', 'Fe3o', 'Fe3t', 'Fe2o', 'Mgo', 'Mgh', 'Cao', 'Cah', 'Sit', 'Lio', 'H', 'Na', 'K', 'Cs', 'Ca', 'Cl']  
-    charges = [1.575, 1.575, 1.8125, 1.575, 1.575, 1.36, 1.36, 1.05, 1.36, 1.05, 2.1, 0.86, 0.425, 1.0, 1.0, 1.0, 2.0, -1.0]
+    # CLAYFF octahedral iron is the single generic Feo (q=+1.575); Fe3t kept for the
+    # rare tetrahedral case. (Cygan 2004 — no Fe2+/Fe3+ octahedral split.)
+    atom_labels = ['Alo', 'Alt', 'Ale', 'Feo', 'Fe3t', 'Mgo', 'Mgh', 'Cao', 'Cah', 'Sit', 'Lio', 'H', 'Na', 'K', 'Cs', 'Ca', 'Cl']
+    charges = [1.575, 1.575, 1.8125, 1.575, 1.575, 1.36, 1.05, 1.36, 1.05, 2.1, 0.86, 0.425, 1.0, 1.0, 1.0, 2.0, -1.0]
     # By default, apply charges to all atoms (set resname=None)
     # To limit charge assignment to specific residues, provide a resname (e.g., 'MIN')
     atoms = charge_clayff(atoms, Box, atom_labels, charges, resname=None)

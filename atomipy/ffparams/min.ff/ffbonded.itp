@@ -26,10 +26,12 @@ H       Oh      Alo     1       110.0   125.52  ; Al(oct)-O-H
 H       Oh      Mgh     1       110.0   125.52  ; Mg(hyd)-O-H
 H       Oh      Mgo     1       110.0   125.52  ; Mg(oct)-O-H
 #ifndef CLAYFF_EXT
-; GMINFF splits octahedral iron into Fe2+/Fe3+ (Feo2/Feo3). CLAYFF_EXT declares a
-; single generic Feo, so these GMINFF-only types are skipped under CLAYFF.
+; GMINFF splits octahedral iron into Fe2+/Fe3+ (Feo2/Feo3).
 H       Oh      Feo2    1       110.0   125.52  ; Fe2+(oct)-O-H
 H       Oh      Feo3    1       110.0   125.52  ; Fe3+(oct)-O-H
+#else
+; CLAYFF_EXT uses a single generic octahedral iron (Feo, Cygan 2004).
+H       Oh      Feo     1       110.0   125.52  ; Fe(oct)-O-H
 #endif
 H       Oh      Cah     1       110.0   125.52  ; Ca(hyd)-O-H
 H       Ohmg    Mgh     1       110.0   125.52  ; Mg-Ohmg-H (isomorphic subst)
