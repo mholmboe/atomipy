@@ -232,6 +232,9 @@ from .lattice import build_cell, make_lattice, lattice_types
 # ===== Geometric region cuts (nanoparticle / nanowire) =====
 from .shapes import cut_sphere, cut_cylinder
 
+# ===== Surface / slab builder =====
+from .surface import make_slab
+
 # ===== OpenMM Interface =====
 try:
     from .openmm_interface import load_minff_into_openmm
@@ -277,4 +280,5 @@ __all__ = [
     'miller_planes', 'd_spacing', 'cut_miller', 'cut_planes', 'hkil_to_hkl',
     'build_cell', 'make_lattice', 'lattice_types',
     'cut_sphere', 'cut_cylinder',
+    'make_slab',
 ]
