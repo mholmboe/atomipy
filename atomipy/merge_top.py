@@ -51,6 +51,27 @@ AtomList = List[Dict[str, Any]]
 ITPDict  = Dict[str, Any]
 
 
+def _charge_to_float(value) -> float:
+    """Robustly parse a charge that may be a float or PDB-style string.
+
+    Handles numeric values, '', None, and PDB trailing-sign notation like
+    '2-' (=-2), '1+' (=+1). Returns 0.0 for anything unparseable.
+    """
+    if value is None or value == "":
+        return 0.0
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        s = str(value).strip()
+        if s and s[-1] in "+-":               # PDB notation: '2-', '1+'
+            sign = -1.0 if s[-1] == "-" else 1.0
+            try:
+                return sign * float(s[:-1] or "1")
+            except ValueError:
+                return 0.0
+        return 0.0
+
+
 def _ion_key(name: str) -> str:
     """Normalise an ion name for charge-tolerant matching.
 
@@ -799,7 +820,7 @@ def write_merged_top(
     from .write_conf import gro  as write_gro_fn
     from .cell_utils  import Cell2Box_dim
 
-    total_charge = sum(float(a.get('charge') or 0.0) for a in atoms_merged)
+    total_charge = sum(_charge_to_float(a.get('charge')) for a in atoms_merged)
 
     # Detect what's present in the system via the shared classifier (resname AND
     # atomtype; mineral set derived from the FF library). This decides which

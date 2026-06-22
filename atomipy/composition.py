@@ -18,6 +18,23 @@ from collections import defaultdict, OrderedDict
 from itertools import groupby
 from typing import Dict, List, Optional, Tuple
 
+
+def _charge_to_float(value) -> float:
+    """Parse a charge that may be numeric or PDB string notation ('2-' -> -2)."""
+    if value is None or value == "":
+        return 0.0
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        s = str(value).strip()
+        if s and s[-1] in "+-":
+            sign = -1.0 if s[-1] == "-" else 1.0
+            try:
+                return sign * float(s[:-1] or "1")
+            except ValueError:
+                return 0.0
+        return 0.0
+
 # ---------------------------------------------------------------------------
 # GROMACS molecule name resolution
 # ---------------------------------------------------------------------------
@@ -347,7 +364,7 @@ def composition(atoms: list, Box=None, verbose: bool = True) -> dict:
         atype = str(a.get('fftype') or a.get('type') or 'UNK').strip()
         type_counts[atype] += 1
         if has_charge and 'charge' in a:
-            type_charges[atype].append(float(a['charge'] or 0.0))
+            type_charges[atype].append(_charge_to_float(a['charge']))
 
     sorted_types  = sorted(type_counts.keys())
     atom_counts   = [type_counts[t] for t in sorted_types]
@@ -356,7 +373,7 @@ def composition(atoms: list, Box=None, verbose: bool = True) -> dict:
          for t in sorted_types]
         if has_charge else []
     )
-    total_charge  = sum(float(a.get('charge') or 0.0) for a in atoms) if has_charge else 0.0
+    total_charge  = sum(_charge_to_float(a.get('charge')) for a in atoms) if has_charge else 0.0
 
     # ------------------------------------------------------------------
     # 4. Verbose output

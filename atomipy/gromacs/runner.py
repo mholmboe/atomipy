@@ -87,6 +87,44 @@ def stage_run_dir(atoms, Box, workdir, *, write_top, write_gro,
     return {"workdir": str(wd), "top": str(top_path), "gro": str(gro_path), "sanitized": sanitized}
 
 
+def stage_minff(workdir, *, minff_src=None, sanitize=True):
+    """Copy min.ff into an existing run dir (which already has top/gro/organic itps).
+
+    Lighter than stage_run_dir: only the force field. Use when the topology and
+    coordinates were already written into ``workdir`` (e.g. by the web-module
+    codegen). Returns the number of orphan lines sanitized.
+    """
+    wd = Path(workdir)
+    src = Path(minff_src) if minff_src else _MINFF_SRC
+    dst = wd / "min.ff"
+    if dst.exists():
+        shutil.rmtree(dst)
+    shutil.copytree(src, dst)
+    return _sanitize_minff(dst) if sanitize else 0
+
+
+def run_local_gmx(workdir, top, gro, stages, *, defines=None, gmx="gmx",
+                  minff_src=None, do_stage_minff=True, on_line=print, **mdp_kwargs):
+    """High-level local-GROMACS run for codegen: stage min.ff, run stages, log.
+
+    The .top/.gro (and any organic .itp) must already exist in ``workdir``.
+    Copies min.ff in, runs the stage pipeline chaining each .gro forward, and
+    calls ``on_line(str)`` for every log line (so a plain print() streams to SSE).
+    Returns the list of per-stage status dicts.
+    """
+    if do_stage_minff:
+        n = stage_minff(workdir, minff_src=minff_src)
+        if n:
+            on_line(f"[atomipy] sanitized {n} orphan water type(s) in run-dir min.ff")
+    statuses = []
+    for item in run_pipeline(workdir, stages, gro, defines=defines, gmx=gmx, top=top, **mdp_kwargs):
+        if isinstance(item, dict):
+            statuses.append(item)
+        else:
+            on_line(item)
+    return statuses
+
+
 def _stream(cmd, cwd, env):
     """Run cmd, yielding merged stdout/stderr lines; finally yield a status dict."""
     proc = subprocess.Popen(
