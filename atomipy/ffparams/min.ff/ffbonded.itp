@@ -34,5 +34,7 @@ H       Ohmg    Alo     1       110.0   125.52  ; Al-Ohmg-H
 H       Oalh    Alo     1       110.0   125.52  ; Al-Oalh-H (edge)
 H       Oalhh   Alo     1       110.0   125.52  ; Al-Oalhh-H (edge dihydroxyl)
 H       Osih    Sit     1       110.0   125.52  ; Si-Osih-H (silanol)
-; Water angles (OPC3 model - rigid, but included for completeness)
-Hw      Ow      Hw      1       109.47  383.0   ; H-O-H water angle
+; Water angles (OPC3 model - rigid). Commented out: Ow/Hw are only valid if water
+; is part of a mineral molecule .itp; with water as its own .itp (opc3.itp/spc.itp,
+; which use OW_opc3/HW_spc) these generic types are undeclared and grompp errors.
+; Hw      Ow      Hw      1       109.47  383.0   ; H-O-H water angle
