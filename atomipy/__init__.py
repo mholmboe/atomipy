@@ -229,6 +229,9 @@ from .miller import miller_planes, d_spacing, cut_miller, cut_planes, hkil_to_hk
 # ===== Lattice / unit-cell builder =====
 from .lattice import build_cell, make_lattice, lattice_types
 
+# ===== Geometric region cuts (nanoparticle / nanowire) =====
+from .shapes import cut_sphere, cut_cylinder
+
 # ===== OpenMM Interface =====
 try:
     from .openmm_interface import load_minff_into_openmm
@@ -273,4 +276,5 @@ __all__ = [
     'xrd', 'occupancy_atom', 'atomic_scattering_factors', 'calculate_multiplicity', 'bragg_law',
     'miller_planes', 'd_spacing', 'cut_miller', 'cut_planes', 'hkil_to_hkl',
     'build_cell', 'make_lattice', 'lattice_types',
+    'cut_sphere', 'cut_cylinder',
 ]
