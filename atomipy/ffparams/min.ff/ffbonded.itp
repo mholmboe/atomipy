@@ -30,8 +30,8 @@ H       Oh      Mgo     1       110.0   125.52  ; Mg(oct)-O-H
 H       Oh      Feo2    1       110.0   125.52  ; Fe2+(oct)-O-H
 H       Oh      Feo3    1       110.0   125.52  ; Fe3+(oct)-O-H
 #else
-; CLAYFF_EXT uses a single generic octahedral iron (Feo, Cygan 2004).
-H       Oh      Feo     1       110.0   125.52  ; Fe(oct)-O-H
+; CLAYFF_EXT uses a single octahedral Fe3+ iron type (Feo, q=+1.575; Cygan 2004).
+H       Oh      Feo     1       110.0   125.52  ; Fe3+(oct)-O-H
 #endif
 H       Oh      Cah     1       110.0   125.52  ; Ca(hyd)-O-H
 H       Ohmg    Mgh     1       110.0   125.52  ; Mg-Ohmg-H (isomorphic subst)
@@ -40,10 +40,5 @@ H       Ohmg    Alo     1       110.0   125.52  ; Al-Ohmg-H
 H       Oalh    Alo     1       110.0   125.52  ; Al-Oalh-H (edge)
 H       Oalhh   Alo     1       110.0   125.52  ; Al-Oalhh-H (edge dihydroxyl)
 H       Osih    Sit     1       110.0   125.52  ; Si-Osih-H (silanol)
-; Water angle (OPC3 model - rigid). Active only with -DMINERAL_WATER, i.e. when
-; water is part of a mineral molecule .itp using generic Ow/Hw types. With water as
-; its own .itp (opc3.itp/spc.itp -> OW_opc3/HW_spc) these generic types are
-; undeclared, so by default this is skipped to keep grompp happy.
-#ifdef MINERAL_WATER
-Hw      Ow      Hw      1       109.47  383.0   ; H-O-H water angle
-#endif
+; (No generic H-O-H water angle here: water carries its own angle/settle in its
+;  model .itp — opc3.itp/spc.itp — using suffixed types like OW_opc3/HW_spc.)
