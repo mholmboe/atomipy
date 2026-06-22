@@ -34,27 +34,79 @@ def detect_gmx(gmx="gmx"):
     return {"path": path, "version": version, "command": gmx}
 
 
-def _sanitize_minff(ffdir):
-    """Comment out orphan generic water bonded types (Ow/Hw) in ffbonded.itp.
+def _active_atomtypes(ffdir, defines):
+    """Set of [atomtypes] names active in ffnonbonded.itp under the given defines.
 
-    The shipped min.ff references generic ``Ow``/``Hw`` water types in a few
-    "for completeness" bonded entries, but no water model or [atomtypes] block
-    declares those names (they use suffixed names like OW_opc3), so grompp
-    rejects them. We patch only the *run-dir copy*; the canonical FF is untouched.
-    Returns the number of lines commented.
+    Honors #ifdef/#ifndef/#else/#endif so the result reflects which mineral
+    parameter block (GMINFF_k* vs CLAYFF_EXT, ion sets, …) is selected. Returns
+    None if ffnonbonded.itp is absent.
+    """
+    fn = Path(ffdir) / "ffnonbonded.itp"
+    if not fn.exists():
+        return None
+    defset = {(d[2:] if d.startswith("-D") else d) for d in (defines or [])}
+    active, in_atomtypes, stack = set(), False, []  # stack: (kind, name)
+
+    def ok():
+        for kind, name in stack:
+            if kind == "ifdef" and name not in defset:
+                return False
+            if kind == "ifndef" and name in defset:
+                return False
+        return True
+
+    for raw in fn.read_text().splitlines():
+        s = raw.strip()
+        if s.startswith("#ifdef"):
+            stack.append(("ifdef", s.split()[1])); continue
+        if s.startswith("#ifndef"):
+            stack.append(("ifndef", s.split()[1])); continue
+        if s.startswith("#else") and stack:
+            k, n = stack[-1]; stack[-1] = ("ifndef" if k == "ifdef" else "ifdef", n); continue
+        if s.startswith("#endif"):
+            if stack: stack.pop()
+            continue
+        if s.startswith("["):
+            in_atomtypes = s.lower().startswith("[ atomtypes")
+            continue
+        if in_atomtypes and s and not s.startswith(";") and ok():
+            active.add(s.split()[0])
+    return active
+
+
+def _sanitize_minff(ffdir, defines=None):
+    """Comment out ffbonded.itp lines that reference an undeclared atom type.
+
+    The shipped min.ff has a few bonded/angle entries whose atom types aren't
+    declared under every parameter set — e.g. generic water Ow/Hw (no model
+    declares them) or Feo2/Feo3 (GMINFF-only; CLAYFF_EXT declares generic Feo).
+    grompp fatally rejects these even when the types are unused. When ``defines``
+    is given we strip lines referencing any type not active under those defines
+    (define-aware); otherwise we fall back to the legacy Ow/Hw check. We patch
+    only the *run-dir copy* — the canonical FF is untouched. Returns #lines cut.
     """
     fb = Path(ffdir) / "ffbonded.itp"
     if not fb.exists():
         return 0
+    active = _active_atomtypes(ffdir, defines) if defines else None
     out, n = [], 0
     for ln in fb.read_text().splitlines():
         s = ln.strip()
-        if s and not s.startswith(";") and not s.startswith("["):
+        if s and not s.startswith(";") and not s.startswith("[") and not s.startswith("#"):
             toks = re.split(r"\s+", s)
-            if "Ow" in toks or "Hw" in toks:
-                out.append("; [atomipy-sanitized orphan water type] " + ln)
-                n += 1
-                continue
+            # leading non-integer tokens are the atom-type names (before the funct)
+            type_toks = []
+            for t in toks:
+                if re.fullmatch(r"-?\d+", t):
+                    break
+                type_toks.append(t)
+            if type_toks:
+                bad = (any(t not in active for t in type_toks) if active is not None
+                       else ("Ow" in type_toks or "Hw" in type_toks))
+                if bad:
+                    out.append("; [atomipy-sanitized orphan type] " + ln)
+                    n += 1
+                    continue
         out.append(ln)
     if n:
         fb.write_text("\n".join(out) + "\n")
@@ -87,12 +139,13 @@ def stage_run_dir(atoms, Box, workdir, *, write_top, write_gro,
     return {"workdir": str(wd), "top": str(top_path), "gro": str(gro_path), "sanitized": sanitized}
 
 
-def stage_minff(workdir, *, minff_src=None, sanitize=True):
+def stage_minff(workdir, *, minff_src=None, sanitize=True, defines=None):
     """Copy min.ff into an existing run dir (which already has top/gro/organic itps).
 
     Lighter than stage_run_dir: only the force field. Use when the topology and
     coordinates were already written into ``workdir`` (e.g. by the web-module
-    codegen). Returns the number of orphan lines sanitized.
+    codegen). ``defines`` (the active FF defines, e.g. ['GMINFF_k500','OPC3'] or
+    ['CLAYFF_EXT', …]) makes sanitization define-aware. Returns #lines sanitized.
     """
     wd = Path(workdir)
     src = Path(minff_src) if minff_src else _MINFF_SRC
@@ -100,11 +153,12 @@ def stage_minff(workdir, *, minff_src=None, sanitize=True):
     if dst.exists():
         shutil.rmtree(dst)
     shutil.copytree(src, dst)
-    return _sanitize_minff(dst) if sanitize else 0
+    return _sanitize_minff(dst, defines=defines) if sanitize else 0
 
 
 def run_local_gmx(workdir, top, gro, stages, *, defines=None, gmx="gmx",
-                  minff_src=None, do_stage_minff=True, on_line=print, **mdp_kwargs):
+                  minff_src=None, do_stage_minff=True, san_defines=None,
+                  on_line=print, **mdp_kwargs):
     """High-level local-GROMACS run for codegen: stage min.ff, run stages, log.
 
     The .top/.gro (and any organic .itp) must already exist in ``workdir``.
@@ -113,9 +167,9 @@ def run_local_gmx(workdir, top, gro, stages, *, defines=None, gmx="gmx",
     Returns the list of per-stage status dicts.
     """
     if do_stage_minff:
-        n = stage_minff(workdir, minff_src=minff_src)
+        n = stage_minff(workdir, minff_src=minff_src, defines=(san_defines if san_defines is not None else defines))
         if n:
-            on_line(f"[atomipy] sanitized {n} orphan water type(s) in run-dir min.ff")
+            on_line(f"[atomipy] sanitized {n} orphan FF type line(s) in run-dir min.ff")
     statuses = []
     for item in run_pipeline(workdir, stages, gro, defines=defines, gmx=gmx, top=top, **mdp_kwargs):
         if isinstance(item, dict):
