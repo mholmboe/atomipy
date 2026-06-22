@@ -125,6 +125,34 @@ def run_local_gmx(workdir, top, gro, stages, *, defines=None, gmx="gmx",
     return statuses
 
 
+def trjconv_to_pdb(workdir, *, tpr, xtc, out, gmx="gmx", pbc="mol", skip=1,
+                   group="System", on_line=None):
+    """Convert a GROMACS trajectory (.xtc/.trr) to a multi-frame PDB via trjconv.
+
+    Browser viewers (3Dmol/JSmol) can't read binary GROMACS trajectories, so we
+    convert to a multi-MODEL PDB — the same format the OpenMM path produces.
+    ``group`` is the trjconv output group (fed on stdin), e.g. 'System' or
+    'non-Water'. Returns the output path, or None if the .xtc is missing/empty or
+    trjconv fails (caller can fall back to a single final frame).
+    """
+    wd = Path(workdir)
+    if not (wd / xtc).exists() or (wd / xtc).stat().st_size == 0:
+        return None
+    env = dict(os.environ)
+    env.setdefault("GMX_MAXBACKUP", "-1")
+    cmd = [gmx, "trjconv", "-s", tpr, "-f", xtc, "-o", out, "-pbc", pbc]
+    if skip and int(skip) > 1:
+        cmd += ["-skip", str(int(skip))]
+    proc = subprocess.run(
+        cmd, cwd=str(wd), env=env, input=f"{group}\n",
+        capture_output=True, text=True,
+    )
+    if on_line:
+        for ln in (proc.stdout + proc.stderr).splitlines():
+            on_line(ln)
+    return str(wd / out) if proc.returncode == 0 and (wd / out).exists() else None
+
+
 def _stream(cmd, cwd, env):
     """Run cmd, yielding merged stdout/stderr lines; finally yield a status dict."""
     proc = subprocess.Popen(
@@ -138,7 +166,7 @@ def _stream(cmd, cwd, env):
 
 
 def run_stage(workdir, stage, struct_in, *, defines=None, gmx="gmx", maxwarn=2,
-              restraint=None, top="topol.top", **mdp_kwargs):
+              restraint=None, top="topol.top", ntmpi=1, ntomp=None, **mdp_kwargs):
     """Generate the .mdp, run grompp then mdrun for one stage; yield log lines.
 
     Yields str log lines, then a final dict {'stage','returncode','gro'} where
@@ -166,7 +194,14 @@ def run_stage(workdir, stage, struct_in, *, defines=None, gmx="gmx", maxwarn=2,
         yield {"stage": stage, "returncode": rc, "gro": None, "step": "grompp"}
         return
 
+    # -ntmpi 1: single thread-MPI rank (no domain decomposition). Robust for the
+    # small / periodic-molecule systems typical here — auto DD often fails to split
+    # a clay sheet that spans the cell across many ranks. OpenMP still parallelizes.
     mdrun = [gmx, "mdrun", "-deffnm", stage]
+    if ntmpi:
+        mdrun += ["-ntmpi", str(int(ntmpi))]
+    if ntomp:
+        mdrun += ["-ntomp", str(int(ntomp))]
     yield f"$ {' '.join(mdrun)}"
     for item in _stream(mdrun, str(wd), env):
         if isinstance(item, dict):
