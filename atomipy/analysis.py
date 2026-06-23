@@ -331,6 +331,154 @@ def density_frames(frames, axis='z', nbins=100, atom_types=None, mode='number'):
     return centers, accum / n
 
 
+def _box_lengths(Box):
+    """Orthogonal box edge lengths [Lx, Ly, Lz] from a 1x3/1x6/1x9 box."""
+    if len(Box) >= 9:
+        return [float(Box[0]), float(Box[1]), float(Box[2])]
+    if len(Box) == 6:
+        bd = Cell2Box_dim(Box)
+        return [float(bd[0]), float(bd[1]), float(bd[2])]
+    if len(Box) == 3:
+        return [float(Box[0]), float(Box[1]), float(Box[2])]
+    return [0.0, 0.0, 0.0]
+
+
+def _unwrap_trajectory(frames, idx):
+    """'nojump' unwrap selected atoms across time (remove PBC jumps between frames).
+
+    Returns an ndarray of shape (n_sel_atoms, n_frames, 3) of continuous coordinates.
+    Assumes a constant atom ordering across frames (true for atomipy trajectories).
+    """
+    n = len(frames)
+    m = len(idx)
+    U = np.zeros((m, n, 3))
+    atoms0 = frames[0][0]
+    raw_prev = np.array([[atoms0[i]["x"], atoms0[i]["y"], atoms0[i]["z"]] for i in idx], dtype=float)
+    U[:, 0, :] = raw_prev
+    for t in range(1, n):
+        atoms_t, box_t = frames[t]
+        L = _box_lengths(box_t)
+        raw = np.array([[atoms_t[i]["x"], atoms_t[i]["y"], atoms_t[i]["z"]] for i in idx], dtype=float)
+        d = raw - raw_prev
+        for c in range(3):
+            if L[c] > 0:
+                d[:, c] -= L[c] * np.round(d[:, c] / L[c])
+        U[:, t, :] = U[:, t - 1, :] + d
+        raw_prev = raw
+    return U
+
+
+def _select_indices(atoms, atom_types):
+    if atom_types:
+        return [i for i, a in enumerate(atoms) if a.get("type") in atom_types or a.get("element") in atom_types]
+    return list(range(len(atoms)))
+
+
+def _dim_components(dims):
+    comp = [{"x": 0, "y": 1, "z": 2}[c] for c in str(dims).lower() if c in "xyz"]
+    return comp or [0, 1, 2]
+
+
+def msd(frames, atom_types=None, dims="xyz", origin_stride=1, dt=1.0, fit_lo=0.1, fit_hi=0.5):
+    """Mean-square displacement with multiple time origins (restarts) + diffusion coefficient.
+
+    Parameters
+    ----------
+    frames : list of (atoms, Box)
+        Trajectory; coordinates are 'nojump'-unwrapped internally (PBC-aware).
+    atom_types : list of str, optional
+        Restrict to these atom names (matched against 'type' or 'element').
+    dims : str
+        Components to use: 'xyz' (3D isotropic), 'xy' (2D), 'z' (1D), etc.
+    origin_stride : int
+        Step between time origins (restarts). 1 = use every frame as an origin.
+    dt : float
+        Time between frames (ps); sets the lag axis and D units.
+    fit_lo, fit_hi : float
+        Fraction of the lag range used for the linear D fit (default middle 10–50%).
+
+    Returns
+    -------
+    dict or None
+        {'lags' (ps), 'msd' (Å²), 'D_A2_ps', 'D_cm2_s', 'D_1e9_m2_s', 'dim', 'n_atoms', 'n_frames'}
+    """
+    if not frames or len(frames) < 3:
+        return None
+    idx = _select_indices(frames[0][0], atom_types)
+    if not idx:
+        return None
+    comp = _dim_components(dims)
+    U = _unwrap_trajectory(frames, idx)[:, :, comp]  # (m, n, dim)
+    n = U.shape[1]
+    acc = np.zeros(n)
+    cnt = np.zeros(n)
+    stride = max(1, int(origin_stride))
+    for t0 in range(0, n, stride):
+        disp = U[:, t0:, :] - U[:, t0:t0 + 1, :]          # (m, n-t0, dim)
+        sq = np.sum(disp * disp, axis=2)                   # (m, n-t0)
+        acc[: n - t0] += np.mean(sq, axis=0)               # mean over atoms
+        cnt[: n - t0] += 1
+    msd_curve = acc / np.maximum(cnt, 1)
+    lags = np.arange(n) * float(dt)
+    lo = max(1, int(fit_lo * n))
+    hi = max(lo + 2, int(fit_hi * n))
+    hi = min(hi, n)
+    dim = len(comp)
+    slope = float(np.polyfit(lags[lo:hi], msd_curve[lo:hi], 1)[0]) if hi > lo + 1 else 0.0
+    D = slope / (2.0 * dim)  # Å²/ps
+    return {
+        "lags": lags, "msd": msd_curve,
+        "D_A2_ps": D, "D_cm2_s": D * 1e-4, "D_1e9_m2_s": D * 10.0,
+        "dim": dim, "n_atoms": len(idx), "n_frames": n,
+    }
+
+
+def displacement_distribution(frames, atom_types=None, dims="xyz", lag=None, origin_stride=1, nbins=50):
+    """Distribution of per-component displacements over a lag (van Hove self-part-like).
+
+    Pools the signed displacement of each selected component (per `dims`) over all
+    selected atoms and time origins at a fixed lag — Gaussian for normal diffusion.
+    A Gaussian with the sample's mean/std is returned for overlay.
+
+    Returns
+    -------
+    dict or None
+        {'centers', 'pdf', 'gauss', 'mu', 'sigma', 'lag_frames', 'n_samples'}
+    """
+    if not frames or len(frames) < 3:
+        return None
+    idx = _select_indices(frames[0][0], atom_types)
+    if not idx:
+        return None
+    comp = _dim_components(dims)
+    U = _unwrap_trajectory(frames, idx)[:, :, comp]
+    n = U.shape[1]
+    if lag is None:
+        lag = max(1, n // 2)
+    lag = int(max(1, min(lag, n - 1)))
+    stride = max(1, int(origin_stride))
+    chunks = []
+    for t0 in range(0, n - lag, stride):
+        chunks.append((U[:, t0 + lag, :] - U[:, t0, :]).ravel())
+    if not chunks:
+        return None
+    samples = np.concatenate(chunks)
+    if samples.size == 0:
+        return None
+    rng = float(np.max(np.abs(samples))) or 1.0
+    edges = np.linspace(-rng, rng, nbins + 1)
+    pdf, _ = np.histogram(samples, bins=edges, density=True)
+    centers = 0.5 * (edges[:-1] + edges[1:])
+    mu = float(np.mean(samples))
+    sigma = float(np.std(samples))
+    if sigma > 0:
+        gauss = np.exp(-((centers - mu) ** 2) / (2 * sigma ** 2)) / (sigma * np.sqrt(2 * np.pi))
+    else:
+        gauss = np.zeros_like(centers)
+    return {"centers": centers, "pdf": pdf, "gauss": gauss, "mu": mu, "sigma": sigma,
+            "lag_frames": lag, "n_samples": int(samples.size)}
+
+
 def coordination_number(atoms, Box, cutoff=3.0, atom_types=None, neighbor_types=None, typeA=None, typeB=None):
     """
     Calculate the coordination number for each atom.

@@ -105,6 +105,8 @@ min_distances = analysis.min_distances
 density_profile = analysis.density_profile
 rdf_frames = analysis.rdf_frames
 density_frames = analysis.density_frames
+msd = analysis.msd
+displacement_distribution = analysis.displacement_distribution
 from .bond_angle import bond_angle, bond_angle_dihedral
 
 # ===== Cell and coordinate transformation functions =====
@@ -279,7 +281,7 @@ __all__ = [
     'assign_dummy_mineral_params', 'write_dummy_mineral_itp', 'write_dummy_system_top', 'ELEMENT_LJ', 'pauling_effective_charge', 'uff_lj', 'UFF_VDW', 'MINFF_LJ_SITES', 'MINFF_FRAMEWORK_ELEMENTS',
     'get_radius', 'bond_distance',
     'unwrap_coordinates', 'calculate_rdf', 'coordination_number', 'closest_atom', 'min_distances',
-    'density_profile', 'rdf_frames', 'density_frames',
+    'density_profile', 'rdf_frames', 'density_frames', 'msd', 'displacement_distribution',
     'xrd', 'occupancy_atom', 'atomic_scattering_factors', 'calculate_multiplicity', 'bragg_law',
     'miller_planes', 'd_spacing', 'cut_miller', 'cut_planes', 'hkil_to_hkl',
     'build_cell', 'make_lattice', 'lattice_types',
