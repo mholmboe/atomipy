@@ -167,7 +167,7 @@ HW_tip4p OW_tip4p HW_tip4p 1 104.52  628.02
                     text = text.replace(f'{w}Ow{e}', f'{w}{water_o}{e}')
                     text = text.replace(f'{w}Hw{e}', f'{w}{water_h}{e}')
                     text = text.replace(f'{w}Na{e}', f'{w}Na+{e}')
-                    text = text.replace(f'{w}Cl{e}', f'{w}Cl−{e}')
+                    # Halide anions are bare-named in min.ff (Cl/Br/F/I) — no translation needed.
                     if self.is_clayff_2004:
                         text = text.replace(f'{w}Alo{e}', f'{w}ao{e}')
                         text = text.replace(f'{w}Sit{e}', f'{w}st{e}')

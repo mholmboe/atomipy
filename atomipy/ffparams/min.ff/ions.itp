@@ -963,7 +963,7 @@ F             1
 
 [ atoms ]
 ; id    at type res nr  residu name at name  cg nr  charge
-1       F−          1       F             F−        1      -1.000000
+1       F          1       F             F        1      -1.000000
 
 #ifdef POSRES_ION
 [ position_restraints ]
@@ -1019,7 +1019,7 @@ Cl           1
 
 [ atoms ]
 ; id    at type res nr  residu name at name  cg nr  charge
-1       Cl−         1       Cl            Cl−       1      -1.000000
+1       Cl         1       Cl            Cl       1      -1.000000
 
 #ifdef POSRES_ION
 [ position_restraints ]
@@ -1061,7 +1061,7 @@ Br            1
 
 [ atoms ]
 ; id    at type res nr  residu name at name  cg nr  charge
-1       Br−         1       Br            Br−       1      -1.000000
+1       Br         1       Br            Br       1      -1.000000
 
 #ifdef POSRES_ION
 [ position_restraints ]
@@ -1103,7 +1103,7 @@ I             1
 
 [ atoms ]
 ; id    at type res nr  residu name at name  cg nr  charge
-1       I−          1       I             I−        1      -1.000000
+1       I          1       I             I        1      -1.000000
 
 #ifdef POSRES_ION
 [ position_restraints ]
@@ -1163,7 +1163,7 @@ F             1
 
 [ atoms ]
 ; id    at type res nr  residu name at name  cg nr  charge
-1       F−          1       F             F−        1      -1.000000
+1       F          1       F             F        1      -1.000000
 
 #ifdef POSRES_ION
 [ position_restraints ]
@@ -1219,7 +1219,7 @@ Cl           1
 
 [ atoms ]
 ; id    at type res nr  residu name at name  cg nr  charge
-1       Cl−         1       Cl            Cl−       1      -1.000000
+1       Cl         1       Cl            Cl       1      -1.000000
 
 #ifdef POSRES_ION
 [ position_restraints ]
@@ -1261,7 +1261,7 @@ Br            1
 
 [ atoms ]
 ; id    at type res nr  residu name at name  cg nr  charge
-1       Br−         1       Br            Br−       1      -1.000000
+1       Br         1       Br            Br       1      -1.000000
 
 #ifdef POSRES_ION
 [ position_restraints ]
@@ -1303,7 +1303,7 @@ I             1
 
 [ atoms ]
 ; id    at type res nr  residu name at name  cg nr  charge
-1       I−          1       I             I−        1      -1.000000
+1       I          1       I             I        1      -1.000000
 
 #ifdef POSRES_ION
 [ position_restraints ]
@@ -1363,7 +1363,7 @@ F             1
 
 [ atoms ]
 ; id    at type res nr  residu name at name  cg nr  charge
-1       F−          1       F             F−        1      -1.000000
+1       F          1       F             F        1      -1.000000
 
 #ifdef POSRES_ION
 [ position_restraints ]
@@ -1419,7 +1419,7 @@ Cl           1
 
 [ atoms ]
 ; id    at type res nr  residu name at name  cg nr  charge
-1       Cl−         1       Cl            Cl−       1      -1.000000
+1       Cl         1       Cl            Cl       1      -1.000000
 
 #ifdef POSRES_ION
 [ position_restraints ]
@@ -1461,7 +1461,7 @@ Br            1
 
 [ atoms ]
 ; id    at type res nr  residu name at name  cg nr  charge
-1       Br−         1       Br            Br−       1      -1.000000
+1       Br         1       Br            Br       1      -1.000000
 
 #ifdef POSRES_ION
 [ position_restraints ]
@@ -1503,7 +1503,7 @@ I             1
 
 [ atoms ]
 ; id    at type res nr  residu name at name  cg nr  charge
-1       I−          1       I             I−        1      -1.000000
+1       I          1       I             I        1      -1.000000
 
 #ifdef POSRES_ION
 [ position_restraints ]
@@ -1563,7 +1563,7 @@ F             1
 
 [ atoms ]
 ; id    at type res nr  residu name at name  cg nr  charge
-1       F−          1       F             F−        1      -1.000000
+1       F          1       F             F        1      -1.000000
 
 #ifdef POSRES_ION
 [ position_restraints ]
@@ -1619,7 +1619,7 @@ Cl           1
 
 [ atoms ]
 ; id    at type res nr  residu name at name  cg nr  charge
-1       Cl−         1       Cl            Cl−       1      -1.000000
+1       Cl         1       Cl            Cl       1      -1.000000
 
 #ifdef POSRES_ION
 [ position_restraints ]
@@ -1661,7 +1661,7 @@ Br            1
 
 [ atoms ]
 ; id    at type res nr  residu name at name  cg nr  charge
-1       Br−         1       Br            Br−       1      -1.000000
+1       Br         1       Br            Br       1      -1.000000
 
 #ifdef POSRES_ION
 [ position_restraints ]
@@ -1703,7 +1703,7 @@ I             1
 
 [ atoms ]
 ; id    at type res nr  residu name at name  cg nr  charge
-1       I−          1       I             I−        1      -1.000000
+1       I          1       I             I        1      -1.000000
 
 #ifdef POSRES_ION
 [ position_restraints ]
@@ -1763,7 +1763,7 @@ F            1
 
 [ atoms ]
 ; id    at type res nr  residu name at name  cg nr  charge
-1       F−          1       F             F−        1      -1.000000
+1       F          1       F             F        1      -1.000000
 
 #ifdef POSRES_ION
 [ position_restraints ]
@@ -1791,7 +1791,7 @@ Cl           1
 
 [ atoms ]
 ; id    at type res nr  residu name at name  cg nr  charge
-1       Cl−         1       Cl            Cl−       1      -1.000000
+1       Cl         1       Cl            Cl       1      -1.000000
 
 #ifdef POSRES_ION
 [ position_restraints ]
@@ -1833,7 +1833,7 @@ Br           1
 
 [ atoms ]
 ; id    at type res nr  residu name at name  cg nr  charge
-1       Br−         1       Br            Br−       1      -1.000000
+1       Br         1       Br            Br       1      -1.000000
 
 #ifdef POSRES_ION
 [ position_restraints ]
@@ -1875,7 +1875,7 @@ I             1
 
 [ atoms ]
 ; id    at type res nr  residu name at name  cg nr  charge
-1       I−          1       I             I−        1      -1.000000
+1       I          1       I             I        1      -1.000000
 
 #ifdef POSRES_ION
 [ position_restraints ]
@@ -1935,7 +1935,7 @@ F             1
 
 [ atoms ]
 ; id    at type res nr  residu name at name  cg nr  charge
-1       F−          1       F             F−        1      -1.000000
+1       F          1       F             F        1      -1.000000
 
 #ifdef POSRES_ION
 [ position_restraints ]
@@ -1963,7 +1963,7 @@ Cl           1
 
 [ atoms ]
 ; id    at type res nr  residu name at name  cg nr  charge
-1       Cl−         1       Cl            Cl−       1      -1.000000
+1       Cl         1       Cl            Cl       1      -1.000000
 
 #ifdef POSRES_ION
 [ position_restraints ]
@@ -2005,7 +2005,7 @@ Br            1
 
 [ atoms ]
 ; id    at type res nr  residu name at name  cg nr  charge
-1       Br−         1       Br            Br−       1      -1.000000
+1       Br         1       Br            Br       1      -1.000000
 
 #ifdef POSRES_ION
 [ position_restraints ]
@@ -2047,7 +2047,7 @@ I             1
 
 [ atoms ]
 ; id    at type res nr  residu name at name  cg nr  charge
-1       I−          1       I             I−        1      -1.000000
+1       I          1       I             I        1      -1.000000
 
 #ifdef POSRES_ION
 [ position_restraints ]
@@ -2107,7 +2107,7 @@ F             1
 
 [ atoms ]
 ; id    at type res nr  residu name at name  cg nr  charge
-1       F−          1       F             F−        1      -1.000000
+1       F          1       F             F        1      -1.000000
 
 #ifdef POSRES_ION
 [ position_restraints ]
@@ -2135,7 +2135,7 @@ Cl           1
 
 [ atoms ]
 ; id    at type res nr  residu name at name  cg nr  charge
-1       Cl−         1       Cl            Cl−       1      -1.000000
+1       Cl         1       Cl            Cl       1      -1.000000
 
 #ifdef POSRES_ION
 [ position_restraints ]
@@ -2177,7 +2177,7 @@ Br            1
 
 [ atoms ]
 ; id    at type res nr  residu name at name  cg nr  charge
-1       Br−         1       Br            Br−       1      -1.000000
+1       Br         1       Br            Br       1      -1.000000
 
 #ifdef POSRES_ION
 [ position_restraints ]
@@ -2219,7 +2219,7 @@ I             1
 
 [ atoms ]
 ; id    at type res nr  residu name at name  cg nr  charge
-1       I−          1       I             I−        1      -1.000000
+1       I          1       I             I        1      -1.000000
 
 #ifdef POSRES_ION
 [ position_restraints ]
@@ -2279,7 +2279,7 @@ F             1
 
 [ atoms ]
 ; id    at type res nr  residu name at name  cg nr  charge
-1       F−          1       F             F−        1      -1.000000
+1       F          1       F             F        1      -1.000000
 
 #ifdef POSRES_ION
 [ position_restraints ]
@@ -2307,7 +2307,7 @@ Cl           1
 
 [ atoms ]
 ; id    at type res nr  residu name at name  cg nr  charge
-1       Cl−         1       Cl            Cl−       1      -1.000000
+1       Cl         1       Cl            Cl       1      -1.000000
 
 #ifdef POSRES_ION
 [ position_restraints ]
@@ -2349,7 +2349,7 @@ Br            1
 
 [ atoms ]
 ; id    at type res nr  residu name at name  cg nr  charge
-1       Br−         1       Br            Br−       1      -1.000000
+1       Br         1       Br            Br       1      -1.000000
 
 #ifdef POSRES_ION
 [ position_restraints ]
@@ -2391,7 +2391,7 @@ I             1
 
 [ atoms ]
 ; id    at type res nr  residu name at name  cg nr  charge
-1       I−          1       I             I−        1      -1.000000
+1       I          1       I             I        1      -1.000000
 
 #ifdef POSRES_ION
 [ position_restraints ]
@@ -2451,7 +2451,7 @@ F             1
 
 [ atoms ]
 ; id    at type res nr  residu name at name  cg nr  charge
-1       F−          1       F             F−        1      -1.000000
+1       F          1       F             F        1      -1.000000
 
 #ifdef POSRES_ION
 [ position_restraints ]
@@ -2479,7 +2479,7 @@ Cl           1
 
 [ atoms ]
 ; id    at type res nr  residu name at name  cg nr  charge
-1       Cl−         1       Cl            Cl−       1      -1.000000
+1       Cl         1       Cl            Cl       1      -1.000000
 
 #ifdef POSRES_ION
 [ position_restraints ]
@@ -2521,7 +2521,7 @@ Br            1
 
 [ atoms ]
 ; id    at type res nr  residu name at name  cg nr  charge
-1       Br−         1       Br            Br−       1      -1.000000
+1       Br         1       Br            Br       1      -1.000000
 
 #ifdef POSRES_ION
 [ position_restraints ]
@@ -2563,7 +2563,7 @@ I             1
 
 [ atoms ]
 ; id    at type res nr  residu name at name  cg nr  charge
-1       I−          1       I             I−        1      -1.000000
+1       I          1       I             I        1      -1.000000
 
 #ifdef POSRES_ION
 [ position_restraints ]
@@ -2623,7 +2623,7 @@ F             1
 
 [ atoms ]
 ; id    at type res nr  residu name at name  cg nr  charge
-1       F−          1       F             F−        1      -1.000000
+1       F          1       F             F        1      -1.000000
 
 #ifdef POSRES_ION
 [ position_restraints ]
@@ -2651,7 +2651,7 @@ Cl           1
 
 [ atoms ]
 ; id    at type res nr  residu name at name  cg nr  charge
-1       Cl−         1       Cl            Cl−       1      -1.000000
+1       Cl         1       Cl            Cl       1      -1.000000
 
 #ifdef POSRES_ION
 [ position_restraints ]
@@ -2693,7 +2693,7 @@ Br            1
 
 [ atoms ]
 ; id    at type res nr  residu name at name  cg nr  charge
-1       Br−         1       Br            Br−       1      -1.000000
+1       Br         1       Br            Br       1      -1.000000
 
 #ifdef POSRES_ION
 [ position_restraints ]
@@ -2735,7 +2735,7 @@ I             1
 
 [ atoms ]
 ; id    at type res nr  residu name at name  cg nr  charge
-1       I−          1       I             I−        1      -1.000000
+1       I          1       I             I        1      -1.000000
 
 #ifdef POSRES_ION
 [ position_restraints ]
@@ -2795,7 +2795,7 @@ F             1
 
 [ atoms ]
 ; id    at type res nr  residu name at name  cg nr  charge
-1       F−          1       F             F−        1      -1.000000
+1       F          1       F             F        1      -1.000000
 
 #ifdef POSRES_ION
 [ position_restraints ]
@@ -2823,7 +2823,7 @@ Cl           1
 
 [ atoms ]
 ; id    at type res nr  residu name at name  cg nr  charge
-1       Cl−         1       Cl            Cl−       1      -1.000000
+1       Cl         1       Cl            Cl       1      -1.000000
 
 #ifdef POSRES_ION
 [ position_restraints ]
@@ -2865,7 +2865,7 @@ Br            1
 
 [ atoms ]
 ; id    at type res nr  residu name at name  cg nr  charge
-1       Br−         1       Br            Br−       1      -1.000000
+1       Br         1       Br            Br       1      -1.000000
 
 #ifdef POSRES_ION
 [ position_restraints ]
@@ -2907,7 +2907,7 @@ I             1
 
 [ atoms ]
 ; id    at type res nr  residu name at name  cg nr  charge
-1       I−          1       I             I−        1      -1.000000
+1       I          1       I             I        1      -1.000000
 
 #ifdef POSRES_ION
 [ position_restraints ]
@@ -2967,7 +2967,7 @@ F             1
 
 [ atoms ]
 ; id    at type res nr  residu name at name  cg nr  charge
-1       F−          1       F             F−        1      -1.000000
+1       F          1       F             F        1      -1.000000
 
 #ifdef POSRES_ION
 [ position_restraints ]
@@ -2995,7 +2995,7 @@ Cl           1
 
 [ atoms ]
 ; id    at type res nr  residu name at name  cg nr  charge
-1       Cl−         1       Cl            Cl−       1      -1.000000
+1       Cl         1       Cl            Cl       1      -1.000000
 
 #ifdef POSRES_ION
 [ position_restraints ]
@@ -3037,7 +3037,7 @@ Br            1
 
 [ atoms ]
 ; id    at type res nr  residu name at name  cg nr  charge
-1       Br−         1       Br            Br−       1      -1.000000
+1       Br         1       Br            Br       1      -1.000000
 
 #ifdef POSRES_ION
 [ position_restraints ]
@@ -3079,7 +3079,7 @@ I             1
 
 [ atoms ]
 ; id    at type res nr  residu name at name  cg nr  charge
-1       I−          1       I             I−        1      -1.000000
+1       I          1       I             I        1      -1.000000
 
 #ifdef POSRES_ION
 [ position_restraints ]

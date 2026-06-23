@@ -543,7 +543,7 @@ def itp(atoms, Box=None, file_path=None, molecule_name=None, nrexcl=1, comment=N
                 if at_type_clean in ['Na', 'NA', 'SOD']:
                     at_type = 'Na+'
                 elif at_type_clean in ['Cl', 'CL', 'CLA']:
-                    at_type = 'Cl−' # Unicode minus U+2212
+                    at_type = 'Cl'   # halide anions are bare-named (charge in the charge column)
                 elif at_type_clean in ['K', 'POT']:
                     at_type = 'K+'
                 elif at_type_clean in ['Li', 'LI']:
@@ -553,11 +553,11 @@ def itp(atoms, Box=None, file_path=None, molecule_name=None, nrexcl=1, comment=N
                 elif at_type_clean in ['Rb', 'RB']:
                     at_type = 'Rb+'
                 elif at_type_clean in ['F']:
-                    at_type = 'F−' # Unicode minus U+2212
+                    at_type = 'F'
                 elif at_type_clean in ['Br', 'BR']:
-                    at_type = 'Br−' # Unicode minus U+2212
+                    at_type = 'Br'
                 elif at_type_clean in ['I']:
-                    at_type = 'I−' # Unicode minus U+2212
+                    at_type = 'I'
                 elif at_type_clean in ['Ca', 'CA', 'CAL']:
                     at_type = 'Ca2+'
                 elif at_type_clean in ['Mg', 'MG']:
