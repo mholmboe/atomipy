@@ -212,6 +212,125 @@ def calculate_rdf(atoms, Box, rmax=15.0, dr=0.1, atom_types=None, pair_types=Non
     
     return r, g_r
 
+def density_profile(atoms, Box, axis='z', nbins=100, atom_types=None, mode='number'):
+    """Compute a 1-D density profile along a box axis (averaged over the slab cross-section).
+
+    Parameters
+    ----------
+    atoms : list of dict
+        Atom dictionaries with 'x','y','z' (and 'type'/'element' for filtering/mass).
+    Box : list of float
+        Box dimensions (1x3, 1x6 Cell, or 1x9 Box_dim).
+    axis : {'x','y','z'}
+        Axis along which to bin.
+    nbins : int
+        Number of slabs.
+    atom_types : list of str, optional
+        Restrict to these atom names (matched against 'type' or 'element').
+    mode : {'number','mass','charge'}
+        'number' -> atoms/Å³, 'mass' -> g/cm³ (via atomic masses), 'charge' -> e/Å³.
+
+    Returns
+    -------
+    (centers, density) : tuple of numpy.ndarray
+        Slab centers (Å along the axis) and density values.
+    """
+    if not atoms:
+        return np.array([]), np.array([])
+
+    ai = {'x': 0, 'y': 1, 'z': 2}[axis]
+
+    # Orthogonal box lengths (good enough for the slab cross-section area)
+    if len(Box) >= 9:
+        L = [Box[0], Box[1], Box[2]]
+    elif len(Box) == 6:
+        bd = Cell2Box_dim(Box)
+        L = [bd[0], bd[1], bd[2]]
+    elif len(Box) == 3:
+        L = [Box[0], Box[1], Box[2]]
+    else:
+        return np.array([]), np.array([])
+
+    Laxis = float(L[ai])
+    if Laxis <= 0:
+        return np.array([]), np.array([])
+    area = 1.0
+    for j in range(3):
+        if j != ai:
+            area *= float(L[j])
+
+    if atom_types:
+        sel = [a for a in atoms if a.get('type') in atom_types or a.get('element') in atom_types]
+    else:
+        sel = list(atoms)
+    if not sel:
+        return np.array([]), np.array([])
+
+    coords = np.mod(np.array([a[axis] for a in sel], dtype=float), Laxis)
+    edges = np.linspace(0.0, Laxis, nbins + 1)
+    binw = Laxis / nbins
+
+    if mode == 'mass':
+        from .mass import mass as _mass
+        from .element import element as _element
+        mtab = _mass()
+        _tmp = [dict(a) for a in sel]
+        _element(_tmp)  # fill 'element' for atoms that lack it
+        w = np.array([float(mtab.get(a.get('element'), 0.0)) for a in _tmp], dtype=float)
+    elif mode == 'charge':
+        w = np.array([float(a.get('charge', 0.0)) for a in sel], dtype=float)
+    else:
+        w = None
+
+    hist, _ = np.histogram(coords, bins=edges, weights=w)
+    slab_v = area * binw  # Å³
+    dens = hist / slab_v
+    if mode == 'mass':
+        dens = dens * 1.66053906660  # amu/Å³ -> g/cm³
+    centers = edges[:-1] + binw / 2.0
+    return centers, dens
+
+
+def rdf_frames(frames, rmax=15.0, dr=0.1, typeA=None, typeB=None, atom_types=None):
+    """Ensemble-average g(r) over a list of (atoms, Box) frames (see calculate_rdf)."""
+    accum = None
+    r = None
+    n = 0
+    for atoms, Box in frames:
+        ri, gi = calculate_rdf(atoms, Box, rmax=rmax, dr=dr,
+                               typeA=typeA, typeB=typeB, atom_types=atom_types)
+        if gi is None or len(gi) == 0:
+            continue
+        if accum is None:
+            accum = np.zeros_like(gi)
+            r = ri
+        accum += gi
+        n += 1
+    if n == 0:
+        return np.array([]), np.array([])
+    return r, accum / n
+
+
+def density_frames(frames, axis='z', nbins=100, atom_types=None, mode='number'):
+    """Ensemble-average a density profile over a list of (atoms, Box) frames."""
+    accum = None
+    centers = None
+    n = 0
+    for atoms, Box in frames:
+        c, d = density_profile(atoms, Box, axis=axis, nbins=nbins,
+                               atom_types=atom_types, mode=mode)
+        if d is None or len(d) == 0:
+            continue
+        if accum is None:
+            accum = np.zeros_like(d)
+            centers = c
+        accum += d
+        n += 1
+    if n == 0:
+        return np.array([]), np.array([])
+    return centers, accum / n
+
+
 def coordination_number(atoms, Box, cutoff=3.0, atom_types=None, neighbor_types=None, typeA=None, typeB=None):
     """
     Calculate the coordination number for each atom.
