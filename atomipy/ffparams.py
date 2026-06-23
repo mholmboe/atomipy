@@ -37,13 +37,13 @@ DEFAULT_TYPE_ALIASES = {
     # Common monovalent ions
     'Na': 'Na+',
     'K': 'K+',
-    'Cl': 'Cl−',  # Note: uses minus sign character
+    'Cl': 'Cl',   # halide anions are bare-named in the JSON/itp (charge in the charge column)
     'Li': 'Li+',
     'Rb': 'Rb+',
     'Cs': 'Cs+',
-    'F': 'F−',
-    'Br': 'Br−',
-    'I': 'I−',
+    'F': 'F',
+    'Br': 'Br',
+    'I': 'I',
     # Common divalent ions
     'Ca': 'Ca2+',
     'Mg': 'Mg2+',

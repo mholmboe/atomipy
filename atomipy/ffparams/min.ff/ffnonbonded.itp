@@ -338,7 +338,6 @@ Rb	37	85.4678	    1.00000	    A	0.304509	1.81230	;	Aqueous	rubinium	ion
 Cs	55	132.90545	1.00000	    A	0.336403	1.65030	;	Aqueous	cesium	ion
 F	9	18.99840	-1.00000	A	0.452220	0.00659	;	Aqueous	fluoride	ion
 Cl	17	35.45300	-1.00000	A	0.491776	0.04879	;	Aqueous	chloride	ion
-Cls	17	35.45300	-1.00000	A	0.491776	0.04879	;	Aqueous	chloride	ion
 Br	35	79.90400	-1.00000	A	0.493202	0.12710	;	Aqueous	bromide	ion
 I	53	126.90447	-1.00000	A	0.525987	0.17451	;	Aqueous	iodide	ion
 #endif

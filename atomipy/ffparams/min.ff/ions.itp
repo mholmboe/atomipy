@@ -537,20 +537,6 @@ Cl            1
 
 [ moleculetype ]
 ; molname   nrexcl
-Cls           1
-
-[ atoms ]
-; id    at type res nr  residu name at name  cg nr  charge
-1       Cls         1       Cls           Cls       1      -1.00000
-
-#ifdef POSRES_ION
-[ position_restraints ]
-; ai  funct  fcx    fcy    fcz
-   1    1       1000       1000       1000
-#endif
-
-[ moleculetype ]
-; molname   nrexcl
 Br            1
 
 [ atoms ]
