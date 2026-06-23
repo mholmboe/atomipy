@@ -226,7 +226,63 @@ def trjconv_to_pdb(workdir, *, tpr, xtc, out, gmx="gmx", pbc="atom", skip=1,
     if on_line:
         for ln in (proc.stdout + proc.stderr).splitlines():
             on_line(ln)
-    return str(wd / out) if proc.returncode == 0 and (wd / out).exists() else None
+    if proc.returncode == 0 and (wd / out).exists():
+        _postprocess_traj_pdb(wd / out)
+        return str(wd / out)
+    return None
+
+
+def _postprocess_traj_pdb(path):
+    """Make a trjconv PDB viewer-friendly: fill the element column (cols 77-78)
+    from the atom name, and put CRYST1 right after each MODEL so 3Dmol/JSmol
+    associate the box with every frame.
+
+    trjconv leaves cols 77-78 blank (it doesn't know Sit->Si, Alo->Al, ...) and
+    writes CRYST1 *before* each MODEL (outside the frame block) — both break
+    per-frame box rendering and element coloring in the browser viewers.
+    """
+    try:
+        from ..element import element as _element   # the function, from the submodule
+    except Exception:
+        _element = None
+    cache = {}
+
+    # atomipy uses pseudo-elements Ow/Hw for water; the PDB element column wants
+    # the real chemical symbol.
+    _real = {"Ow": "O", "Hw": "H"}
+
+    def elem_for(name):
+        n = (name or "").strip()
+        if n not in cache:
+            el = ""
+            if _element is not None:
+                try:
+                    el = (_element([{"type": n}])[0].get("element") or "").strip()
+                except Exception:
+                    el = ""
+            el = _real.get(el, el)
+            cache[n] = el[:2]
+        return cache[n]
+
+    p = Path(path)
+    out, last_cryst = [], None
+    for ln in p.read_text(encoding="utf-8", errors="replace").splitlines():
+        if ln.startswith("CRYST1"):
+            last_cryst = ln          # hold; re-emit right after the next MODEL
+            continue
+        if ln.startswith("MODEL"):
+            out.append(ln)
+            if last_cryst:
+                out.append(last_cryst)
+            continue
+        if ln.startswith(("ATOM", "HETATM")):
+            el = elem_for(ln[12:16])
+            if el:
+                if len(ln) < 78:
+                    ln = ln.ljust(78)
+                ln = ln[:76] + el.rjust(2) + ln[78:]
+        out.append(ln)
+    p.write_text("\n".join(out) + "\n", encoding="utf-8")
 
 
 def _stream(cmd, cwd, env):
