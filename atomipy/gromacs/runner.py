@@ -329,6 +329,73 @@ def _postprocess_traj_pdb(path):
     p.write_text("\n".join(out) + "\n", encoding="utf-8")
 
 
+def _parse_xvg(path):
+    """Parse a GROMACS .xvg into {'time': [...], 'series': [{'name','values'}, ...]}."""
+    names = []
+    rows = []
+    with open(path, "r", encoding="utf-8", errors="replace") as f:
+        for line in f:
+            line = line.rstrip("\n")
+            if line.startswith("@"):
+                m = re.match(r'@\s+s(\d+)\s+legend\s+"(.*)"', line)
+                if m:
+                    names.append(m.group(2))
+                continue
+            if not line.strip() or line.startswith(("#", "&")):
+                continue
+            parts = line.split()
+            try:
+                rows.append([float(p) for p in parts])
+            except ValueError:
+                continue
+    if not rows:
+        return None
+    cols = list(zip(*rows))
+    time = list(cols[0])
+    series = []
+    for i, nm in enumerate(names):
+        col = i + 1
+        if col < len(cols):
+            series.append({"name": nm, "values": list(cols[col])})
+    return {"time": time, "series": series}
+
+
+def energy_timeseries(workdir, edr, *, terms=None, gmx="gmx", out="energy.xvg", on_line=None):
+    """Run ``gmx energy`` on an .edr and return a thermodynamic time-series.
+
+    Parameters
+    ----------
+    workdir, edr : str
+        Working directory and .edr filename (relative to it).
+    terms : list of str, optional
+        GROMACS energy term names to extract. Terms not present in the .edr are
+        silently skipped by gmx (e.g. EM .edr has only Potential).
+    Returns
+    -------
+    dict or None
+        {'time': [...], 'series': [{'name': 'Potential (kJ/mol)', 'values': [...]}, ...]}
+    """
+    if terms is None:
+        terms = ["Potential", "Kinetic-En.", "Total-Energy", "Temperature",
+                 "Pressure", "Volume", "Density"]
+    gmx_cmd, libs = _resolve_gmx(gmx)
+    env = _gmx_env(libs)
+    wd = Path(workdir)
+    sel = "\n".join(terms) + "\n\n"
+    cmd = [gmx_cmd, "energy", "-f", edr, "-o", out]
+    if on_line:
+        on_line("$ echo <terms> | " + " ".join(cmd))
+    proc = subprocess.run(cmd, cwd=str(wd), input=sel, capture_output=True,
+                          text=True, encoding="utf-8", errors="replace", env=env)
+    if on_line:
+        for ln in (proc.stdout + "\n" + proc.stderr).splitlines():
+            on_line(ln)
+    xvg = wd / out
+    if proc.returncode != 0 or not xvg.exists():
+        return None
+    return _parse_xvg(xvg)
+
+
 def _stream(cmd, cwd, env):
     """Run cmd, yielding merged stdout/stderr lines; finally yield a status dict."""
     proc = subprocess.Popen(
