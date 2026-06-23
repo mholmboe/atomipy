@@ -342,7 +342,8 @@ def _stream(cmd, cwd, env):
 
 
 def run_stage(workdir, stage, struct_in, *, defines=None, gmx="gmx", maxwarn=2,
-              restraint=None, top="topol.top", ntmpi=1, ntomp=None, **mdp_kwargs):
+              restraint=None, top="topol.top", ntmpi=1, ntomp=None, mdp_text=None,
+              **mdp_kwargs):
     """Generate the .mdp, run grompp then mdrun for one stage; yield log lines.
 
     Yields str log lines, then a final dict {'stage','returncode','gro'} where
@@ -353,7 +354,10 @@ def run_stage(workdir, stage, struct_in, *, defines=None, gmx="gmx", maxwarn=2,
     env = _gmx_env(_libs)
 
     mdp_path = wd / f"{stage}.mdp"
-    mdp_path.write_text(_mdp_text(stage, defines=defines, **mdp_kwargs), encoding="utf-8")
+    if mdp_text is not None and str(mdp_text).strip():
+        mdp_path.write_text(str(mdp_text), encoding="utf-8")   # user-supplied .mdp, verbatim
+    else:
+        mdp_path.write_text(_mdp_text(stage, defines=defines, **mdp_kwargs), encoding="utf-8")
 
     grompp = [gmx, "grompp", "-f", f"{stage}.mdp", "-c", struct_in, "-p", top,
               "-o", f"{stage}.tpr", "-maxwarn", str(maxwarn)]
