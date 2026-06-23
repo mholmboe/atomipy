@@ -201,7 +201,7 @@ def run_local_gmx(workdir, top, gro, stages, *, defines=None, gmx="gmx",
     return statuses
 
 
-def trjconv_to_pdb(workdir, *, tpr, xtc, out, gmx="gmx", pbc="mol", skip=1,
+def trjconv_to_pdb(workdir, *, tpr, xtc, out, gmx="gmx", pbc="atom", skip=1,
                    group="System", on_line=None):
     """Convert a GROMACS trajectory (.xtc/.trr) to a multi-frame PDB via trjconv.
 
@@ -273,7 +273,9 @@ def run_stage(workdir, stage, struct_in, *, defines=None, gmx="gmx", maxwarn=2,
     # -ntmpi 1: single thread-MPI rank (no domain decomposition). Robust for the
     # small / periodic-molecule systems typical here — auto DD often fails to split
     # a clay sheet that spans the cell across many ranks. OpenMP still parallelizes.
-    mdrun = [gmx, "mdrun", "-deffnm", stage]
+    # -v: verbose step progress to stderr (merged into the stream) so the run panel
+    # shows live progress instead of going silent during the mdrun compute.
+    mdrun = [gmx, "mdrun", "-deffnm", stage, "-v"]
     if ntmpi:
         mdrun += ["-ntmpi", str(int(ntmpi))]
     if ntomp:
