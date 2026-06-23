@@ -25,7 +25,8 @@ def detect_gmx(gmx="gmx"):
     if not path:
         return None
     try:
-        out = subprocess.run([gmx, "--version"], capture_output=True, text=True, timeout=30)
+        out = subprocess.run([gmx, "--version"], capture_output=True, text=True,
+                             encoding="utf-8", errors="replace", timeout=30)
         blob = (out.stdout or "") + (out.stderr or "")
         m = re.search(r"GROMACS version:?\s*(\S+)", blob)
         version = m.group(1) if m else "unknown"
@@ -55,7 +56,7 @@ def _active_atomtypes(ffdir, defines):
                 return False
         return True
 
-    for raw in fn.read_text().splitlines():
+    for raw in fn.read_text(encoding="utf-8", errors="ignore").splitlines():
         s = raw.strip()
         if s.startswith("#ifdef"):
             stack.append(("ifdef", s.split()[1])); continue
@@ -103,7 +104,7 @@ def _sanitize_minff(ffdir, defines=None):
                 return False
         return True
 
-    for ln in fb.read_text().splitlines():
+    for ln in fb.read_text(encoding="utf-8", errors="ignore").splitlines():
         s = ln.strip()
         if s.startswith("#ifdef"):
             stack.append(("ifdef", s.split()[1])); out.append(ln); continue
@@ -130,7 +131,7 @@ def _sanitize_minff(ffdir, defines=None):
                     continue
         out.append(ln)
     if n:
-        fb.write_text("\n".join(out) + "\n")
+        fb.write_text("\n".join(out) + "\n", encoding="utf-8")
     return n
 
 
@@ -220,7 +221,7 @@ def trjconv_to_pdb(workdir, *, tpr, xtc, out, gmx="gmx", pbc="mol", skip=1,
         cmd += ["-skip", str(int(skip))]
     proc = subprocess.run(
         cmd, cwd=str(wd), env=env, input=f"{group}\n",
-        capture_output=True, text=True,
+        capture_output=True, text=True, encoding="utf-8", errors="replace",
     )
     if on_line:
         for ln in (proc.stdout + proc.stderr).splitlines():
@@ -232,7 +233,7 @@ def _stream(cmd, cwd, env):
     """Run cmd, yielding merged stdout/stderr lines; finally yield a status dict."""
     proc = subprocess.Popen(
         cmd, cwd=cwd, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-        text=True, bufsize=1,
+        text=True, encoding="utf-8", errors="replace", bufsize=1,
     )
     for line in proc.stdout:
         yield line.rstrip("\n")
@@ -252,7 +253,7 @@ def run_stage(workdir, stage, struct_in, *, defines=None, gmx="gmx", maxwarn=2,
     env.setdefault("GMX_MAXBACKUP", "-1")
 
     mdp_path = wd / f"{stage}.mdp"
-    mdp_path.write_text(_mdp_text(stage, defines=defines, **mdp_kwargs))
+    mdp_path.write_text(_mdp_text(stage, defines=defines, **mdp_kwargs), encoding="utf-8")
 
     grompp = [gmx, "grompp", "-f", f"{stage}.mdp", "-c", struct_in, "-p", top,
               "-o", f"{stage}.tpr", "-maxwarn", str(maxwarn)]
