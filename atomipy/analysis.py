@@ -106,10 +106,10 @@ def unwrap_coordinates(atoms, Box, molid=None):
                 
     return unwrapped_atoms
 
-def calculate_rdf(atoms, Box, rmax=15.0, dr=0.1, atom_types=None, pair_types=None, typeA=None, typeB=None):
+def calculate_rdf(atoms, Box, rmax=15.0, dr=0.1, atom_types=None, pair_types=None, typeA=None, typeB=None, return_cn=False):
     """
     Calculate the Radial Distribution Function g(r) for specified atom pairs.
-    
+
     Parameters
     ----------
     atoms : list of dict
@@ -124,14 +124,18 @@ def calculate_rdf(atoms, Box, rmax=15.0, dr=0.1, atom_types=None, pair_types=Non
         Filter atoms by these types for both particles in the pair.
     pair_types : tuple of lists, optional
         (types_A, types_B) to compute RDF between elements of A and B.
-        
+    return_cn : bool
+        If True, also return the running coordination number n(r) — the average
+        number of B atoms within radius r of an A atom (cumulative integral of g(r)).
+
     Returns
     -------
     tuple
-        (r, g_r) - Bin centers and RDF values.
+        (r, g_r) — or (r, g_r, n_r) when return_cn=True.
     """
+    _empty = (np.array([]), np.array([]), np.array([])) if return_cn else (np.array([]), np.array([]))
     if not atoms:
-        return np.array([]), np.array([])
+        return _empty
 
     # Map typeA/typeB to pair_types if provided
     if typeA and typeB:
@@ -155,7 +159,7 @@ def calculate_rdf(atoms, Box, rmax=15.0, dr=0.1, atom_types=None, pair_types=Non
         is_cross = False
 
     if not indices_a or not indices_b:
-        return np.array([]), np.array([])
+        return _empty
 
     # Use dist_matrix for all-to-all distances
     # For large systems, we should use cell_list for performance, but dist_matrix is easier for RDF
@@ -209,7 +213,13 @@ def calculate_rdf(atoms, Box, rmax=15.0, dr=0.1, atom_types=None, pair_types=Non
     # g(r) = hist(r) / (N_a * rho * V(r))
     # where N_a is number of atoms in type A
     g_r = hist / (len(indices_a) * rho * shell_v)
-    
+
+    if return_cn:
+        # Running coordination number: average number of B within r of an A atom.
+        # Exact from the same pair histogram: cumulative pair count / N_a.
+        n_r = np.cumsum(hist) / len(indices_a)
+        return r, g_r, n_r
+
     return r, g_r
 
 def density_profile(atoms, Box, axis='z', nbins=100, atom_types=None, mode='number'):
@@ -291,23 +301,35 @@ def density_profile(atoms, Box, axis='z', nbins=100, atom_types=None, mode='numb
     return centers, dens
 
 
-def rdf_frames(frames, rmax=15.0, dr=0.1, typeA=None, typeB=None, atom_types=None):
-    """Ensemble-average g(r) over a list of (atoms, Box) frames (see calculate_rdf)."""
+def rdf_frames(frames, rmax=15.0, dr=0.1, typeA=None, typeB=None, atom_types=None, return_cn=False):
+    """Ensemble-average g(r) over a list of (atoms, Box) frames (see calculate_rdf).
+
+    With return_cn=True also returns the ensemble-averaged running coordination
+    number n(r): (r, g_r, n_r).
+    """
     accum = None
+    accum_n = None
     r = None
     n = 0
     for atoms, Box in frames:
-        ri, gi = calculate_rdf(atoms, Box, rmax=rmax, dr=dr,
-                               typeA=typeA, typeB=typeB, atom_types=atom_types)
+        res = calculate_rdf(atoms, Box, rmax=rmax, dr=dr,
+                            typeA=typeA, typeB=typeB, atom_types=atom_types, return_cn=return_cn)
+        gi = res[1]
         if gi is None or len(gi) == 0:
             continue
         if accum is None:
             accum = np.zeros_like(gi)
-            r = ri
+            r = res[0]
+            if return_cn:
+                accum_n = np.zeros_like(res[2])
         accum += gi
+        if return_cn:
+            accum_n += res[2]
         n += 1
     if n == 0:
-        return np.array([]), np.array([])
+        return (np.array([]), np.array([]), np.array([])) if return_cn else (np.array([]), np.array([]))
+    if return_cn:
+        return r, accum / n, accum_n / n
     return r, accum / n
 
 
