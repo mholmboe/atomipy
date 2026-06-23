@@ -501,6 +501,138 @@ def displacement_distribution(frames, atom_types=None, dims="xyz", lag=None, ori
             "lag_frames": lag, "n_samples": int(samples.size)}
 
 
+def _mimg(d, L):
+    """Minimum-image a displacement array d (...,3) for orthogonal box lengths L."""
+    for c in range(3):
+        if L[c] > 0:
+            d[..., c] -= L[c] * np.round(d[..., c] / L[c])
+    return d
+
+
+def find_hbonds(atoms, Box, donor_types=None, acceptor_types=None,
+                r_cut=3.5, angle_cut=30.0, exclude_same_molecule=True,
+                dh_cut=1.3, elements=None):
+    """Geometric hydrogen-bond detection for ONE frame (GROMACS gmx hbond convention).
+
+    A hydrogen bond D-H...A requires D...A < r_cut AND the H-D...A angle (at the donor)
+    <= angle_cut. Donors/acceptors are O/N/F by element, optionally restricted to atom
+    name lists (donor_types / acceptor_types). Each H is bonded to its nearest heavy
+    O/N/F within dh_cut.
+
+    Returns
+    -------
+    list of (donor_idx, h_idx, acceptor_idx)
+    """
+    if not atoms:
+        return []
+    if elements is None:
+        from .element import element as _element
+        ae = [dict(a) for a in atoms]
+        _element(ae)
+        elements = [a.get('element') for a in ae]
+    # Normalize atomipy's water labels to base elements (Ow->O, Hw->H).
+    elements = ['O' if e == 'Ow' else ('H' if e == 'Hw' else e) for e in elements]
+    pos = np.array([[a['x'], a['y'], a['z']] for a in atoms], dtype=float)
+    L = np.array(_box_lengths(Box), dtype=float)
+    molid = [a.get('molid', i) for i, a in enumerate(atoms)]
+    accept_el = {'O', 'N', 'F'}
+
+    acc_idx = [i for i in range(len(atoms))
+               if elements[i] in accept_el and (not acceptor_types or atoms[i].get('type') in acceptor_types)]
+    don_ok = set(i for i in range(len(atoms))
+                 if elements[i] in accept_el and (not donor_types or atoms[i].get('type') in donor_types))
+    H_idx = [i for i in range(len(atoms)) if elements[i] == 'H']
+    heavy_all = [i for i in range(len(atoms)) if elements[i] in accept_el]
+    if not acc_idx or not H_idx or not heavy_all:
+        return []
+
+    acc_arr = np.array(acc_idx)
+    acc_pos = pos[acc_arr]
+    heavy_arr = np.array(heavy_all)
+    heavy_pos = pos[heavy_arr]
+
+    hbonds = []
+    for h in H_idx:
+        r = np.sqrt((_mimg(heavy_pos - pos[h], L) ** 2).sum(1))
+        j = int(np.argmin(r))
+        if r[j] > dh_cut:
+            continue
+        D = int(heavy_arr[j])
+        if D not in don_ok:
+            continue
+        rDA = np.sqrt((_mimg(acc_pos - pos[D], L) ** 2).sum(1))
+        for ci in np.where(rDA < r_cut)[0]:
+            A = int(acc_arr[ci])
+            if A == D:
+                continue
+            if exclude_same_molecule and molid[A] == molid[D]:
+                continue
+            u = _mimg((pos[h] - pos[D]).reshape(1, 3).copy(), L)[0]
+            v = _mimg((pos[A] - pos[D]).reshape(1, 3).copy(), L)[0]
+            nu = np.linalg.norm(u); nv = np.linalg.norm(v)
+            if nu == 0 or nv == 0:
+                continue
+            ang = np.degrees(np.arccos(np.clip(np.dot(u, v) / (nu * nv), -1.0, 1.0)))
+            if ang <= angle_cut:
+                hbonds.append((D, h, A))
+    return hbonds
+
+
+def hbonds_frames(frames, donor_types=None, acceptor_types=None, r_cut=3.5,
+                  angle_cut=30.0, exclude_same_molecule=True, max_count=8):
+    """Hydrogen-bond analysis over a trajectory (or single structure).
+
+    Returns total counts and the distribution of H-bonds per molecule (capturing
+    single vs. multiple donor/acceptor participation). A molecule's count is the
+    number of H-bonds it takes part in (as donor or acceptor).
+
+    Returns
+    -------
+    dict or None
+        {'n_frames', 'mean_total', 'mean_per_molecule', 'time_series',
+         'dist_x' (#H-bonds), 'dist_y' (fraction of molecules)}
+    """
+    if not frames:
+        return None
+    from collections import defaultdict
+    from .element import element as _element
+
+    # Atom identity is constant across frames -> classify elements / capable molecules once.
+    atoms0 = frames[0][0]
+    ae = [dict(a) for a in atoms0]
+    _element(ae)
+    elements = ['O' if a.get('element') == 'Ow' else ('H' if a.get('element') == 'Hw' else a.get('element')) for a in ae]
+    capable = set(atoms0[i].get('molid', i) for i in range(len(atoms0)) if elements[i] in ('O', 'N', 'F'))
+    n_capable = max(len(capable), 1)
+
+    dist = np.zeros(max_count + 1)
+    time_series = []
+    n = 0
+    for atoms, Box in frames:
+        hb = find_hbonds(atoms, Box, donor_types=donor_types, acceptor_types=acceptor_types,
+                         r_cut=r_cut, angle_cut=angle_cut, exclude_same_molecule=exclude_same_molecule,
+                         elements=elements)
+        time_series.append(len(hb))
+        per_mol = defaultdict(int)
+        for (D, _H, A) in hb:
+            per_mol[atoms[D].get('molid')] += 1
+            per_mol[atoms[A].get('molid')] += 1
+        for m in capable:
+            dist[min(per_mol.get(m, 0), max_count)] += 1
+        n += 1
+    if n == 0:
+        return None
+    dist = dist / (n * n_capable)
+    return {
+        'n_frames': n,
+        'mean_total': float(np.mean(time_series)),
+        'mean_per_molecule': float(np.sum(np.arange(max_count + 1) * dist)),
+        'time_series': [int(x) for x in time_series],
+        'dist_x': list(range(max_count + 1)),
+        'dist_y': [float(x) for x in dist],
+    }
+
+
 def coordination_number(atoms, Box, cutoff=3.0, atom_types=None, neighbor_types=None, typeA=None, typeB=None):
     """
     Calculate the coordination number for each atom.

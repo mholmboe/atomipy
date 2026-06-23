@@ -107,6 +107,8 @@ rdf_frames = analysis.rdf_frames
 density_frames = analysis.density_frames
 msd = analysis.msd
 displacement_distribution = analysis.displacement_distribution
+find_hbonds = analysis.find_hbonds
+hbonds_frames = analysis.hbonds_frames
 from .bond_angle import bond_angle, bond_angle_dihedral
 
 # ===== Cell and coordinate transformation functions =====
@@ -282,6 +284,7 @@ __all__ = [
     'get_radius', 'bond_distance',
     'unwrap_coordinates', 'calculate_rdf', 'coordination_number', 'closest_atom', 'min_distances',
     'density_profile', 'rdf_frames', 'density_frames', 'msd', 'displacement_distribution',
+    'find_hbonds', 'hbonds_frames',
     'xrd', 'occupancy_atom', 'atomic_scattering_factors', 'calculate_multiplicity', 'bragg_law',
     'miller_planes', 'd_spacing', 'cut_miller', 'cut_planes', 'hkil_to_hkl',
     'build_cell', 'make_lattice', 'lattice_types',
