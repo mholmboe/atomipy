@@ -510,14 +510,17 @@ def _mimg(d, L):
 
 
 def find_hbonds(atoms, Box, donor_types=None, acceptor_types=None,
+                donor_resnames=None, acceptor_resnames=None,
                 r_cut=3.5, angle_cut=30.0, exclude_same_molecule=True,
                 dh_cut=1.3, elements=None):
     """Geometric hydrogen-bond detection for ONE frame (GROMACS gmx hbond convention).
 
     A hydrogen bond D-H...A requires D...A < r_cut AND the H-D...A angle (at the donor)
-    <= angle_cut. Donors/acceptors are O/N/F by element, optionally restricted to atom
-    name lists (donor_types / acceptor_types). Each H is bonded to its nearest heavy
-    O/N/F within dh_cut.
+    <= angle_cut. Donors/acceptors are O/N/F by element, optionally restricted by atom
+    name (donor_types / acceptor_types) AND/OR residue name (donor_resnames /
+    acceptor_resnames). A filter left as None imposes no restriction on that dimension,
+    so type=None and resname=None selects every O/N/F (the whole system). Each H is
+    bonded to its nearest heavy O/N/F within dh_cut.
 
     Returns
     -------
@@ -537,10 +540,17 @@ def find_hbonds(atoms, Box, donor_types=None, acceptor_types=None,
     molid = [a.get('molid', i) for i, a in enumerate(atoms)]
     accept_el = {'O', 'N', 'F'}
 
+    def _sel(i, types, resn):
+        if types and atoms[i].get('type') not in types:
+            return False
+        if resn and atoms[i].get('resname') not in resn:
+            return False
+        return True
+
     acc_idx = [i for i in range(len(atoms))
-               if elements[i] in accept_el and (not acceptor_types or atoms[i].get('type') in acceptor_types)]
+               if elements[i] in accept_el and _sel(i, acceptor_types, acceptor_resnames)]
     don_ok = set(i for i in range(len(atoms))
-                 if elements[i] in accept_el and (not donor_types or atoms[i].get('type') in donor_types))
+                 if elements[i] in accept_el and _sel(i, donor_types, donor_resnames))
     H_idx = [i for i in range(len(atoms)) if elements[i] == 'H']
     heavy_all = [i for i in range(len(atoms)) if elements[i] in accept_el]
     if not acc_idx or not H_idx or not heavy_all:
@@ -578,7 +588,8 @@ def find_hbonds(atoms, Box, donor_types=None, acceptor_types=None,
     return hbonds
 
 
-def hbonds_frames(frames, donor_types=None, acceptor_types=None, r_cut=3.5,
+def hbonds_frames(frames, donor_types=None, acceptor_types=None,
+                  donor_resnames=None, acceptor_resnames=None, r_cut=3.5,
                   angle_cut=30.0, exclude_same_molecule=True, max_count=8):
     """Hydrogen-bond analysis over a trajectory (or single structure).
 
@@ -610,6 +621,7 @@ def hbonds_frames(frames, donor_types=None, acceptor_types=None, r_cut=3.5,
     n = 0
     for atoms, Box in frames:
         hb = find_hbonds(atoms, Box, donor_types=donor_types, acceptor_types=acceptor_types,
+                         donor_resnames=donor_resnames, acceptor_resnames=acceptor_resnames,
                          r_cut=r_cut, angle_cut=angle_cut, exclude_same_molecule=exclude_same_molecule,
                          elements=elements)
         time_series.append(len(hb))
