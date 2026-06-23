@@ -19,20 +19,64 @@ from .mdp import mdp as _mdp_text, build_defines
 _MINFF_SRC = Path(__file__).resolve().parent.parent / "ffparams" / "min.ff"
 
 
+def _resolve_gmx(spec):
+    """Resolve a user GROMACS spec to (gmx_command, lib_dirs).
+
+    ``spec`` may be: '' or 'gmx' (use PATH), a path to the gmx binary, a path to
+    a GMXRC script, or a GROMACS install/bin directory. lib_dirs are the install's
+    library folders, added to the loader path so a custom build finds its .so/.dylib.
+    """
+    if not spec or spec == "gmx":
+        return "gmx", []
+    p = Path(spec)
+    if p.name.startswith("GMXRC"):          # .../bin/GMXRC  -> .../bin/gmx
+        bindir = p.parent
+        return str(bindir / "gmx"), _lib_dirs(bindir.parent)
+    if p.is_dir():                          # install dir or bin dir
+        if (p / "gmx").exists():
+            return str(p / "gmx"), _lib_dirs(p.parent)
+        if (p / "bin" / "gmx").exists():
+            return str(p / "bin" / "gmx"), _lib_dirs(p)
+        return str(p / "gmx"), _lib_dirs(p.parent)
+    # a file (gmx binary) or a bare command name
+    root = p.parent.parent if p.parent.name == "bin" else p.parent
+    return spec, _lib_dirs(root)
+
+
+def _lib_dirs(root):
+    return [str(root / d) for d in ("lib", "lib64") if (root / d).is_dir()]
+
+
+def _gmx_env(libs, base=None):
+    """Copy the env and prepend the custom GROMACS lib dirs to the loader path."""
+    env = dict(base if base is not None else os.environ)
+    env.setdefault("GMX_MAXBACKUP", "-1")
+    if libs:
+        joined = os.pathsep.join(libs)
+        for var in ("LD_LIBRARY_PATH", "DYLD_LIBRARY_PATH", "DYLD_FALLBACK_LIBRARY_PATH"):
+            env[var] = joined + (os.pathsep + env[var] if env.get(var) else "")
+    return env
+
+
 def detect_gmx(gmx="gmx"):
-    """Return {'path','version','command'} for a usable gmx, or None if absent."""
-    path = shutil.which(gmx)
+    """Return {'path','version','command','libs'} for a usable gmx, or None.
+
+    ``gmx`` may be 'gmx' (PATH) or a custom binary/GMXRC/install-dir path.
+    """
+    cmd, libs = _resolve_gmx(gmx)
+    path = shutil.which(cmd) or (cmd if os.path.isfile(cmd) and os.access(cmd, os.X_OK) else None)
     if not path:
         return None
     try:
-        out = subprocess.run([gmx, "--version"], capture_output=True, text=True,
-                             encoding="utf-8", errors="replace", timeout=30)
+        out = subprocess.run([path, "--version"], capture_output=True, text=True,
+                             encoding="utf-8", errors="replace", timeout=30,
+                             env=_gmx_env(libs))
         blob = (out.stdout or "") + (out.stderr or "")
         m = re.search(r"GROMACS version:?\s*(\S+)", blob)
         version = m.group(1) if m else "unknown"
     except Exception:
         version = "unknown"
-    return {"path": path, "version": version, "command": gmx}
+    return {"path": path, "version": version, "command": gmx, "libs": libs}
 
 
 def _active_atomtypes(ffdir, defines):
@@ -214,8 +258,8 @@ def trjconv_to_pdb(workdir, *, tpr, xtc, out, gmx="gmx", pbc="atom", skip=1,
     wd = Path(workdir)
     if not (wd / xtc).exists() or (wd / xtc).stat().st_size == 0:
         return None
-    env = dict(os.environ)
-    env.setdefault("GMX_MAXBACKUP", "-1")
+    gmx, _libs = _resolve_gmx(gmx)
+    env = _gmx_env(_libs)
     cmd = [gmx, "trjconv", "-s", tpr, "-f", xtc, "-o", out, "-pbc", pbc]
     if skip and int(skip) > 1:
         cmd += ["-skip", str(int(skip))]
@@ -305,8 +349,8 @@ def run_stage(workdir, stage, struct_in, *, defines=None, gmx="gmx", maxwarn=2,
     'gro' is the output coordinate file (``{stage}.gro``) if mdrun succeeded.
     """
     wd = Path(workdir)
-    env = dict(os.environ)
-    env.setdefault("GMX_MAXBACKUP", "-1")
+    gmx, _libs = _resolve_gmx(gmx)
+    env = _gmx_env(_libs)
 
     mdp_path = wd / f"{stage}.mdp"
     mdp_path.write_text(_mdp_text(stage, defines=defines, **mdp_kwargs), encoding="utf-8")
