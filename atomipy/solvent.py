@@ -377,7 +377,12 @@ def solvate(limits, density=1000.0, min_distance=2.0, max_solvent: Union[str, in
     
     # Slice to get only atoms within the target region
     sliced_solvent = build_slice(full_solvent, [xlo, ylo, zlo, xhi, yhi, zhi])
-    
+
+    # Remove solvent-solvent overlaps (replicated-template tile-seam / PBC clashes) UP
+    # FRONT, so the molecule-count selection below draws from a clash-free pool (and an
+    # explicit count isn't undercut by clashes removed after selection).
+    sliced_solvent = _declash_solvent(sliced_solvent, box_dim, min_distance)
+
     # Randomize the order of molecules for unbiased selection
     unique_molids = set(atom['molid'] for atom in sliced_solvent)
     molid_list = list(unique_molids)
@@ -449,10 +454,6 @@ def solvate(limits, density=1000.0, min_distance=2.0, max_solvent: Union[str, in
                 solvent_result = [atom for atom in solvent_result 
                                  if atom['molid'] in selected_molids]
     
-    # Remove solvent-solvent overlaps (replicated-template seam / PBC clashes) so the
-    # box doesn't explode in MD. Done for every path (incl. pure solvent with no solute).
-    solvent_result = _declash_solvent(solvent_result, box_dim, min_distance)
-
     # Calculate statistics for output
     n_solvent_molecules = len(set(atom['molid'] for atom in solvent_result))
     n_solvent_atoms = len(solvent_result)
