@@ -501,6 +501,95 @@ def displacement_distribution(frames, atom_types=None, dims="xyz", lag=None, ori
             "lag_frames": lag, "n_samples": int(samples.size)}
 
 
+def _fd_velocities(U, dt):
+    """Central finite-difference velocities from unwrapped positions U (m, n, 3)."""
+    n = U.shape[1]
+    V = np.zeros_like(U)
+    if n >= 3:
+        V[:, 1:-1, :] = (U[:, 2:, :] - U[:, :-2, :]) / (2.0 * dt)
+        V[:, 0, :] = (U[:, 1, :] - U[:, 0, :]) / dt
+        V[:, -1, :] = (U[:, -1, :] - U[:, -2, :]) / dt
+    elif n == 2:
+        V[:, 0, :] = V[:, 1, :] = (U[:, 1, :] - U[:, 0, :]) / dt
+    return V
+
+
+def vacf(frames, atom_types=None, dt=1.0, origin_stride=1, max_lag=None, window=True):
+    """Velocity autocorrelation function, power spectrum and Green-Kubo diffusion.
+
+    NOTE: the trajectory stores POSITIONS only, so velocities are estimated by central
+    finite difference of the (PBC-unwrapped) positions: v(t) = [r(t+dt) - r(t-dt)]/(2 dt).
+    This is NOT the integrator's true velocity. Consequences:
+      * the resolvable frequency range is capped at the Nyquist limit 1/(2 dt) — for a
+        meaningful vibrational spectrum the trajectory must be saved every few fs;
+      * the difference acts as a low-pass filter (amplitudes scale by sinc(w dt)), so
+        high-frequency peaks are damped.
+    The Green-Kubo diffusion (low-frequency / long-time) is robust; the power spectrum is
+    only meaningful with fine output. For sharp spectra use true .trr velocities instead.
+
+    Parameters
+    ----------
+    frames : list of (atoms, Box)
+    atom_types : list of str, optional   Restrict to these atom names.
+    dt : float                            Time between frames (ps).
+    origin_stride : int                   Stride between time origins (restarts).
+    max_lag : int, optional               Max VACF lag in frames (default n-1).
+    window : bool                         Apply a decaying window before the FFT.
+
+    Returns
+    -------
+    dict or None
+        {'lags' (ps), 'vacf', 'vacf_norm', 'D_A2_ps','D_cm2_s','D_1e9_m2_s',
+         'freq_thz','wavenumber_cm1','spectrum','nyquist_cm1','n_atoms','n_frames'}
+    """
+    if not frames or len(frames) < 4:
+        return None
+    idx = _select_indices(frames[0][0], atom_types)
+    if not idx:
+        return None
+    dt = float(dt)
+    U = _unwrap_trajectory(frames, idx)
+    n = U.shape[1]
+    V = _fd_velocities(U, dt)
+    if max_lag is None:
+        max_lag = n - 1
+    max_lag = int(max(1, min(max_lag, n - 1)))
+    C = np.zeros(max_lag + 1)
+    cnt = np.zeros(max_lag + 1)
+    stride = max(1, int(origin_stride))
+    for t0 in range(0, n, stride):
+        hi = min(n, t0 + max_lag + 1)
+        d = np.einsum('ad,atd->at', V[:, t0, :], V[:, t0:hi, :])  # (m, hi-t0)
+        s = d.mean(axis=0)
+        C[: hi - t0] += s
+        cnt[: hi - t0] += 1
+    C = C / np.maximum(cnt, 1)
+    lags = np.arange(max_lag + 1) * dt
+
+    # Green-Kubo self-diffusion: D = (1/3) integral of the (3D) VACF over time.
+    D = float(np.trapz(C, dx=dt) / 3.0)  # Å²/ps
+
+    # Power spectrum (vibrational DOS) = FFT of the (windowed) VACF.
+    L = len(C)
+    if window and L > 1:
+        w = 0.5 * (1.0 + np.cos(np.pi * np.arange(L) / (L - 1)))  # 1 at lag 0 -> 0 at max lag
+        Cw = C * w
+    else:
+        Cw = C
+    spec = np.abs(np.fft.rfft(Cw))
+    freqs = np.fft.rfftfreq(L, d=dt)          # 1/ps == THz
+    wn = freqs * 33.35641                      # cm^-1 (1 THz = 33.35641 cm^-1)
+    spec_n = spec / spec.max() if spec.max() > 0 else spec
+    nyq_cm1 = (1.0 / (2.0 * dt)) * 33.35641
+
+    return {
+        'lags': lags, 'vacf': C, 'vacf_norm': C / C[0] if C[0] != 0 else C,
+        'D_A2_ps': D, 'D_cm2_s': D * 1e-4, 'D_1e9_m2_s': D * 10.0,
+        'freq_thz': freqs, 'wavenumber_cm1': wn, 'spectrum': spec_n,
+        'nyquist_cm1': nyq_cm1, 'n_atoms': len(idx), 'n_frames': n,
+    }
+
+
 def _mimg(d, L):
     """Minimum-image a displacement array d (...,3) for orthogonal box lengths L."""
     for c in range(3):
