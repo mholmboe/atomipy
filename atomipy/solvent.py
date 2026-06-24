@@ -171,27 +171,29 @@ def find_H2O(atoms, Box_dim=None, rmin=1.30):
     return water_atoms, non_water_atoms
 
 
-def _declash_solvent(solv_atoms, box_dim, min_distance):
+def _declash_solvent(solv_atoms, box_dim, heavy_cut=2.0, h_cut=1.0):
     """Drop solvent molecules that overlap OTHER solvent molecules.
 
     The water template is replicated and sliced to fill the box, so molecules from
     neighbouring tiles (or across the periodic boundary) can land on top of each other
     — these clashes produce near-infinite forces that make MD explode ("water cannot be
-    settled") unless minimized first. Hydrogen atoms use the smaller cutoff (min_distance/2)
-    so genuine hydrogen bonds (O···H ≈ 1.8 Å) are preserved; only true overlaps are removed.
-    Greedy: for each too-close inter-molecular pair, drop one of the two molecules.
+    settled") unless minimized first.
+
+    Overlap is judged by a fixed physical criterion (NOT the solvation min_distance):
+    an inter-molecular pair is a clash if it is closer than ``h_cut`` (default 1.0 Å) when
+    either atom is a hydrogen, or ``heavy_cut`` (default 2.0 Å) otherwise. Using the
+    smaller cutoff for H preserves genuine hydrogen bonds (O···H ≈ 1.8 Å); only true
+    overlaps are removed. Greedy: for each too-close inter-molecular pair, drop one of
+    the two molecules.
     """
     if not solv_atoms:
         return solv_atoms
     from .distances import get_neighbor_list
-    if isinstance(min_distance, (list, tuple)):
-        big = float(min_distance[0])
-        small = float(min_distance[1]) if len(min_distance) > 1 else big / 2.0
-    else:
-        big = float(min_distance)
-        small = big / 2.0
+    heavy_cut = float(heavy_cut)
+    h_cut = float(h_cut)
+    search_cut = max(heavy_cut, h_cut)
     try:
-        i_idx, j_idx, dists, *_ = get_neighbor_list(solv_atoms, box_dim, cutoff=big)
+        i_idx, j_idx, dists, *_ = get_neighbor_list(solv_atoms, box_dim, cutoff=search_cut)
     except Exception:
         return solv_atoms
     molid = [a.get('molid') for a in solv_atoms]
@@ -201,12 +203,13 @@ def _declash_solvent(solv_atoms, box_dim, min_distance):
         ma, mb = molid[a], molid[b]
         if ma == mb:
             continue
-        thr = small if (is_h[a] or is_h[b]) else big
+        thr = h_cut if (is_h[a] or is_h[b]) else heavy_cut
         if d < thr and ma not in removed and mb not in removed:
             removed.add(max(ma, mb))
     if removed:
         kept = [a for a in solv_atoms if a.get('molid') not in removed]
-        print(f"  Removed {len(removed)} overlapping solvent molecule(s) (tile-seam/PBC clashes)")
+        print(f"  Removed {len(removed)} overlapping solvent molecule(s) "
+              f"(< {heavy_cut:g} Å heavy / {h_cut:g} Å H; tile-seam/PBC clashes)")
         return kept
     return solv_atoms
 
@@ -380,8 +383,9 @@ def solvate(limits, density=1000.0, min_distance=2.0, max_solvent: Union[str, in
 
     # Remove solvent-solvent overlaps (replicated-template tile-seam / PBC clashes) UP
     # FRONT, so the molecule-count selection below draws from a clash-free pool (and an
-    # explicit count isn't undercut by clashes removed after selection).
-    sliced_solvent = _declash_solvent(sliced_solvent, box_dim, min_distance)
+    # explicit count isn't undercut by clashes removed after selection). Fixed physical
+    # overlap thresholds: 2 Å heavy-heavy, 1 Å when a hydrogen is involved.
+    sliced_solvent = _declash_solvent(sliced_solvent, box_dim, heavy_cut=2.0, h_cut=1.0)
 
     # Randomize the order of molecules for unbiased selection
     unique_molids = set(atom['molid'] for atom in sliced_solvent)
