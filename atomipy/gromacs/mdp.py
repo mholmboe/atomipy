@@ -78,6 +78,9 @@ def mdp(stage, *, defines=None, nsteps=None, dt=0.001, temperature=298.0,
             ("nsteps", str(nsteps if nsteps is not None else 5000)),
             ("emtol", str(emtol)),
             ("emstep", str(emstep)),
+            # steepest-descent writes the minimization trajectory to .trr (it ignores
+            # nstxout-compressed/.xtc), so set nstxout to capture the EM progression.
+            ("nstxout", str(nstxtc)),
             ("nstxout-compressed", str(nstxtc)),
         ]
         pairs += list(_COMMON.items())
