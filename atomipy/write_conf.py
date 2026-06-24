@@ -312,8 +312,8 @@ def gro(atoms, Box, file_path):
         f.write(f"{len(atoms)}\n")
         # Write each atom line with GRO format: residue number (5 chars), residue name (5 chars), atom name (5 chars), atom number (5 chars), x (8.3f), y (8.3f), z (8.3f) and optionally velocities vx, vy, vz (8.4f each)
         for i, atom in enumerate(atoms, start=1):
-            # Use molid if available, otherwise default to 1
-            resnum = atom.get('molid', 1)  # Use molecule ID as residue number in GRO format
+            # Residue number = molecule id (5-char field wraps at 100000, GROMACS convention).
+            resnum = atom.get('molid', 1) % 100000  # Use molecule ID as residue number in GRO format
             resname = atom.get('resname', 'UNK')
             
             # Use 'type' field for atom name, fall back to element or first character of resname
@@ -323,9 +323,13 @@ def gro(atoms, Box, file_path):
             if atomname is None:
                 atomname = resname[0] if resname else 'X'
             atomname = str(atomname)
-                
-            index = atom.get('index', i)
-            
+
+            # Atom serial is POSITIONAL in a .gro (5-char field, wraps at 100000). Always
+            # write a sequential number so subset/reordered atom lists (e.g. solvated boxes
+            # whose 'index' carries the replicated template's sparse ids) can't leave gaps
+            # or duplicates.
+            index = i % 100000
+
             # Convert coordinates from Angstroms to nm for .gro format
             x = atom.get('x', 0.0) * angstrom_to_nm
             y = atom.get('y', 0.0) * angstrom_to_nm
