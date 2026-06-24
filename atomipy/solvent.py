@@ -432,18 +432,29 @@ def solvate(limits, density=1000.0, min_distance=2.0, max_solvent: Union[str, in
     print(f"  Subvolume: {box_dim[0]:.2f} x {box_dim[1]:.2f} x {box_dim[2]:.2f} Å³ = {volume_angstrom3:.2f} Å³")
     print(f"  Added {n_solvent_molecules} water molecules ({n_solvent_atoms} atoms)")
     
-    # Combine solute and solvent if solute is provided
-    if solute_atoms is not None:
-        # Update molids to avoid conflicts
-        max_solute_molid = max(atom['molid'] for atom in solute_atoms) if solute_atoms else 0
-        for atom in solvent_result:
-            atom['molid'] += max_solute_molid + 1
-        
-        # Combine
-        result = solute_atoms + solvent_result if include_solute else solvent_result
+    # Renumber the selected solvent molecules to CONTIGUOUS molids. The replicated/
+    # sliced template leaves sparse, non-consecutive molids (e.g. 2,3,5,…,1728 for 1000
+    # molecules); downstream writers group residues by molid, so sparse ids corrupt the
+    # .gro/.top (mismatched molecule count -> grompp/settle failure). Start after the
+    # real solute (if any), else at 1.
+    start_molid = 1
+    if solute_atoms:  # a real, non-empty solute
+        start_molid = max((a['molid'] for a in solute_atoms), default=0) + 1
+    _remap = {}
+    _next = start_molid
+    for atom in solvent_result:
+        om = atom['molid']
+        if om not in _remap:
+            _remap[om] = _next
+            _next += 1
+        atom['molid'] = _remap[om]
+
+    # Combine solute + solvent (only a real, non-empty solute is prepended).
+    if solute_atoms and include_solute:
+        result = list(solute_atoms) + solvent_result
     else:
         result = solvent_result
-    
+
     return result
 
 
