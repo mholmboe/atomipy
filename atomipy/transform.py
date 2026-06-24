@@ -768,9 +768,11 @@ def scale(atoms, Box, scale_factors, resname=None):
         List of atom dictionaries with coordinates
     Box : list of float
         Box dimensions (1x3, 1x6, or 1x9).
-    scale_factors : list of float or float
-        Scaling factors for x, y, z dimensions. If a single value is provided,
-        it will be applied to all dimensions.
+    scale_factors : float or sequence of float
+        A single number (or length-1 vector) scales x, y and z ISOTROPICALLY
+        (box and all coordinates by the same factor). A length-3 vector
+        [sx, sy, sz] scales each axis — and the corresponding box edge — by its
+        own factor, e.g. [1.0, 1.02, 0.975]. Accepts numpy scalars/arrays too.
     resname : str, optional
         Only scale atoms with this residue name, if provided. Default is None (all atoms).
         
@@ -793,14 +795,18 @@ def scale(atoms, Box, scale_factors, resname=None):
     """
     # Make a deep copy to avoid modifying the original atoms
     atoms = [atom.copy() for atom in atoms]
-    
-    # Handle single scale factor
-    if isinstance(scale_factors, (int, float)):
-        scale_factors = [scale_factors, scale_factors, scale_factors]
-    
-    # Ensure scale_factors has 3 elements
-    if len(scale_factors) != 3:
-        raise ValueError("scale_factors must be a single number or list of 3 numbers")
+
+    # Normalize scale_factors. A scalar or length-1 vector scales x/y/z ISOTROPICALLY;
+    # a length-3 vector [sx, sy, sz] scales each axis by the corresponding factor.
+    # Accepts Python numbers, lists/tuples, and numpy scalars/arrays.
+    _sf = np.atleast_1d(np.asarray(scale_factors, dtype=float)).ravel()
+    if _sf.size == 1:
+        scale_factors = [float(_sf[0]), float(_sf[0]), float(_sf[0])]
+    elif _sf.size == 3:
+        scale_factors = [float(_sf[0]), float(_sf[1]), float(_sf[2])]
+    else:
+        raise ValueError("scale_factors must be a single number, a length-1 vector "
+                         "(isotropic), or a length-3 vector [sx, sy, sz]")
     
     # Determine which atoms to scale
     if resname is not None:
@@ -809,44 +815,23 @@ def scale(atoms, Box, scale_factors, resname=None):
     else:
         indices_to_scale = list(range(len(atoms)))
     
-    # Normalize box
+    # Normalize box -> orthogonal Box_dim + [a, b, c, alpha, beta, gamma] cell.
     Box_dim, Cell = normalize_box(Box)
-    
-    # Handle triclinic box if needed
-    is_triclinic = len(Box_dim) > 3 and any(Box_dim[i] != 0 for i in [5, 7, 8])
-    
-    if is_triclinic:
-        # Convert to orthogonal coordinates
-        cell_params = Cell
-        ortho_atoms = triclinic_to_orthogonal(atoms=atoms, Box=Box_dim)
-        
-        # Scale orthogonal coordinates
-        for i in indices_to_scale:
-            ortho_atoms[i]['x'] *= scale_factors[0]
-            ortho_atoms[i]['y'] *= scale_factors[1]
-            ortho_atoms[i]['z'] *= scale_factors[2]
-        
-        # Scale box dimensions while preserving angles
-        new_cell = cell_params.copy()
-        new_cell[0] *= scale_factors[0]  # a
-        new_cell[1] *= scale_factors[1]  # b
-        new_cell[2] *= scale_factors[2]  # c
-        new_box = Cell2Box_dim(new_cell)
-        
-        # Convert back to triclinic coordinates
-        scaled_atoms = orthogonal_to_triclinic(atoms=ortho_atoms, Box=new_box)
-    else:
-        # Direct scaling for orthogonal box
-        for i in indices_to_scale:
-            atoms[i]['x'] *= scale_factors[0]
-            atoms[i]['y'] *= scale_factors[1]
-            atoms[i]['z'] *= scale_factors[2]
-        
-        # Scale box dimensions
-        new_box = Box_dim.copy() if hasattr(Box_dim, 'copy') else list(Box_dim)
-        for i in range(min(3, len(Box_dim))):
-            new_box[i] *= scale_factors[i]
-            
-        scaled_atoms = atoms
-    
-    return scaled_atoms, new_box
+
+    # Scale by keeping FRACTIONAL coordinates fixed and scaling the cell edges per axis.
+    # This is correct for both orthogonal and triclinic cells (angles preserved): atoms
+    # stay at the same fractional positions, so the box and all coordinates scale together.
+    new_cell = [Cell[0] * scale_factors[0], Cell[1] * scale_factors[1], Cell[2] * scale_factors[2],
+                Cell[3], Cell[4], Cell[5]]
+    new_box = Cell2Box_dim(new_cell)
+
+    if atoms:
+        cart = np.array([[a['x'], a['y'], a['z']] for a in atoms], dtype=float)
+        frac = cartesian_to_fractional(cart_coords=cart, Box=Box_dim, add_to_atoms=False)
+        cart_new = fractional_to_cartesian(frac_coords=frac, Box=new_box, add_to_atoms=False)
+        for i in indices_to_scale:   # write back only the selected atoms (all, unless resname given)
+            atoms[i]['x'] = float(cart_new[i, 0])
+            atoms[i]['y'] = float(cart_new[i, 1])
+            atoms[i]['z'] = float(cart_new[i, 2])
+
+    return atoms, new_box
