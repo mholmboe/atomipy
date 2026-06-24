@@ -35,8 +35,8 @@ atomipy **v0.97** adds a local **GROMACS simulation engine** and a suite of
 
 ## 🚀 Use it without local setup
 * This release powers the web-module's **GROMACS** Simulate node, including
-  **GPU GROMACS on Google Colab** (the app launcher's optional GROMACS cell, or a
-  one-click per-workflow notebook export). See `atomipy-web-module`.
+  **GPU GROMACS on Google Colab** via the app launcher's optional GROMACS cell.
+  See `atomipy-web-module`.
 
 ---
 

@@ -51,7 +51,7 @@ so any workflow can be reproduced locally or on Google Colab. It covers:
   MSD / self-diffusion, VACF / vibrational power spectrum, and hydrogen-bond analysis — plus
   interactive plotting, a 3D viewer, and an Inspector that reports the variables/files at any
   point in the graph.
-- **GROMACS on a Colab GPU** — either enable the engine inside the Colab app (the launcher's optional GROMACS cell) or download a one-click, per-workflow GPU notebook.
+- **GROMACS on a Colab GPU** — enable the engine inside the Colab app via the launcher's optional GROMACS cell.
 
 **2. As a Python library — full scripting control.**
 Import atomipy and call its functions directly, as shown throughout this README. This is the way
@@ -159,8 +159,8 @@ Understanding the core containers and fields used in atomipy makes it easier to 
   - **Automatic Dispatch**: Smart switching between Direct ($O(N^2)$) and Sparse ($O(N)$) methods.
 - **Local GROMACS engine** (`atomipy.gromacs`): run grompp + mdrun directly from an atomipy
   system — energy minimization and NVT/NPT, MINFF/CLAYFF `.mdp` generation, define-aware force-field
-  staging, and trajectory conversion. Used by the web-module's GROMACS Simulate node and exportable
-  as a GPU Colab notebook.
+  staging, and trajectory conversion. Used by the web-module's GROMACS Simulate node, including
+  on a Colab GPU.
 - Advanced Structural Analysis:
   - **RDF/g(r) + running coordination n(r)**: radial distribution functions (single structure or
     ensemble-averaged over a trajectory) with the cumulative coordination number.
@@ -620,7 +620,7 @@ atoms, cell = ap.load_molecule('L-tryptophan')   # 27 atoms, resname 'LTRY'
 ### Local GROMACS engine (`atomipy.gromacs`)
 
 Run GROMACS directly from an atomipy system, reusing the same MINFF/CLAYFF topology writers.
-This powers the web-module's GROMACS Simulate node and the GPU-Colab export, but is usable
+This powers the web-module's GROMACS Simulate node (including on a Colab GPU), but is usable
 standalone wherever a `gmx` binary is available.
 
 - `detect_gmx(gmx='gmx')`: locate/validate a GROMACS install (a `gmx` binary, a `GMXRC`, or an install dir) and report its version.
