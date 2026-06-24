@@ -6,6 +6,7 @@ The package now supports generating GROMACS n2t (atom name to type) files for bo
 
 ## Contents
 - [Overview](#overview)
+- [Two ways to use atomipy (web-module app vs. Python library)](#two-ways-to-use-atomipy)
 - [Project Structure](#project-structure)
 - [Common Variables](#common-variables)
   - [Structure Containers](#structure-containers)
@@ -27,6 +28,38 @@ This toolbox is designed to import, export, and analyze molecular structures wit
 Built-in atom typing for MINFF and CLAYFF is a core feature: you can assign atom types, charges, and generate ITP/PSF/LAMMPS topologies directly from structures. For quick runs without local setup, use the molecular system and topology builder at [www.atomipy.io](https://www.atomipy.io).
 
 The molecular structure information is stored in dictionaries where each atom has fields for coordinates, neighbors, bonds, angles, element type, and more.
+
+## Two ways to use atomipy
+
+atomipy can be used in two complementary ways that share the same core:
+
+**1. Interactively, through the web-module app — the easiest way to get started.**
+The visual node-graph builder at **[www.atomipy.io](https://www.atomipy.io)** (open source:
+[atomipy-web-module](https://github.com/mholmboe/atomipy-web-module)) lets you build, solvate,
+force-field, simulate and analyze systems by wiring nodes together — no Python required. Every
+node maps onto atomipy functions, and the app shows and exports the exact Python script it runs,
+so any workflow can be reproduced locally or on Google Colab. It covers:
+
+- Import or build structures: presets, a bundled crystal library, parametric lattices
+  (`make_lattice`/`build_cell`), and a dedicated **Water-models library** (SPC/E, TIP3P, TIP4P,
+  TIP5P; hexagonal-ice, grid, and equilibrated boxes).
+- Solvate, add ions, isomorphic substitution, supercell replication, box/PBC and coordinate tools.
+- **MINFF / CLAYFF** force-fielding and topology export (GROMACS, LAMMPS, …).
+- **Simulation** with **OpenMM** (CPU/GPU) or a local **GROMACS** engine (grompp + mdrun) — energy
+  minimization and NVT/NPT, chainable in any order, with a fully editable `.mdp`.
+- **Trajectory analysis** nodes: RDF g(r) + running coordination *n(r)*, density profiles (x/y/z),
+  MSD / self-diffusion, VACF / vibrational power spectrum, and hydrogen-bond analysis — plus
+  interactive plotting, a 3D viewer, and an Inspector that reports the variables/files at any
+  point in the graph.
+- One-click **GPU GROMACS on Google Colab** export.
+
+**2. As a Python library — full scripting control.**
+Import atomipy and call its functions directly, as shown throughout this README. This is the way
+to automate, batch-process, and integrate atomipy into your own pipelines.
+
+The web-module is the fastest way to get started and to *discover* the API (download the generated
+script to learn the calls); the library is the way to *automate and extend* it. Both run the same
+atomipy code.
 
 ## Project Structure
 
@@ -124,9 +157,21 @@ Understanding the core containers and fields used in atomipy makes it easier to 
   - **Extreme Scalability**: Optimized $O(N)$ cell-lists for systems with **>100,000 atoms**.
   - **Memory Efficiency**: Sparse algorithms prevent RAM exhaustion on large-scale supercells.
   - **Automatic Dispatch**: Smart switching between Direct ($O(N^2)$) and Sparse ($O(N)$) methods.
+- **Local GROMACS engine** (`atomipy.gromacs`): run grompp + mdrun directly from an atomipy
+  system — energy minimization and NVT/NPT, MINFF/CLAYFF `.mdp` generation, define-aware force-field
+  staging, and trajectory conversion. Used by the web-module's GROMACS Simulate node and exportable
+  as a GPU Colab notebook.
 - Advanced Structural Analysis:
-  - **RDF/g(r)**: Radial distribution functions for large-scale systems.
+  - **RDF/g(r) + running coordination n(r)**: radial distribution functions (single structure or
+    ensemble-averaged over a trajectory) with the cumulative coordination number.
   - **Coordination Numbers**: Fast atom-by-atom environment analysis.
+  - **Density profiles** (x/y/z): number / mass / charge density along a box axis.
+  - **MSD / self-diffusion**: PBC-unwrapped, multi-time-origin mean-square displacement and the
+    van Hove displacement distribution.
+  - **VACF / power spectrum**: velocity autocorrelation (finite-difference), Green–Kubo diffusion
+    and the vibrational density of states.
+  - **Hydrogen bonds**: geometric donor–H···acceptor analysis (gmx-hbond convention) with
+    per-molecule counts.
   - **Unwrap**: Restore molecular continuity for systems split by PBC.
 - Progress tracking for computationally intensive calculations
 - Consolidated charge module with support for formal, MINFF, and CLAYFF charge assignments
@@ -520,11 +565,19 @@ atoms, cell = ap.load_molecule('L-tryptophan')   # 27 atoms, resname 'LTRY'
 - `dist_matrix(atoms, Box)`: Calculate a full distance matrix (N x N) for small systems.
 - `cell_list_dist_matrix(atoms, Box)`: Full cell-list based distance analysis returning sparse arrays.
 - `neighbor_list_fast(atoms, Box, cutoff)`: Extreme-performance sparse neighbor list ($O(N)$), capable of handling > 1,000,000 atoms.
-- `calculate_rdf(atoms, Box, rmax, dr)`: High-performance radial distribution function calculation.
+- `calculate_rdf(atoms, Box, rmax, dr, typeA=None, typeB=None, return_cn=False)`: radial distribution function; with `return_cn=True` also returns the running coordination number *n(r)*.
 - `coordination_number(atoms, Box, cutoff)`: Efficient per-atom coordination analysis via sparse indexing.
 - `closest_atom(atoms, reference, Box)`: Find the neighbor closest to a target point or atom.
 - `find_H2O(atoms, Box_dim=None, rmin=1.25)`: Automated water discovery and molecule ID assignment.
 - `get_structure_stats(atoms, Box, ...)`: Comprehensive geometry and topology diagnostics.
+
+**Trajectory analysis** (operate on a list of `(atoms, Box)` frames, e.g. from `import_traj`):
+
+- `density_profile(atoms, Box, axis='z', nbins=100, atom_types=None, mode='number')`: 1-D density profile (`number` atoms/Å³, `mass` g/cm³, or `charge` e/Å³). `density_frames(frames, ...)` ensemble-averages it.
+- `rdf_frames(frames, typeA=None, typeB=None, rmax=15.0, dr=0.1, return_cn=False)`: ensemble-averaged g(r) (and optional n(r)) over a trajectory.
+- `msd(frames, atom_types=None, dims='xyz', dt=1.0, origin_stride=1)`: mean-square displacement and self-diffusion D (Einstein); PBC-unwrapped, multiple time origins; `dims` selects 3D/2D(`'xy'`)/1D(`'z'`). `displacement_distribution(frames, ...)` gives the van Hove self-part.
+- `vacf(frames, atom_types=None, dt=1.0, ...)`: velocity autocorrelation (finite-difference velocities), Green–Kubo diffusion D, and the power spectrum / vibrational DOS (cm⁻¹).
+- `find_hbonds(atoms, Box, donor_types=None, acceptor_types=None, donor_resnames=None, acceptor_resnames=None, r_cut=3.5, angle_cut=30.0)` / `hbonds_frames(frames, ...)`: geometric hydrogen-bond detection (GROMACS gmx-hbond convention) with per-molecule counts.
 
 ### Coordinate Transformations
 
@@ -535,7 +588,7 @@ atoms, cell = ap.load_molecule('L-tryptophan')   # 27 atoms, resname 'LTRY'
 - `wrap(atoms, Box)`: Wrap all atoms into the primary simulation cell.
 - `unwrap_coordinates(atoms, Box)`: Reconstruct split molecules across periodic boundaries.
 - `get_cell_vectors(Box)`: Derives absolute lattice vectors (H matrix).
-- `scale(atoms, scale_factor)`: Rescale coordinates and box dimensions.
+- `scale(atoms, Box, scale_factors)`: Rescale coordinates and box together. A scalar (or length-1 vector) scales isotropically; a length-3 `[sx, sy, sz]` scales each axis (and cell edge) independently. Works for orthogonal and triclinic cells (angles preserved).
 
 ### Diffraction
 
@@ -554,7 +607,7 @@ atoms, cell = ap.load_molecule('L-tryptophan')   # 27 atoms, resname 'LTRY'
 - `molecule(atoms, molid=1, resname=None)`: Assign molecule ID and optionally residue name to all atoms in a list. Useful for grouping atoms as a single molecular unit before topology generation.
 - `fuse_atoms(atoms, Box, rmax=0.5, criteria='average')`: Removes overlapping atoms within a cluster. Designed for cleaning up disordered CIFs by keeping the atom with highest `occupancy`, preserving `order`, or computing an `average` geometric center (matching the MATLAB library behavior).
 - `merge(atoms1, atoms2, Box, type_mode='molid', atom_label=None, min_distance=None)`: Merge two atom lists by removing atoms from atoms2 that are too close to atoms1. Supports molecule-aware removal via `type_mode='molid'`.
-- `solvate(limits, density=1000.0, min_distance=2.0, ...)`: Generate a solvation box. Supports custom solvent molecules and density control.
+- `solvate(limits, density=1000.0, min_distance=2.0, max_solvent='max', solvent_type='spce', ...)`: Fill a region with water/solvent. The pre-equilibrated template is isotropically scaled to the target `density`, solvent–solvent overlaps (tile-seam/PBC clashes) are removed, and molecules get contiguous molids. `max_solvent` may be `'max'`, a `'shellN'` shell, or an exact integer count (raises if the box can't hold it).
 - `ionize(ion_type, resname, limits, num_ions, ...)`: Add ions to a system within specified region limits.
 - `insert(molecule_atoms, limits, ...)`: Insert molecules into a system within specified region limits.
 - `slice(atoms, limits, remove_partial_molecules=True)`: Extract atoms within a region defined by limits.
@@ -563,6 +616,19 @@ atoms, cell = ap.load_molecule('L-tryptophan')   # 27 atoms, resname 'LTRY'
 - `adjust_H_atom(atoms, Box, h_type='H', neighbor_type='O', distance=0.96)`: Adjust bond lengths of hydrogen atoms, useful for fixing distorted bonds.
 - `adjust_Hw_atom(atoms, Box, water_resname='SOL', water_model='OPC3')`: Repair water molecules by adding missing hydrogens and fixing geometry (OH distance and HOH angle) for models like OPC3/SPC/TIP3P.
 - `is_centrosymmetric_along_z(atoms, tolerance=0.1)`: Check if a structure is approximately centrosymmetric along the z-axis by analyzing the distribution of z-coordinates
+
+### Local GROMACS engine (`atomipy.gromacs`)
+
+Run GROMACS directly from an atomipy system, reusing the same MINFF/CLAYFF topology writers.
+This powers the web-module's GROMACS Simulate node and the GPU-Colab export, but is usable
+standalone wherever a `gmx` binary is available.
+
+- `detect_gmx(gmx='gmx')`: locate/validate a GROMACS install (a `gmx` binary, a `GMXRC`, or an install dir) and report its version.
+- `mdp(stage, ...)` / `build_defines(...)`: generate `.mdp` text for `em`/`nvt`/`npt`/`md` and the MINFF/CLAYFF `-D` defines.
+- `stage_minff(workdir, defines=...)`: copy the (define-aware) `min.ff` force field into the run directory.
+- `run_stage(...)`, `run_pipeline(...)`, `run_local_gmx(workdir, top, gro, stages, ...)`: run grompp + mdrun for one or more stages; accepts a verbatim `mdp_text` to override the generated `.mdp`.
+- `trjconv_to_pdb(workdir, tpr=..., xtc=..., out=..., pbc='atom', ...)`: convert an `.xtc`/`.trr` trajectory to a multi-frame PDB (box per frame) for viewing/analysis.
+- `energy_timeseries(workdir, edr, terms=..., ...)`: parse `.edr` thermodynamics (potential/temperature/pressure/volume/density vs time) via `gmx energy`.
 
 ### Cell Utilities
 
