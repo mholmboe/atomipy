@@ -289,9 +289,14 @@ def solvate(limits, density=1000.0, min_distance=2.0, max_solvent: Union[str, in
     volume_nm3 = (box_dim[0] / 10) * (box_dim[1] / 10) * (box_dim[2] / 10)
     molecules_per_nm3 = density / 30  # Approximate for water
     n_molecules_needed = int(volume_nm3 * molecules_per_nm3)
-    
-    if isinstance(max_solvent, int):
-        n_molecules_needed = min(n_molecules_needed, max_solvent)
+
+    # An explicit integer max_solvent is a TARGET count, not just an upper bound:
+    # don't let a low density estimate under-fill it (the box-fill branch below would
+    # otherwise place only the density-derived number). A shortfall is reported after
+    # placement (raises below) so the caller knows the box couldn't hold the request.
+    requested_count = max_solvent if isinstance(max_solvent, int) else None
+    if requested_count is not None:
+        n_molecules_needed = requested_count
     
     # Calculate how many times to replicate the solvent Box
     nx = int(np.ceil((xhi - xlo) / solvent_box[0]))
@@ -389,7 +394,19 @@ def solvate(limits, density=1000.0, min_distance=2.0, max_solvent: Union[str, in
     # Calculate statistics for output
     n_solvent_molecules = len(set(atom['molid'] for atom in solvent_result))
     n_solvent_atoms = len(solvent_result)
-    
+
+    # If the caller requested an EXACT number of molecules (box fill / overlap removal,
+    # not a 'shell' cap) and the box couldn't hold them, fail loudly rather than
+    # silently returning fewer. The water template is pre-equilibrated at ~1 g/cm³, so a
+    # higher density cannot pack more — the limit is the box volume / min_distance.
+    if requested_count is not None and shell_thickness is None and n_solvent_molecules < requested_count:
+        raise ValueError(
+            f"solvate: could only place {n_solvent_molecules} of the requested {requested_count} "
+            f"solvent molecules in the {box_dim[0]:.1f} x {box_dim[1]:.1f} x {box_dim[2]:.1f} A box "
+            f"(min_distance={min_distance} A). Water packs at ~1 g/cm3, so increasing the density "
+            f"cannot add more. Enlarge the box, lower the requested count, or reduce min_distance."
+        )
+
     # Calculate subvolume
     volume_angstrom3 = box_dim[0] * box_dim[1] * box_dim[2]
     
