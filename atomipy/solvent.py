@@ -283,7 +283,25 @@ def solvate(limits, density=1000.0, min_distance=2.0, max_solvent: Union[str, in
     # Find how many atoms per solvent molecule (e.g., 3 for SPC water)
     unique_molids = set(atom['molid'] for atom in solvent_atoms)
     atoms_per_molecule = len(solvent_atoms) / len(unique_molids)
-    
+
+    # Scale the pre-equilibrated solvent template to the requested density. The template
+    # is at ~1 g/cm³; to hit `density` (kg/m³) we keep the molecule count fixed and
+    # rescale the VOLUME by rho_template/density, i.e. an isotropic linear factor
+    # (rho_template/density)**(1/3). So density 1050 kg/m³ compresses the template (and
+    # its box) by ~1.6 %/axis, density 950 expands it — making the density knob actually
+    # change the packing instead of being ignored above ~1 g/cm³.
+    from .transform import scale as _scale
+    _M_water = 18.01528          # g/mol
+    _NA = 6.02214076e23
+    _v_template_m3 = (solvent_box[0] * solvent_box[1] * solvent_box[2]) * 1e-30  # Å³ -> m³
+    if _v_template_m3 > 0:
+        _rho_template = (len(unique_molids) * _M_water / _NA / 1000.0) / _v_template_m3  # kg/m³
+        if density and density > 0 and _rho_template > 0 and abs(density - _rho_template) / _rho_template > 1e-3:
+            _s = (_rho_template / float(density)) ** (1.0 / 3.0)
+            solvent_atoms, solvent_box = _scale(solvent_atoms, solvent_box, _s)
+            print(f"  Solvent template scaled by {_s:.4f}/axis -> target density {density/1000.0:.3f} g/cm³ "
+                  f"(template ~{_rho_template/1000.0:.3f} g/cm³)")
+
     # Calculate how many solvent molecules are needed to fill the Box
     # For water, 1000 kg/m³ is about 33.3 molecules per nm³
     volume_nm3 = (box_dim[0] / 10) * (box_dim[1] / 10) * (box_dim[2] / 10)
