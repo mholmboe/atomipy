@@ -171,7 +171,47 @@ def find_H2O(atoms, Box_dim=None, rmin=1.30):
     return water_atoms, non_water_atoms
 
 
-def solvate(limits, density=1000.0, min_distance=2.0, max_solvent: Union[str, int] = 'max', 
+def _declash_solvent(solv_atoms, box_dim, min_distance):
+    """Drop solvent molecules that overlap OTHER solvent molecules.
+
+    The water template is replicated and sliced to fill the box, so molecules from
+    neighbouring tiles (or across the periodic boundary) can land on top of each other
+    — these clashes produce near-infinite forces that make MD explode ("water cannot be
+    settled") unless minimized first. Hydrogen atoms use the smaller cutoff (min_distance/2)
+    so genuine hydrogen bonds (O···H ≈ 1.8 Å) are preserved; only true overlaps are removed.
+    Greedy: for each too-close inter-molecular pair, drop one of the two molecules.
+    """
+    if not solv_atoms:
+        return solv_atoms
+    from .distances import get_neighbor_list
+    if isinstance(min_distance, (list, tuple)):
+        big = float(min_distance[0])
+        small = float(min_distance[1]) if len(min_distance) > 1 else big / 2.0
+    else:
+        big = float(min_distance)
+        small = big / 2.0
+    try:
+        i_idx, j_idx, dists, *_ = get_neighbor_list(solv_atoms, box_dim, cutoff=big)
+    except Exception:
+        return solv_atoms
+    molid = [a.get('molid') for a in solv_atoms]
+    is_h = [str(a.get('type', '')).upper().startswith('H') for a in solv_atoms]
+    removed = set()
+    for a, b, d in zip(i_idx, j_idx, dists):
+        ma, mb = molid[a], molid[b]
+        if ma == mb:
+            continue
+        thr = small if (is_h[a] or is_h[b]) else big
+        if d < thr and ma not in removed and mb not in removed:
+            removed.add(max(ma, mb))
+    if removed:
+        kept = [a for a in solv_atoms if a.get('molid') not in removed]
+        print(f"  Removed {len(removed)} overlapping solvent molecule(s) (tile-seam/PBC clashes)")
+        return kept
+    return solv_atoms
+
+
+def solvate(limits, density=1000.0, min_distance=2.0, max_solvent: Union[str, int] = 'max',
            solute_atoms=None, Box=None, solvent_type='spce', custom_solvent=None, custom_box=None,
            include_solute=False):
     """
@@ -409,6 +449,10 @@ def solvate(limits, density=1000.0, min_distance=2.0, max_solvent: Union[str, in
                 solvent_result = [atom for atom in solvent_result 
                                  if atom['molid'] in selected_molids]
     
+    # Remove solvent-solvent overlaps (replicated-template seam / PBC clashes) so the
+    # box doesn't explode in MD. Done for every path (incl. pure solvent with no solute).
+    solvent_result = _declash_solvent(solvent_result, box_dim, min_distance)
+
     # Calculate statistics for output
     n_solvent_molecules = len(set(atom['molid'] for atom in solvent_result))
     n_solvent_atoms = len(solvent_result)
