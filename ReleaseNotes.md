@@ -1,3 +1,45 @@
+# Release Notes: atomipy v0.97 (from v0.96)
+
+*Released 2026-06-24*
+
+atomipy **v0.97** adds a local **GROMACS simulation engine** and a suite of
+**trajectory-analysis** tools, and hardens solvation.
+
+---
+
+## ⚙️ Local GROMACS engine (`atomipy.gromacs`)
+* Run **grompp + mdrun** directly from an atomipy system, reusing the MINFF/CLAYFF
+  topology writers: `detect_gmx`, `mdp`/`build_defines`, `stage_minff`, `run_stage`,
+  `run_pipeline`, `run_local_gmx`, `trjconv_to_pdb`, `energy_timeseries`.
+* Single-stage runs (EM **or** NVT **or** NPT) — chain them in any order; accepts a
+  verbatim `mdp_text` to override the generated `.mdp`. EM writes a `.trr` (steepest
+  descent ignores `.xtc`) via `nstxout`.
+
+## 📈 Trajectory analysis (`atomipy.analysis`)
+* `density_profile` / `density_frames` (number / mass / charge, along x/y/z).
+* `rdf_frames` and `calculate_rdf(return_cn=True)` — ensemble g(r) **plus** running
+  coordination *n(r)*.
+* `msd` (PBC-unwrapped, multi-origin; 3D / 2D-xy / 1D-z) + `displacement_distribution`
+  (van Hove self-part).
+* `vacf` — finite-difference velocity autocorrelation, Green–Kubo *D*, and the
+  vibrational power spectrum / DOS.
+* `find_hbonds` / `hbonds_frames` — geometric donor–H···acceptor analysis
+  (gmx-hbond convention), selectable by atom type and/or residue name.
+
+## 💧 Solvation & transforms
+* `solvate`: isotropically scales the water template to the target **density**,
+  removes solvent–solvent overlaps, renumbers molids contiguously, and treats an
+  integer `max_solvent` as an exact count (raises if the box can't hold it).
+* `scale(atoms, Box, scale_factors)` reimplemented via fractional coordinates —
+  scalar = isotropic, length-3 = per-axis; correct for triclinic cells.
+
+## 🚀 Use it without local setup
+* This release powers the web-module's **GROMACS** Simulate node, including
+  **GPU GROMACS on Google Colab** (the app launcher's optional GROMACS cell, or a
+  one-click per-workflow notebook export). See `atomipy-web-module`.
+
+---
+
 # Release Notes: atomipy v0.96 (from v0.95)
 
 *Released 2026-06-06*

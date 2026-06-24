@@ -51,7 +51,7 @@ so any workflow can be reproduced locally or on Google Colab. It covers:
   MSD / self-diffusion, VACF / vibrational power spectrum, and hydrogen-bond analysis — plus
   interactive plotting, a 3D viewer, and an Inspector that reports the variables/files at any
   point in the graph.
-- One-click **GPU GROMACS on Google Colab** export.
+- **GROMACS on a Colab GPU** — either enable the engine inside the Colab app (the launcher's optional GROMACS cell) or download a one-click, per-workflow GPU notebook.
 
 **2. As a Python library — full scripting control.**
 Import atomipy and call its functions directly, as shown throughout this README. This is the way
