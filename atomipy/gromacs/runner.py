@@ -9,6 +9,7 @@ is yielded line-by-line (for SSE streaming in the web app).
 
 import os
 import re
+import glob
 import shutil
 import subprocess
 from pathlib import Path
@@ -19,15 +20,55 @@ from .mdp import mdp as _mdp_text, build_defines
 _MINFF_SRC = Path(__file__).resolve().parent.parent / "ffparams" / "min.ff"
 
 
+def _default_gmx():
+    """Preferred default GROMACS when the user hasn't specified a path.
+
+    Prefers a real GROMACS *install* (its ``GMXRC``) over a bare ``gmx`` on PATH —
+    on macOS the PATH ``gmx`` is usually the Homebrew build, which the user may not
+    want. Search order:
+
+      1. ``$ATOMIPY_GMX_PATH`` (explicit override: gmx binary / GMXRC / install dir)
+      2. common install locations, e.g. ``/usr/local/gromacs*/bin/GMXRC`` (latest)
+
+    Returns a spec string for the existing install, or ``None`` to fall back to the
+    PATH ``gmx`` (e.g. on Colab / the online server, where no such install exists).
+    """
+    override = os.environ.get("ATOMIPY_GMX_PATH") or os.environ.get("ATOMIPY_GMX")
+    if override and Path(override).exists():
+        return override
+    patterns = (
+        "/usr/local/gromacs*/bin/GMXRC",
+        "/opt/gromacs*/bin/GMXRC",
+        "/usr/local/gromacs/bin/GMXRC",
+    )
+    found = []
+    for pat in patterns:
+        found.extend(glob.glob(pat))
+    if not found:
+        return None
+
+    def _ver_key(path):
+        # Natural version order so gromacs-2024.2 > gromacs-2024-beta > unversioned.
+        m = re.search(r"gromacs[-/]?([0-9]+(?:\.[0-9]+)*)", path)
+        return tuple(int(x) for x in m.group(1).split(".")) if m else (0,)
+
+    found.sort(key=_ver_key)      # prefer the highest version
+    return found[-1]
+
+
 def _resolve_gmx(spec):
     """Resolve a user GROMACS spec to (gmx_command, lib_dirs).
 
-    ``spec`` may be: '' or 'gmx' (use PATH), a path to the gmx binary, a path to
-    a GMXRC script, or a GROMACS install/bin directory. lib_dirs are the install's
-    library folders, added to the loader path so a custom build finds its .so/.dylib.
+    ``spec`` may be: '' or 'gmx' (auto: a detected install, else PATH), a path to
+    the gmx binary, a path to a GMXRC script, or a GROMACS install/bin directory.
+    lib_dirs are the install's library folders, added to the loader path so a custom
+    build finds its .so/.dylib.
     """
     if not spec or spec == "gmx":
-        return "gmx", []
+        spec = _default_gmx()
+        if not spec:
+            return "gmx", []
+        # fall through and resolve the detected install (GMXRC / dir / binary)
     p = Path(spec)
     if p.name.startswith("GMXRC"):          # .../bin/GMXRC  -> .../bin/gmx
         bindir = p.parent
