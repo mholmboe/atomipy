@@ -179,12 +179,15 @@ def _declash_solvent(solv_atoms, box_dim, heavy_cut=2.0, h_cut=1.0):
     — these clashes produce near-infinite forces that make MD explode ("water cannot be
     settled") unless minimized first.
 
-    Overlap is judged by a fixed physical criterion (NOT the solvation min_distance):
-    an inter-molecular pair is a clash if it is closer than ``h_cut`` (default 1.0 Å) when
-    either atom is a hydrogen, or ``heavy_cut`` (default 2.0 Å) otherwise. Using the
-    smaller cutoff for H preserves genuine hydrogen bonds (O···H ≈ 1.8 Å); only true
-    overlaps are removed. Greedy: for each too-close inter-molecular pair, drop one of
-    the two molecules.
+    Overlap is judged per pair: an inter-molecular pair is a clash if it is closer than
+    ``h_cut`` (default 1.0 Å) when either atom is a hydrogen, or ``heavy_cut`` (default
+    2.0 Å) otherwise. Using the smaller cutoff for H preserves genuine hydrogen bonds
+    (O···H ≈ 1.8 Å); only true overlaps are removed. Greedy: for each too-close
+    inter-molecular pair, drop one of the two molecules.
+
+    For a pure-water box, ``solvate`` derives these from its ``min_distance`` (O–O =
+    min_distance, O–H/H–H = min_distance/2), so that knob tightens/loosens the water
+    packing; with a solute present the fixed physical thresholds are used instead.
     """
     if not solv_atoms:
         return solv_atoms
@@ -383,9 +386,24 @@ def solvate(limits, density=1000.0, min_distance=2.0, max_solvent: Union[str, in
 
     # Remove solvent-solvent overlaps (replicated-template tile-seam / PBC clashes) UP
     # FRONT, so the molecule-count selection below draws from a clash-free pool (and an
-    # explicit count isn't undercut by clashes removed after selection). Fixed physical
-    # overlap thresholds: 2 Å heavy-heavy, 1 Å when a hydrogen is involved.
-    sliced_solvent = _declash_solvent(sliced_solvent, box_dim, heavy_cut=2.0, h_cut=1.0)
+    # explicit count isn't undercut by clashes removed after selection).
+    #
+    # For a pure-water box (no solute) the water–water clash thresholds follow
+    # `min_distance`: O–O at min_distance, and any pair involving H (O–H, H–H) at
+    # min_distance/2. (A [heavy, h] list is honoured as-is.) The default min_distance=2.0
+    # reproduces the previous fixed 2.0 Å / 1.0 Å behaviour, so existing results are
+    # unchanged. When a solute is present, solvent–solvent declashing keeps the fixed
+    # physical thresholds (min_distance there governs solute↔solvent clearance instead).
+    if solute_atoms is None:
+        if isinstance(min_distance, (list, tuple)):
+            _declash_heavy = float(min_distance[0])
+            _declash_h = float(min_distance[1]) if len(min_distance) > 1 else float(min_distance[0]) / 2.0
+        else:
+            _declash_heavy = float(min_distance)
+            _declash_h = float(min_distance) / 2.0
+        sliced_solvent = _declash_solvent(sliced_solvent, box_dim, heavy_cut=_declash_heavy, h_cut=_declash_h)
+    else:
+        sliced_solvent = _declash_solvent(sliced_solvent, box_dim, heavy_cut=2.0, h_cut=1.0)
 
     # Randomize the order of molecules for unbiased selection
     unique_molids = set(atom['molid'] for atom in sliced_solvent)
