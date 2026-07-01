@@ -112,14 +112,21 @@ def Box_dim2Cell(Box_dim):
             Box[2, 2] = lz * np.sqrt(1.0 - cos_alpha**2 - cos_beta**2 - cos_gamma**2 + 
                                      2.0 * cos_alpha * cos_beta * cos_gamma) / sin_gamma
         else:
-            # Triclinic Box with Box vectors: [Lx, Ly, Lz, xy, xz, yz]
+            # Triclinic Box given as GROMACS tilt vectors: [Lx, Ly, Lz, xy, xz, yz].
+            # Return proper cell parameters [a, b, c, alpha, beta, gamma] — NOT a 3x3
+            # matrix (the previous code assigned a matrix to `Cell`, breaking every caller
+            # that unpacks six values). Same formula as the 9-component branch below.
             lx, ly, lz, xy, xz, yz = Box_dim
-            
-            Cell = np.array([
-                [lx, xy, xz],
-                [0.0, ly, yz],
-                [0.0, 0.0, lz]
-            ])
+            a = lx
+            b = np.sqrt(ly**2 + xy**2)
+            c = np.sqrt(lz**2 + xz**2 + yz**2)
+            cos_alfa = (ly*yz + xy*xz) / (b*c) if b > 0 and c > 0 else 0.0
+            cos_beta = xz / c if c > 0 else 0.0
+            cos_gamma = xy / b if b > 0 else 0.0
+            alfa = np.degrees(np.arccos(np.clip(cos_alfa, -1.0, 1.0)))
+            beta = np.degrees(np.arccos(np.clip(cos_beta, -1.0, 1.0)))
+            gamma = np.degrees(np.arccos(np.clip(cos_gamma, -1.0, 1.0)))
+            Cell = np.array([a, b, c, alfa, beta, gamma])
     elif len(Box_dim) == 9:
         # GRO 9-component format:
         # Box_dim = [lx, ly, lz, 0, 0, xy, 0, xz, yz]

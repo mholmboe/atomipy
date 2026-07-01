@@ -172,8 +172,9 @@ def com(atoms, add_to_atoms=True):
     - The function does not consider periodic boundary conditions (no wrapping).
     - If atoms don't have mass assigned, it will call set_atomic_masses() first.
     """
-    # Check if atoms have mass attribute, if not, set them
-    if not all('mass' in atom for atom in atoms[:min(10, len(atoms))]):
+    # Check if atoms have mass attribute, if not, set them. Check ALL atoms (not just the
+    # first 10) so a later mass-less atom doesn't slip through and KeyError below.
+    if not all('mass' in atom for atom in atoms):
         atoms = set_atomic_masses(atoms)
     
     total_mass = 0.0
@@ -183,7 +184,7 @@ def com(atoms, add_to_atoms=True):
     
     # Calculate weighted sum of positions
     for atom in atoms:
-        mass = atom['mass']
+        mass = atom.get('mass', 0.0)
         weighted_x += atom['x'] * mass
         weighted_y += atom['y'] * mass
         weighted_z += atom['z'] * mass
@@ -201,10 +202,10 @@ def com(atoms, add_to_atoms=True):
         com_y = sum(atom['y'] for atom in atoms) / len(atoms)
         com_z = sum(atom['z'] for atom in atoms) / len(atoms)
     
-    # Add COM to each atom dictionary if requested
+    # Add COM to each atom dictionary if requested. Use a FRESH dict per atom so mutating
+    # one atom's 'com' doesn't change every other atom's (they must not share a reference).
     if add_to_atoms:
-        com = {'x': com_x, 'y': com_y, 'z': com_z}
         for atom in atoms:
-            atom['com'] = com
+            atom['com'] = {'x': com_x, 'y': com_y, 'z': com_z}
     
     return (com_x, com_y, com_z)

@@ -101,7 +101,16 @@ def pdb(atoms, Box, file_path, write_conect=False, write_element=True):
         
         # Add MODEL record
         f.write("MODEL        1\n")
-        
+
+        # OpenMM drops atoms with duplicate NAMES inside the same residue. Reindex each
+        # atom into its own residue ONLY when the whole structure is a single residue
+        # (constant resnum/molid) AND atom names repeat — the mineral case. A genuine
+        # multi-residue file, or a small single residue with unique names (e.g. a water or
+        # ligand that happens to be numbered 1), keeps its real residue numbers.
+        _res_ids = {(a.get('resnum') if a.get('resnum') is not None else a.get('molid', 1)) for a in atoms}
+        _names_all = [str(a.get('fftype') or a.get('type') or a.get('element') or '') for a in atoms]
+        _reindex_residues = len(_res_ids) <= 1 and len(set(_names_all)) < len(_names_all)
+
         for i, atom in enumerate(atoms, start=1):
             # Format the ATOM record according to PDB specification
             index = atom.get('index', i)
@@ -141,13 +150,13 @@ def pdb(atoms, Box, file_path, write_conect=False, write_element=True):
             res_seq = atom.get('resnum')
             if res_seq is None:
                 res_seq = atom.get('molid', 1)
-            
-            # If res_seq is constant (e.g. 1), OpenMM treats the entire mineral as a single residue
-            # and discards all atoms with duplicate names (resulting in only 6 atoms parsed!).
-            # Using the 1-based sequential index (i) ensures unique residues while keeping the PDB spec.
-            if res_seq == 1 or res_seq is None:
+
+            # Only reindex into per-atom residues for the single-residue / repeating-name
+            # case detected above (keeps OpenMM from dropping duplicate-named atoms), so a
+            # legitimate residue numbered 1 is no longer split apart.
+            if _reindex_residues:
                 res_seq = i
-                
+
             res_seq = (res_seq - 1) % 9999 + 1 # Columns 23-26: max 4 digits (1 to 9999)
             icode = atom.get('icode', ' ') # Column 27: Code for insertion of residues
             

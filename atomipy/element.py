@@ -1,3 +1,22 @@
+# Two-letter chemical element symbols (lowercased). Used to catch genuine elements like
+# Hf/Hg/He/Kr/Os *before* the single-letter fallbacks below would collapse them to H/K/O.
+# Deliberately EXCLUDES force-field type codes that equal a symbol but mean something else:
+#   'ho' = CLAYFF/MINFF hydroxyl hydrogen  (must stay H, not Holmium)
+#   'at' = tetrahedral-aluminium code      (must not become Astatine)
+#   'sc' = already mapped to a Si variant above
+# Matching is on the FULL token (exact equality), so multi-char FF names ('ob', 'oh',
+# 'st', 'ao', 'nap'...) are unaffected and fall through to the prefix rules.
+_TWO_LETTER_ELEMENTS = frozenset({
+    'he', 'li', 'be', 'ne', 'na', 'mg', 'al', 'si', 'cl', 'ar', 'ca', 'ti', 'cr', 'mn',
+    'fe', 'co', 'ni', 'cu', 'zn', 'ga', 'ge', 'as', 'se', 'br', 'kr', 'rb', 'sr', 'zr',
+    'nb', 'mo', 'tc', 'ru', 'rh', 'pd', 'ag', 'cd', 'in', 'sn', 'sb', 'te', 'xe', 'cs',
+    'ba', 'la', 'ce', 'pr', 'nd', 'pm', 'sm', 'eu', 'gd', 'tb', 'dy', 'er', 'tm', 'yb',
+    'lu', 'hf', 'ta', 're', 'os', 'ir', 'pt', 'au', 'hg', 'tl', 'pb', 'bi', 'po', 'rn',
+    'fr', 'ra', 'ac', 'th', 'pa', 'np', 'pu', 'am', 'cm', 'bk', 'cf', 'es', 'fm', 'md',
+    'no', 'lr',
+})
+
+
 def element(atoms):
     """Guess the chemical element for multiple atom entries and update atom types.
     
@@ -77,6 +96,10 @@ def element(atoms):
             atom['element'] = 'Fe'
         elif atomtype_lower.startswith('fe'):
             atom['element'] = 'Fe'
+        elif atomtype_lower in _TWO_LETTER_ELEMENTS:
+            # Exact two-letter element symbol (He, Hf, Hg, Kr, Os, ...) — takes precedence
+            # over the single-letter fallbacks below so it isn't collapsed to H/K/O/F.
+            atom['element'] = atomtype_lower.capitalize()
         elif atomtype_lower.startswith('f'):
             atom['element'] = 'F'
         elif atomtype_lower.startswith('li'):

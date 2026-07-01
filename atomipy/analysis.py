@@ -164,7 +164,28 @@ def calculate_rdf(atoms, Box, rmax=15.0, dr=0.1, atom_types=None, pair_types=Non
     # Use dist_matrix for all-to-all distances
     # For large systems, we should use cell_list for performance, but dist_matrix is easier for RDF
     # actually distances.py has get_neighbor_list which is better for large systems
-    
+
+    # dist_matrix uses single-image minimum-image distances, so g(r) is only valid out to
+    # half the shortest box edge; beyond that periodic images are missed and the spherical
+    # shell exceeds the box. Cap rmax to that limit (with a warning) rather than returning
+    # silently-wrong large-r values.
+    if len(Box) == 9:
+        _edges = (Box[0], Box[1], Box[2])
+    elif len(Box) == 3:
+        _edges = (Box[0], Box[1], Box[2])
+    else:
+        from .cell_utils import Cell2Box_dim
+        _bd = Cell2Box_dim(Box)
+        _edges = (_bd[0], _bd[1], _bd[2])
+    _rmax_valid = 0.5 * min(_edges)
+    if rmax > _rmax_valid + 1e-9:
+        import warnings
+        warnings.warn(
+            f"calculate_rdf: rmax={rmax:.3g} A exceeds half the shortest box edge "
+            f"({_rmax_valid:.3g} A); capping to that limit (minimum-image g(r) is only "
+            f"valid to L/2).", stacklevel=2)
+        rmax = _rmax_valid
+
     # Construct histogram
     bins = np.arange(0, rmax + dr, dr)
     hist = np.zeros(len(bins) - 1)
@@ -764,25 +785,23 @@ def coordination_number(atoms, Box, cutoff=3.0, atom_types=None, neighbor_types=
     i_idx, j_idx, d, _, _, _ = get_neighbor_list(atoms, Box, cutoff)
     
     cn = np.zeros(len(atoms), dtype=int)
-    
-    # If we have filters, we need to handle them
+
+    # get_neighbor_list returns an UNDIRECTED upper-triangle list: each pair (i, j) with
+    # i < j appears once but represents two directed relations (i has neighbor j, and j
+    # has neighbor i), so both endpoints normally get +1.
     if neighbor_types:
-        neighbor_mask = np.array([a.get('type') in neighbor_types for a in atoms])
-        # j_idx refers to indices in 'atoms'
-        valid_mask = neighbor_mask[j_idx]
-        i_idx = i_idx[valid_mask]
-        j_idx = j_idx[valid_mask]
-        
-    # Count occurrences in i_idx
-    unique_i, counts = np.unique(i_idx, return_counts=True)
-    cn[unique_i] = counts
-    
-    # Also count in j_idx (since neighbor list might be half-matrix if implemented that way)
-    # Actually get_neighbor_list in distances.py uses upper triangle mask
-    # so we MUST count both i and j.
-    unique_j, counts_j = np.unique(j_idx, return_counts=True)
-    cn[unique_j] += counts_j
-    
+        neighbor_mask = np.array([a.get('type') in set(neighbor_types) for a in atoms])
+        # Count j toward i's CN only when j is a neighbor_type, and i toward j's CN only
+        # when i is a neighbor_type. This avoids crediting the neighbor atoms themselves
+        # and avoids dropping pairs merely because of upper-triangle index ordering.
+        count_arrays = (i_idx[neighbor_mask[j_idx]], j_idx[neighbor_mask[i_idx]])
+    else:
+        count_arrays = (i_idx, j_idx)
+
+    for arr in count_arrays:
+        unique, counts = np.unique(arr, return_counts=True)
+        cn[unique] += counts
+
     if atom_types:
         target_indices = [i for i, a in enumerate(atoms) if a.get('type') in atom_types]
         return cn[target_indices].tolist()
