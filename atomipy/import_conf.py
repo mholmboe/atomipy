@@ -861,8 +861,10 @@ def import_traj(file_path, top=None, stride=1, start=0, stop=None):
     ext = os.path.splitext(file_path)[1].lower()
     frames = []
 
-    if ext in ('.xtc', '.trr'):
-        return _import_xdr_traj(file_path, ext, top=top, stride=stride, start=start, stop=stop)
+    # Binary/foreign trajectory formats: .xtc/.trr via libxdrfile (or gmx), and
+    # .dcd/.nc/.h5/.lammpstrj via the optional mdtraj backend.
+    if ext in ('.xtc', '.trr', '.dcd', '.nc', '.netcdf', '.h5', '.lammpstrj', '.lammps'):
+        return _import_binary_traj(file_path, ext, top=top, stride=stride, start=start, stop=stop)
 
     if ext == '.pdb':
         current_atoms = []
@@ -990,36 +992,86 @@ def _gmx_xtc_to_pdb(file_path, top):
     return None
 
 
-def _import_xdr_traj(file_path, ext, top=None, stride=1, start=0, stop=None):
-    """Read .xtc/.trr into a list of (atoms, Box) frames (Ångström).
+def _ref_atoms_from_top(top):
+    """Load per-atom metadata (type/resname/molid) from a reference structure, or None."""
+    if top is None:
+        return None
+    res = auto(top)
+    return res[0] if isinstance(res, (tuple, list)) and res and isinstance(res[0], list) else res
 
-    Uses libxdrfile (atomipy.xdrfile) when available, else falls back to gmx trjconv;
-    raises a clear error if neither route works.
+
+def _import_via_mdtraj(file_path, top, stride, start, stop):
+    """Optional backend: read any format mdtraj understands (.dcd, .nc, .h5, .lammpstrj,
+    and .xtc/.trr as a fallback). Returns frames, or None if mdtraj isn't installed / can't
+    read the file. mdtraj carries its own topology, so ``top`` is used both to satisfy mdtraj
+    and to supply atomipy atom metadata (falling back to mdtraj's own topology names)."""
+    try:
+        import mdtraj as md  # optional dependency
+    except Exception:
+        return None
+    try:
+        traj = md.load(file_path, top=top) if top else md.load(file_path)
+    except Exception:
+        return None
+
+    ref_atoms = _ref_atoms_from_top(top)
+    if ref_atoms is None:  # derive metadata from mdtraj's own topology
+        ref_atoms = [{
+            'type': a.name,
+            'element': (a.element.symbol if a.element is not None else None),
+            'resname': a.residue.name, 'molid': a.residue.index + 1, 'index': a.index + 1,
+        } for a in traj.topology.atoms]
+
+    n = len(traj)
+    idx = range(n)[start:(stop if stop is not None else n):max(1, int(stride))]
+    out = []
+    for i in idx:
+        coords = traj.xyz[i] * 10.0                    # nm -> Angstrom
+        uv = traj.unitcell_vectors
+        if uv is not None:
+            m = uv[i] * 10.0
+            lx, ly, lz = float(m[0][0]), float(m[1][1]), float(m[2][2])
+            xy, xz, yz = float(m[1][0]), float(m[2][0]), float(m[2][1])
+            box = [lx, ly, lz] if abs(xy) < 1e-6 and abs(xz) < 1e-6 and abs(yz) < 1e-6 \
+                else [lx, ly, lz, xy, xz, yz]
+        else:
+            box = None
+        out.append((_build_frame_atoms(coords, ref_atoms), box))
+    return out
+
+
+def _import_binary_traj(file_path, ext, top=None, stride=1, start=0, stop=None):
+    """Read a binary/foreign trajectory into a list of (atoms, Box) frames (Ångström).
+
+    Backend order: libxdrfile (xtc/trr) -> optional mdtraj (dcd/nc/h5/lammpstrj, and
+    xtc/trr fallback) -> gmx trjconv (xtc/trr). Raises a clear error if none applies.
     """
-    ref_atoms = None
-    if top is not None:
-        res = auto(top)
-        ref_atoms = res[0] if isinstance(res, (tuple, list)) and res and isinstance(res[0], list) else res
-
     from . import xdrfile as _xdr
-    if _xdr.have_xdrfile():
+    if ext in ('.xtc', '.trr') and _xdr.have_xdrfile():
+        ref_atoms = _ref_atoms_from_top(top)
         reader = _xdr.read_xtc_frames if ext == '.xtc' else _xdr.read_trr_frames
         return [(_build_frame_atoms(coords, ref_atoms), box)
                 for coords, box in reader(file_path, stride=stride, start=start, stop=stop)]
 
-    # Fallback: gmx trjconv -> temporary multi-frame PDB, then parse that.
-    conv = _gmx_xtc_to_pdb(file_path, top)
-    if conv:
-        try:
-            return import_traj(conv, stride=stride, start=start, stop=stop)
-        finally:
+    # Optional mdtraj backend — covers .dcd/.nc/.h5/.lammpstrj (and xtc/trr if libxdrfile
+    # is absent). Returns None when mdtraj isn't installed or can't read the file.
+    frames = _import_via_mdtraj(file_path, top, stride, start, stop)
+    if frames is not None:
+        return frames
+
+    # gmx trjconv fallback (xtc/trr only) -> temporary multi-frame PDB, then parse that.
+    if ext in ('.xtc', '.trr'):
+        conv = _gmx_xtc_to_pdb(file_path, top)
+        if conv:
             try:
-                os.remove(conv)
-            except OSError:
-                pass
+                return import_traj(conv, stride=stride, start=start, stop=stop)
+            finally:
+                try:
+                    os.remove(conv)
+                except OSError:
+                    pass
 
     raise ImportError(
-        f"Reading {ext} needs libxdrfile or gmx. Install/point ATOMIPY_XDRFILE at a "
-        f"libxdrfile shared library (see docs/libxdrfile.md), or provide a gmx install "
-        f"and a `top` structure so atomipy can convert via `gmx trjconv`, or pass a "
-        f".pdb/.gro trajectory instead.")
+        f"Reading {ext} needs one of: libxdrfile (xtc/trr; set ATOMIPY_XDRFILE, see "
+        f"docs/libxdrfile.md), the optional 'mdtraj' package (dcd/nc/h5/lammpstrj/…), or a "
+        f"gmx install + a `top` structure (xtc/trr). Or convert to .pdb/.gro first.")

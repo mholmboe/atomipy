@@ -58,3 +58,16 @@ export ATOMIPY_XDRFILE=/abs/path/to/libxdrfile.so
 
 `libxdrfile` is LGPL-2.1; it is an **optional** runtime dependency, not bundled with
 atomipy. If you already run GROMACS, the `gmx trjconv` fallback needs no extra build.
+
+## Other formats (`.dcd`, `.nc`, `.h5`, `.lammpstrj`) via optional mdtraj
+
+`import_traj` also reads any format the optional **mdtraj** package understands — `.dcd`
+(CHARMM/NAMD), AMBER `.nc`, `.h5`, `.lammpstrj`, and `.xtc`/`.trr` too — when mdtraj is
+installed (`pip install mdtraj`). Pass `top=` as usual (mdtraj also uses it, e.g. a `.psf`
+or `.pdb` alongside a `.dcd`); if `top` is omitted, atom metadata is taken from mdtraj's
+own topology. No mdtraj = these formats raise a clear "install mdtraj" error, and atomipy
+keeps mdtraj strictly optional (no new hard dependency).
+
+The dispatch is pluggable: each format is just a reader that yields `(coords_Å, box_Å)`
+frames, assembled by the shared frame builder — so adding another format is one small
+function plus a branch.
