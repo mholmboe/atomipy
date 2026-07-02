@@ -837,17 +837,33 @@ def poscar(file_path):
     
     return atoms, Cell
 
-def import_traj(file_path):
+def import_traj(file_path, top=None, stride=1, start=0, stop=None):
     """Import a trajectory file (multi-frame).
-    
-    Supports .pdb (MODEL/ENDMDL) and .gro (consecutive frames).
-    
+
+    Supports .pdb (MODEL/ENDMDL), .gro (consecutive frames), and GROMACS .xtc/.trr.
+
+    .xtc/.trr carry only coordinates + box (no atom names/types), so pass ``top`` — a
+    companion .gro/.pdb/.cif structure — to supply per-atom metadata (type/resname/molid)
+    for typed analysis; without it, frames get generic atom types. .xtc/.trr are read via
+    the optional ``libxdrfile`` (see atomipy.xdrfile); if that's unavailable, atomipy falls
+    back to converting with ``gmx trjconv`` (requires ``top`` + a gmx install).
+
+    Args:
+       file_path: trajectory file (.pdb/.gro/.xtc/.trr).
+       top: reference structure for .xtc/.trr atom metadata (ignored for .pdb/.gro).
+       stride: keep every ``stride``-th frame (default 1 = all).
+       start: index of the first frame to keep (default 0).
+       stop: stop before this frame index (default None = to the end).
+
     Returns:
        list of (atoms, Box) tuples.
     """
     ext = os.path.splitext(file_path)[1].lower()
     frames = []
-    
+
+    if ext in ('.xtc', '.trr'):
+        return _import_xdr_traj(file_path, ext, top=top, stride=stride, start=start, stop=stop)
+
     if ext == '.pdb':
         current_atoms = []
         current_cell = None
@@ -906,5 +922,104 @@ def import_traj(file_path):
                 i += 2 + n_atoms + 1
             except (ValueError, IndexError):
                 break
-                
+
+    # Frame subsampling (xtc/trr do this during read; apply it to pdb/gro here).
+    if start or stop is not None or stride != 1:
+        frames = frames[start:stop:max(1, int(stride))]
     return frames
+
+
+def _build_frame_atoms(coords, ref_atoms):
+    """Assemble one frame's atom dicts from an (natoms,3) coord array.
+
+    If ``ref_atoms`` is given (a reference topology from ``top``), clone its per-atom
+    metadata (type/resname/molid/element) and overwrite coordinates — this is what makes
+    typed analysis (msd/rdf by atom type) work on .xtc/.trr. Without it, atoms get a
+    generic type so only geometric/untyped analysis is meaningful.
+    """
+    n = len(coords)
+    if ref_atoms is not None:
+        if len(ref_atoms) != n:
+            raise ValueError(
+                f"trajectory has {n} atoms but the reference topology ('top') has "
+                f"{len(ref_atoms)} — they must match")
+        out = []
+        for i, a in enumerate(ref_atoms):
+            out.append({
+                'x': float(coords[i][0]), 'y': float(coords[i][1]), 'z': float(coords[i][2]),
+                'type': a.get('type'), 'resname': a.get('resname'),
+                'molid': a.get('molid', 1), 'element': a.get('element'),
+                'index': a.get('index', i + 1),
+            })
+        return out
+    return [{'x': float(c[0]), 'y': float(c[1]), 'z': float(c[2]),
+             'type': 'X', 'resname': 'UNK', 'molid': 1, 'index': i + 1}
+            for i, c in enumerate(coords)]
+
+
+def _gmx_xtc_to_pdb(file_path, top):
+    """Fallback: convert .xtc/.trr -> a multi-frame .pdb via ``gmx trjconv``.
+
+    Requires a gmx install and a structure file (``top``) for ``-s``. Returns the path to
+    a temporary .pdb (caller deletes it), or None if gmx/top are unavailable.
+    """
+    if not top:
+        return None
+    try:
+        from .gromacs.runner import detect_gmx, _gmx_env
+    except Exception:
+        return None
+    info = detect_gmx()
+    if not info:
+        return None
+    import subprocess, tempfile
+    out = tempfile.NamedTemporaryFile(suffix='.pdb', delete=False)
+    out.close()
+    try:
+        proc = subprocess.run(
+            [info['path'], 'trjconv', '-s', top, '-f', file_path, '-o', out.name],
+            input='0\n', capture_output=True, text=True, env=_gmx_env(info.get('libs')))
+        if proc.returncode == 0 and os.path.getsize(out.name) > 0:
+            return out.name
+    except Exception:
+        pass
+    try:
+        os.remove(out.name)
+    except OSError:
+        pass
+    return None
+
+
+def _import_xdr_traj(file_path, ext, top=None, stride=1, start=0, stop=None):
+    """Read .xtc/.trr into a list of (atoms, Box) frames (Ångström).
+
+    Uses libxdrfile (atomipy.xdrfile) when available, else falls back to gmx trjconv;
+    raises a clear error if neither route works.
+    """
+    ref_atoms = None
+    if top is not None:
+        res = auto(top)
+        ref_atoms = res[0] if isinstance(res, (tuple, list)) and res and isinstance(res[0], list) else res
+
+    from . import xdrfile as _xdr
+    if _xdr.have_xdrfile():
+        reader = _xdr.read_xtc_frames if ext == '.xtc' else _xdr.read_trr_frames
+        return [(_build_frame_atoms(coords, ref_atoms), box)
+                for coords, box in reader(file_path, stride=stride, start=start, stop=stop)]
+
+    # Fallback: gmx trjconv -> temporary multi-frame PDB, then parse that.
+    conv = _gmx_xtc_to_pdb(file_path, top)
+    if conv:
+        try:
+            return import_traj(conv, stride=stride, start=start, stop=stop)
+        finally:
+            try:
+                os.remove(conv)
+            except OSError:
+                pass
+
+    raise ImportError(
+        f"Reading {ext} needs libxdrfile or gmx. Install/point ATOMIPY_XDRFILE at a "
+        f"libxdrfile shared library (see docs/libxdrfile.md), or provide a gmx install "
+        f"and a `top` structure so atomipy can convert via `gmx trjconv`, or pass a "
+        f".pdb/.gro trajectory instead.")

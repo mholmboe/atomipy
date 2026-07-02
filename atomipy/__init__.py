@@ -37,6 +37,10 @@ import_poscar = import_conf.poscar
 import_traj = import_conf.import_traj
 import_auto = import_conf.auto
 
+# Optional .xtc/.trr support via libxdrfile (used by import_traj; see docs/libxdrfile.md).
+from . import xdrfile
+have_xdrfile = xdrfile.have_xdrfile
+
 from . import write_conf
 write_pdb = write_conf.pdb
 write_gro = write_conf.gro
