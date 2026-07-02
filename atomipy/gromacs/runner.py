@@ -317,6 +317,34 @@ def trjconv_to_pdb(workdir, *, tpr, xtc, out, gmx="gmx", pbc="atom", skip=1,
     return None
 
 
+def trjconv(workdir, *, tpr, src, out, gmx="gmx", pbc="mol", skip=1, group="System", on_line=None):
+    """Convert a GROMACS trajectory to another format via ``gmx trjconv``.
+
+    The output format follows the ``out`` extension (.xtc/.trr/.gro/.pdb). Unlike
+    ``trjconv_to_pdb`` this does NO PDB post-processing, so it's safe for binary outputs
+    (xtc/trr). Returns the output path, or None if the source is missing/empty or trjconv
+    fails.
+    """
+    wd = Path(workdir)
+    if not (wd / src).exists() or (wd / src).stat().st_size == 0:
+        return None
+    gmxcmd, _libs = _resolve_gmx(gmx)
+    env = _gmx_env(_libs)
+    cmd = [gmxcmd, "trjconv", "-s", tpr, "-f", src, "-o", out, "-pbc", pbc]
+    if skip and int(skip) > 1:
+        cmd += ["-skip", str(int(skip))]
+    proc = subprocess.run(
+        cmd, cwd=str(wd), env=env, input=f"{group}\n",
+        capture_output=True, text=True, encoding="utf-8", errors="replace",
+    )
+    if on_line:
+        for ln in (proc.stdout + proc.stderr).splitlines():
+            on_line(ln)
+    if proc.returncode == 0 and (wd / out).exists():
+        return str(wd / out)
+    return None
+
+
 def _postprocess_traj_pdb(path):
     """Make a trjconv PDB viewer-friendly: fill the element column (cols 77-78)
     from the atom name, and put CRYST1 right after each MODEL so 3Dmol/JSmol
