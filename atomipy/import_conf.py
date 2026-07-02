@@ -1053,6 +1053,16 @@ def _import_binary_traj(file_path, ext, top=None, stride=1, start=0, stop=None):
         return [(_build_frame_atoms(coords, ref_atoms), box)
                 for coords, box in reader(file_path, stride=stride, start=start, stop=stop)]
 
+    # .dcd: zero-dependency pure-Python reader (mdtraj below is the fallback).
+    if ext == '.dcd':
+        from . import dcd as _dcd
+        try:
+            ref_atoms = _ref_atoms_from_top(top)
+            return [(_build_frame_atoms(coords, ref_atoms), box)
+                    for coords, box in _dcd.read_dcd_frames(file_path, stride=stride, start=start, stop=stop)]
+        except Exception:
+            pass  # fall through to mdtraj
+
     # Optional mdtraj backend — covers .dcd/.nc/.h5/.lammpstrj (and xtc/trr if libxdrfile
     # is absent). Returns None when mdtraj isn't installed or can't read the file.
     frames = _import_via_mdtraj(file_path, top, stride, start, stop)

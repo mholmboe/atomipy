@@ -16,6 +16,8 @@ If none is found, :func:`have_xdrfile` returns ``False`` and callers fall back (
 to **Ångström** (atomipy's unit) on the way out.
 """
 import os
+import sys
+import glob
 import ctypes
 import ctypes.util
 
@@ -39,6 +41,14 @@ def _candidate_libs():
     found = ctypes.util.find_library("xdrfile")
     if found:
         yield found
+    # Conda/venv installs (e.g. conda-forge `xdrfile`) land in <prefix>/lib but that dir
+    # isn't always on the loader path — glob it explicitly so the env-provided lib is found.
+    prefixes = {sys.prefix, getattr(sys, "base_prefix", sys.prefix), os.environ.get("CONDA_PREFIX")}
+    for base in filter(None, prefixes):
+        for sub in ("lib", "lib64", os.path.join("Library", "bin")):
+            for pat in ("libxdrfile*.so*", "libxdrfile*.dylib", "libxdrfile*.dll", "xdrfile*.dll"):
+                for hit in sorted(glob.glob(os.path.join(base, sub, pat))):
+                    yield hit
     for name in ("libxdrfile.so", "libxdrfile.so.4", "libxdrfile.so.2",
                  "libxdrfile.dylib", "libxdrfile.2.dylib",
                  "xdrfile.dll", "libxdrfile.dll"):
