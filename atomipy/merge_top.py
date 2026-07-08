@@ -520,7 +520,9 @@ def _build_mineral_itp(atoms_in: list, box: Optional[list]) -> dict:
             _mol_local[m] = len(_mol_local) + 1
         _local_resnr.append(_mol_local[m])
     itp = {
-        'moleculetype': {'moleculetype': [_mt_name], 'nrexcl': [3]},
+        # nrexcl=2 for inorganic mineral moleculetypes (MINFF/CLAYFF exclude 1-2 neighbours;
+        # nonbonded metal-O interactions must NOT be excluded at 3 bonds). Organics use 3.
+        'moleculetype': {'moleculetype': [_mt_name], 'nrexcl': [2]},
         'atoms': {
             'nr':      local_idx,
             'type':    [a.get('fftype', a.get('type', 'X')) for a in updated_atoms],
@@ -910,6 +912,40 @@ def write_merged_top(
               f"in place of the auto-detected {len(_auto)} entries.")
     else:
         mol_counts: List[Tuple[str, int]] = get_mol_sequence(atoms_merged)
+
+        # Reconcile the mineral [ molecules ] counts with the actual mineral moleculetypes.
+        # The mineral is written as ONE moleculetype per component (each a single instance
+        # containing all its atoms), but get_mol_sequence counts by molid — so a multi-molid
+        # single-resname mineral (e.g. stacked clay layers with "Reset MolID" off) is
+        # miscounted (MIN 3) against a one-moleculetype MIN, making the topology expect
+        # N x more mineral atoms than the .gro has (grompp: coordinate/topology mismatch).
+        # Rebuild those entries as one-per-moleculetype so counts and atoms agree.
+        if has_mineral:
+            _min_mts, _seen_mt = [], set()
+            for _itp in itp_merged.get('_original_itps', []) or []:
+                if not _itp or _itp.get('_source_itp'):
+                    continue
+                _mt = _itp.get('moleculetype', {})
+                if not _mt or 'moleculetype' not in _mt:
+                    continue
+                _nm, _b, _s = _mt['moleculetype'][0], _mt['moleculetype'][0], 1
+                while _nm in _seen_mt:
+                    _nm = f"{_b}_{_s}"; _s += 1
+                _seen_mt.add(_nm)
+                _min_mts.append(_nm)
+            if _min_mts:
+                _min_match = set(_min_mts) | {n.split('_')[0] for n in _min_mts}
+                _reco, _done = [], False
+                for _n, _c in mol_counts:
+                    if _n in _min_match:
+                        if not _done:
+                            _reco.extend((nm, 1) for nm in _min_mts)
+                            _done = True
+                    else:
+                        _reco.append((_n, _c))
+                if not _done:
+                    _reco = [(nm, 1) for nm in _min_mts] + _reco
+                mol_counts = _reco
 
     # ------------------------------------------------------------------
     # Write .top

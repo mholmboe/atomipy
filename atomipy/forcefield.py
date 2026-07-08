@@ -540,7 +540,7 @@ def minff(atoms, Box, ffname='minff', rmaxlong=2.45, rmaxH=1.2, log=False, log_f
             # Store bond information and prepare for atom typing
             for i, atom in enumerate(atoms):
                 # Skip water and ion residues if present
-                if atom.get('resname') in ['SOL', 'ION']:
+                if _is_solvent_or_ion(atom):
                     continue
                     
                 # Get neighbors from the bonds
@@ -564,7 +564,7 @@ def minff(atoms, Box, ffname='minff', rmaxlong=2.45, rmaxH=1.2, log=False, log_f
         # Assign atom types based on coordination and bond information
         for i, atom in enumerate(atoms):
             # Skip water and ion residues
-            if atom.get('resname') in ['SOL', 'ION']:
+            if _is_solvent_or_ion(atom):
                 continue
                 
             # Get neighbors from the bonds
@@ -1196,7 +1196,7 @@ def clayff(atoms, Box, ffname='clayff', rmaxlong=2.45, rmaxH=1.2, log=False, log
             # Store bond information and prepare for atom typing
             for i, atom in enumerate(atoms):
                 # Skip water and ion residues if present
-                if atom.get('resname') in ['SOL', 'ION']:
+                if _is_solvent_or_ion(atom):
                     continue
                     
                 # Get neighbors from the bonds
@@ -1220,7 +1220,7 @@ def clayff(atoms, Box, ffname='clayff', rmaxlong=2.45, rmaxH=1.2, log=False, log
         # Assign atom types based on coordination and bond information
         for i, atom in enumerate(atoms):
             # Skip water and ion residues
-            if atom.get('resname') in ['SOL', 'ION']:
+            if _is_solvent_or_ion(atom):
                 continue
                 
             # Get neighbors from the bonds
