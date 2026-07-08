@@ -456,9 +456,12 @@ def _build_mineral_itp(atoms_in: list, box: Optional[list]) -> dict:
 
     # Build a local-index map: 0-based array position → 1-based local index
     # bond_angle() stores 0-based array positions in Bond_index / Angle_index.
-    # The [ atoms ] section uses atom['index'] as nr.  We need the bond ai/aj
-    # to reference those same nr values — look them up rather than blindly +1.
-    local_idx = [int(a['index']) for a in updated_atoms]   # nr values, 1-based
+    # A GROMACS [ moleculetype ] must number its own atoms LOCALLY from 1 — its [ bonds ]/
+    # [ angles ]/[ position_restraints ] all reference those local nr. Use the atom's
+    # POSITION in this component (1..N), NOT its global atom['index']: when the mineral is
+    # split into per-layer moleculetypes the atoms keep the whole-system indices (e.g.
+    # 41..80 for layer 2), which would make that block start at 41 and break grompp.
+    local_idx = list(range(1, len(updated_atoms) + 1))     # local nr, 1-based per moleculetype
 
     # Classify every scanned angle (bond_angle rows are [i, j, k, angle_deg], 0-based)
     # via atomipy's shared angle model (write_top.angle_parameters) — the SAME logic
@@ -505,17 +508,28 @@ def _build_mineral_itp(atoms_in: list, box: Optional[list]) -> dict:
         _rn0 = str(updated_atoms[0].get('resname') or '').strip()
         if _rn0:
             _mt_name = _rn0
+    # Residue numbers must be LOCAL to the moleculetype (start at 1), not the whole-system
+    # molid. Map this component's molids to 1..K in first-seen order, so a single slab (one
+    # molid) becomes all resnr 1 regardless of its molid in the .gro/.pdb; an (un-split)
+    # multi-molid mineral gets a clean local 1,2,3,...
+    _mol_local = {}
+    _local_resnr = []
+    for a in updated_atoms:
+        m = a.get('molid', 1)
+        if m not in _mol_local:
+            _mol_local[m] = len(_mol_local) + 1
+        _local_resnr.append(_mol_local[m])
     itp = {
         'moleculetype': {'moleculetype': [_mt_name], 'nrexcl': [3]},
         'atoms': {
             'nr':      local_idx,
             'type':    [a.get('fftype', a.get('type', 'X')) for a in updated_atoms],
-            'resnr':   [a.get('molid', 1) for a in updated_atoms],
+            'resnr':   _local_resnr,
             'residue': [a.get('resname', 'MIN') for a in updated_atoms],
             'atom':    [a.get('type', 'X') for a in updated_atoms],
             'cgnr':    local_idx,
             'charge':  [float(a.get('charge') or 0.0) for a in updated_atoms],
-            'mass':    [a.get('mass', 0.0) for a in updated_atoms]
+            'mass':    [float(a.get('mass') or 0.0) for a in updated_atoms]
         },
         'bonds': {
             'ai':    [local_idx[int(b[0])] for b in filtered_bonds],
@@ -544,6 +558,44 @@ def _build_mineral_itp(atoms_in: list, box: Optional[list]) -> dict:
 # Core merge function
 # ---------------------------------------------------------------------------
 
+def _split_mineral_components_by_resname(components):
+    """Split any built-from-scratch mineral component (``itp`` is None) that contains
+    MORE THAN ONE distinct residue name into one sub-component per residue name, so each
+    becomes its own ``[ moleculetype ]`` in the output .top (e.g. three stacked clay
+    layers the user named MIN1/MIN2/MIN3 -> MIN1 1 / MIN2 1 / MIN3 1 in ``[ molecules ]``).
+
+    A single-resname mineral, or any pre-built (``itp`` provided) component, passes through
+    unchanged, so the default behaviour is identical. Splitting is keyed on RESNAME (not
+    molid) on purpose: resnames are coarse and user-controlled, so a structure with per-atom
+    molids (e.g. from an external PDB) still yields ONE moleculetype instead of exploding
+    into thousands. Atoms of each resname are kept in first-seen order, so each group stays
+    contiguous in the merged atom list — a requirement for a valid GROMACS [ molecules ]
+    sequence. Bonds are rebuilt per group by _build_mineral_itp, so give distinct resnames
+    only to parts that are genuinely separate molecules (stacked layers have no inter-layer
+    bonds, so this is safe).
+    """
+    out = []
+    for c in components:
+        atoms = c.get('atoms', [])
+        if c.get('itp') is not None or not atoms:
+            out.append(c)
+            continue
+        order = []
+        groups = {}
+        for a in atoms:
+            rn = str(a.get('resname', 'MIN') or 'MIN')
+            if rn not in groups:
+                groups[rn] = []
+                order.append(rn)
+            groups[rn].append(a)
+        if len(order) <= 1:
+            out.append(c)
+            continue
+        for rn in order:
+            out.append({'atoms': groups[rn], 'itp': None, 'box': c.get('box')})
+    return out
+
+
 def merge_top(
     *components,
     output_box: Optional[list] = None,
@@ -569,6 +621,11 @@ def merge_top(
     """
     if not components:
         raise ValueError("merge_top: at least one component is required")
+
+    # A single mineral component carrying several distinct residue names (e.g. stacked
+    # clay layers named MIN1/MIN2/MIN3) is expanded into one component per resname, so each
+    # gets its own [ moleculetype ]. No-op for single-resname minerals.
+    components = _split_mineral_components_by_resname(components)
 
     # ------------------------------------------------------------------
     # 1. Determine merged box
@@ -792,6 +849,10 @@ def write_merged_top(
     # for consistency (Σ count×moleculetype_size == atom count, and matching
     # order). Names must match defined moleculetypes / #included .itp molnames.
     mol_counts_override: Optional[Sequence[Tuple[str, int]]] = None,
+    # Position-restraint force constant (kJ/mol/nm²) written into each mineral .itp behind
+    # a shared '#ifdef POSRES'. Every mineral atom is restrained, so a single -DPOSRES at
+    # grompp freezes all mineral slabs. Set None to omit the block entirely.
+    posres_fc: Optional[float] = 1000.0,
 ) -> None:
     """
     Write a self-contained GROMACS .top file and a .gro coordinate file for a
@@ -889,6 +950,17 @@ def write_merged_top(
                 f.write('#include "min.ff/ffbonded.itp"\n')  # O-H + edge bond/angle types
             f.write('\n')
 
+        # Mineral moleculetype(s): one self-contained .itp per slab, #included like the
+        # water/ion topologies (local 1-based indexing + a shared '#ifdef POSRES' block).
+        if has_mineral:
+            _mineral_itp_files = _write_mineral_itp_files(
+                out_top, itp_merged, angle_ka=angle_ka, posres_fc=posres_fc)
+            if _mineral_itp_files:
+                f.write('; Mineral/s\n')
+                for _fn, _ in _mineral_itp_files:
+                    f.write(f'#include "{_fn}"\n')
+                f.write('\n')
+
         # Organic itp includes (GAFF atomtypes + molecule topology, incl. explicit [ pairs ])
         if organic_itps:
             f.write('; Organic molecule topologies\n')
@@ -915,9 +987,7 @@ def write_merged_top(
             f.write('; Ions\n')
             f.write('#include "min.ff/ions.itp"\n\n')
 
-        # Write mineral molecule sections inline if mineral atoms are present
-        if has_mineral:
-            _write_mineral_molecule_sections(f, atoms_merged, itp_merged, box_merged, angle_ka=angle_ka)
+        # (Mineral moleculetypes are written to separate #include'd .itp files above.)
 
         # [ system ] and [ molecules ]
         f.write('[ system ]\n')
@@ -949,97 +1019,104 @@ def write_merged_top(
           f'{len(component_labels)} component(s))')
 
 
-def _write_mineral_molecule_sections(f, atoms, itp_merged, box_merged, angle_ka=500.0):
-    """Write inline [ moleculetype ] / [ atoms ] / etc. for mineral components.
+def _write_one_mineral_moleculetype(f, itp, molname, angle_ka=500.0, posres_fc=1000.0):
+    """Write a single mineral [ moleculetype ] (+ [ atoms ]/[ bonds ]/[ angles ] and, if
+    posres_fc is set, a shared '#ifdef POSRES [ position_restraints ]' restraining every
+    atom) to file object ``f``. All indices are the itp's own local 1-based nr."""
+    mt = itp.get('moleculetype', {})
+    nrexcl = mt['nrexcl'][0] if 'nrexcl' in mt else 3
 
-    angle_ka is the Ka force constant (kJ/mol/rad²) for metal O-M-O / M-O-M
-    angles. When angle_ka is None, NO [ angles ] section is emitted at all — not
-    even M-O-H (CLAYFF "No angles" / MINFF "No angles"). Otherwise each angle is
-    written with explicit parameters: metal angles use their scanned θ0 with
-    this Ka; M-O-H angles use the standard θ0/k stored on the itp.
+    f.write('[ moleculetype ]\n')
+    f.write('; name             nrexcl\n')
+    f.write(f'{molname:<18} {nrexcl}\n\n')
+
+    atoms_sec = itp.get('atoms', {})
+    n_atoms = 0
+    if atoms_sec and 'nr' in atoms_sec:
+        f.write('[ atoms ]\n')
+        f.write('; nr  type  resnr  residue  atom  cgnr  charge  mass\n')
+        n_atoms = len(atoms_sec['nr'])
+        for i in range(n_atoms):
+            _chg = float(atoms_sec['charge'][i] or 0.0)
+            _mass = float(atoms_sec['mass'][i] or 0.0)
+            f.write(f"{atoms_sec['nr'][i]:>6} {str(atoms_sec['type'][i] or 'X'):<10} "
+                    f"{atoms_sec['resnr'][i]:>5} {str(atoms_sec['residue'][i] or 'MIN'):<8} "
+                    f"{str(atoms_sec['atom'][i] or 'X'):<8} {atoms_sec['cgnr'][i]:>5} "
+                    f"{_chg:>12.6f} {_mass:>12.6f}\n")
+        f.write('\n')
+
+    bonds = itp.get('bonds', {})
+    if bonds and 'ai' in bonds:
+        f.write('[ bonds ]\n')
+        f.write('; ai   aj   funct\n')
+        for i in range(len(bonds['ai'])):
+            f.write(f"{bonds['ai'][i]:>5} {bonds['aj'][i]:>5} {bonds['funct'][i]:>5}\n")
+        f.write('\n')
+
+    angles = itp.get('angles', {})
+    if angle_ka is not None and angles and 'ai' in angles:
+        n = len(angles['ai'])
+        cats = angles.get('category', ['metal'] * n)
+        c0s  = angles.get('c0', [''] * n)
+        c1s  = angles.get('c1', [''] * n)
+        f.write('[ angles ]\n')
+        f.write('; ai   aj   ak   funct      th0          cth\n')
+        for i in range(n):
+            th0 = c0s[i] if i < len(c0s) else ''
+            # Metal O-M-O / M-O-M get the chosen Ka; M-O-H keep their standard k.
+            kth = f'{float(angle_ka):.3f}' if cats[i] == 'metal' else (c1s[i] if i < len(c1s) else '')
+            if th0 != '' and kth != '':
+                f.write(f"{angles['ai'][i]:>5} {angles['aj'][i]:>5} {angles['ak'][i]:>5} "
+                        f"{angles['funct'][i]:>5} {th0:>10} {kth:>12}\n")
+            else:
+                f.write(f"{angles['ai'][i]:>5} {angles['aj'][i]:>5} {angles['ak'][i]:>5} "
+                        f"{angles['funct'][i]:>5}\n")
+        f.write('\n')
+
+    # Shared POSRES block: restrain EVERY atom of this slab. Guarded by the single 'POSRES'
+    # define, so grompp -DPOSRES freezes all mineral slabs at once (no per-slab defines).
+    if posres_fc and n_atoms > 0:
+        _fc = f'{float(posres_fc):.1f}'
+        f.write('#ifdef POSRES\n')
+        f.write('[ position_restraints ]\n')
+        f.write('; ai  funct      fcx        fcy        fcz\n')
+        for i in range(n_atoms):
+            f.write(f"{atoms_sec['nr'][i]:>6}     1 {_fc:>10} {_fc:>10} {_fc:>10}\n")
+        f.write('#endif\n\n')
+
+
+def _write_mineral_itp_files(out_top, itp_merged, angle_ka=500.0, posres_fc=1000.0):
+    """Write each mineral [ moleculetype ] to its own ``minN.itp`` next to ``out_top`` and
+    return a list of (filename, molname) to #include from the .top — mirroring the water/ion
+    layout. Names are deduped exactly as merge_top() deduped the [ molecules ] entries
+    (MIN, MIN_1, ...), so [ molecules ] entries still resolve to a defined moleculetype.
     """
     original_itps = itp_merged.get('_original_itps', [])
     if not original_itps:
-        return
-
-    # Track names so each mineral component gets a UNIQUE [ moleculetype ] name
-    # (MIN, MIN_1, ...). merge_top() already deduped the [ molecules ] entries and
-    # the atom resnames the same way; without matching it here, two different
-    # minerals both write [ moleculetype ] MIN while [ molecules ] references MIN_1
-    # -> GROMACS/OpenMM "molecule type 'MIN_1' not found" (and a duplicate 'MIN').
+        return []
+    out_dir = os.path.dirname(os.path.abspath(out_top)) or '.'
     _seen_mineral_names: set = set()
+    files = []
+    n = 0
     for itp in original_itps:
-        if itp is None:
+        if itp is None or itp.get('_source_itp'):
             continue
-        # Skip if it is an organic included file
-        if itp.get('_source_itp'):
-            continue
-
         mt = itp.get('moleculetype', {})
         if not mt or 'moleculetype' not in mt:
             continue
-
         molname = mt['moleculetype'][0]
         _base, _suf = molname, 1
         while molname in _seen_mineral_names:
             molname = f"{_base}_{_suf}"
             _suf += 1
         _seen_mineral_names.add(molname)
-        nrexcl = mt['nrexcl'][0] if 'nrexcl' in mt else 3
-        
-        f.write('[ moleculetype ]\n')
-        f.write('; name             nrexcl\n')
-        f.write(f'{molname:<18} {nrexcl}\n\n')
-        
-        atoms_sec = itp.get('atoms', {})
-        if atoms_sec and 'nr' in atoms_sec:
-            f.write('[ atoms ]\n')
-            f.write('; nr  type  resnr  residue  atom  cgnr  charge  mass\n')
-            n = len(atoms_sec['nr'])
-            for i in range(n):
-                nr = atoms_sec['nr'][i]
-                atype = atoms_sec['type'][i]
-                resnr = atoms_sec['resnr'][i]
-                residue = atoms_sec['residue'][i]
-                atom = atoms_sec['atom'][i]
-                cgnr = atoms_sec['cgnr'][i]
-                charge = atoms_sec['charge'][i]
-                mass = atoms_sec['mass'][i]
-                f.write(f'{nr:>6} {atype:<10} {resnr:>5} {residue:<8} {atom:<8} {cgnr:>5} {charge:>12.6f} {mass:>12.6f}\n')
-            f.write('\n')
-            
-        bonds = itp.get('bonds', {})
-        if bonds and 'ai' in bonds:
-            f.write('[ bonds ]\n')
-            f.write('; ai   aj   funct\n')
-            for i in range(len(bonds['ai'])):
-                ai = bonds['ai'][i]
-                aj = bonds['aj'][i]
-                funct = bonds['funct'][i]
-                f.write(f'{ai:>5} {aj:>5} {funct:>5}\n')
-            f.write('\n')
-            
-        angles = itp.get('angles', {})
-        if angle_ka is not None and angles and 'ai' in angles:
-            n = len(angles['ai'])
-            cats = angles.get('category', ['metal'] * n)
-            c0s  = angles.get('c0', [''] * n)
-            c1s  = angles.get('c1', [''] * n)
-            f.write('[ angles ]\n')
-            f.write('; ai   aj   ak   funct      th0          cth\n')
-            for i in range(n):
-                ai = angles['ai'][i]
-                aj = angles['aj'][i]
-                ak = angles['ak'][i]
-                funct = angles['funct'][i]
-                th0 = c0s[i] if i < len(c0s) else ''
-                # Metal O-M-O / M-O-M get the chosen Ka; M-O-H keep their standard k.
-                kth = f'{float(angle_ka):.3f}' if cats[i] == 'metal' else (c1s[i] if i < len(c1s) else '')
-                if th0 != '' and kth != '':
-                    f.write(f'{ai:>5} {aj:>5} {ak:>5} {funct:>5} {th0:>10} {kth:>12}\n')
-                else:
-                    f.write(f'{ai:>5} {aj:>5} {ak:>5} {funct:>5}\n')
-            f.write('\n')
+        n += 1
+        fname = f"min{n}.itp"
+        with open(os.path.join(out_dir, fname), 'w', encoding='utf-8') as mf:
+            mf.write(f'; {provenance_string()} — mineral moleculetype {molname}\n\n')
+            _write_one_mineral_moleculetype(mf, itp, molname, angle_ka=angle_ka, posres_fc=posres_fc)
+        files.append((fname, molname))
+    return files
 
 
 def _write_gro_fallback(atoms: AtomList, box: list, out_gro: str) -> None:

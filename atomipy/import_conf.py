@@ -19,9 +19,14 @@ def pdb(file_path):
     """
     atoms = []
     Cell = None
+    # atomipy-written PDBs stash the real molid in the segID column (cols 73-76) and mark
+    # it with a REMARK, so molid survives the OpenMM-safe per-atom residue renumbering.
+    _molid_in_segid = False
     with open(file_path, 'r', encoding='utf-8') as f:
         for line in f:
-            if line.startswith("CRYST1"):
+            if line.startswith("REMARK") and "ATOMIPY molid stored in segID" in line:
+                _molid_in_segid = True
+            elif line.startswith("CRYST1"):
                 # Parse Cell parameters from CRYST1 line
                 a = float(line[6:15].strip())
                 b = float(line[15:24].strip())
@@ -51,10 +56,19 @@ def pdb(file_path):
                     atname = line[12:16].strip()           # Cols 13-16
                     resname = line[17:20].strip()          # Cols 18-20
                     
-                    try:
-                        molid = int(line[22:26])     # Cols 23-26 (Residue sequence number as molid)
-                    except (ValueError, IndexError):
-                        molid = 1 # Default if not present or invalid
+                    # Prefer the segID-stored molid (atomipy round-trip); fall back to the
+                    # residue sequence number for ordinary/external PDBs.
+                    molid = None
+                    if _molid_in_segid and len(line) >= 76:
+                        try:
+                            molid = int(line[72:76])   # Cols 73-76 (segID = true molid)
+                        except (ValueError, IndexError):
+                            molid = None
+                    if molid is None:
+                        try:
+                            molid = int(line[22:26])     # Cols 23-26 (Residue sequence number as molid)
+                        except (ValueError, IndexError):
+                            molid = 1 # Default if not present or invalid
 
                     x = float(line[30:38])           # Cols 31-38
                     y = float(line[38:46])           # Cols 39-46

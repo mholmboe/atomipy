@@ -169,6 +169,7 @@ reorder = build.reorder
 condense = build.condense
 create_grid = build.create_grid
 join_and_reorder = build.join_and_reorder
+split_slabs_by_molid = build.split_slabs_by_molid
 
 # ===== Resname functions =====
 from .resname import assign_resname
@@ -274,7 +275,7 @@ __all__ = [
     'direct_cartesian_to_fractional', 'direct_fractional_to_cartesian',
     'replicate_system', 'translate', 'rotate', 'place', 'center', 'update', 'scale', 'bend',
     'substitute', 'molecule', 'merge', 'slice', 'fit_box', 'remove', 'delete_sites', 'fuse_atoms', 'solvate', 'ionize', 'insert',
-    'add_H_atom', 'adjust_H_atom', 'adjust_Hw_atom', 'reorder', 'condense', 'create_grid', 'join_and_reorder',
+    'add_H_atom', 'adjust_H_atom', 'adjust_Hw_atom', 'reorder', 'condense', 'create_grid', 'join_and_reorder', 'split_slabs_by_molid',
     'is_centrosymmetric_along_z',
     'assign_resname', 'spc2tip4p', 'tip3p2tip4p',
     'composition', 'get_mol_sequence', 'get_mol_sequence_typed',

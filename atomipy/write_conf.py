@@ -49,7 +49,7 @@ def _infer_element(atom):
     return 'X'
 
 
-def pdb(atoms, Box, file_path, write_conect=False, write_element=True):
+def pdb(atoms, Box, file_path, write_conect=False, write_element=True, reindex_residues=False):
     """Write atoms and Cell dimensions to a PDB file.
 
     Args:
@@ -99,17 +99,26 @@ def pdb(atoms, Box, file_path, write_conect=False, write_element=True):
             f.write(f"SCALE2    {s21:10.6f}{s22:10.6f}{s23:10.6f}     {0.0:10.5f}\n")
             f.write(f"SCALE3    {s31:10.6f}{s32:10.6f}{s33:10.6f}     {0.0:10.5f}\n")
         
+        # Preserve the true molecule id across a PDB round-trip. PDB has no molid column,
+        # and the OpenMM-safe per-atom residue reindexing (below) would otherwise turn molid
+        # per-atom on re-import. We stash the real molid in the segID field (cols 73-76) and
+        # flag it with this REMARK so import_pdb can restore molid regardless of res_seq.
+        f.write("REMARK   ATOMIPY molid stored in segID (cols 73-76)\n")
+
         # Add MODEL record
         f.write("MODEL        1\n")
 
-        # OpenMM drops atoms with duplicate NAMES inside the same residue. Reindex each
-        # atom into its own residue ONLY when the whole structure is a single residue
-        # (constant resnum/molid) AND atom names repeat — the mineral case. A genuine
-        # multi-residue file, or a small single residue with unique names (e.g. a water or
-        # ligand that happens to be numbered 1), keeps its real residue numbers.
+        # By DEFAULT the residue-number column mirrors molid (like the .gro writer), so an
+        # exported mineral shows one residue == one molecule. Opt in with
+        # reindex_residues=True to instead give each atom its own residue number — needed
+        # only when the PDB will be read by OpenMM's PDBFile, which drops atoms that share a
+        # NAME inside the same residue (a mineral has many identical Alo/Ob/... names). The
+        # standard OpenMM path here loads .gro, not this PDB, so the default stays clean.
+        # (The true molid is also stashed in segID/REMARK below, so a round-trip is exact
+        # either way.) Only reindex when asked AND it's the single-residue repeating-name case.
         _res_ids = {(a.get('resnum') if a.get('resnum') is not None else a.get('molid', 1)) for a in atoms}
         _names_all = [str(a.get('fftype') or a.get('type') or a.get('element') or '') for a in atoms]
-        _reindex_residues = len(_res_ids) <= 1 and len(set(_names_all)) < len(_names_all)
+        _reindex_residues = reindex_residues and (len(_res_ids) <= 1 and len(set(_names_all)) < len(_names_all))
 
         for i, atom in enumerate(atoms, start=1):
             # Format the ATOM record according to PDB specification
@@ -231,10 +240,15 @@ def pdb(atoms, Box, file_path, write_conect=False, write_element=True):
             # Z coordinate               47-54 (z:8.3f)
             # Occupancy                  55-60 (occupancy_val:6.2f)
             # Temperature factor         61-66 (temp_factor_val:6.2f)
-            # Spaces (Seg ID etc.)       67-76 ("          ")
+            # Spaces                     67-72 ("      ")
+            # Seg ID                     73-76 (_seg_str:4s = true molid, carries it round-trip)
             # Element symbol             77-78 (element_symbol_pdb:>2s)
             # Charge                     79-80 (charge_str:>2s)
-            f.write(f"ATOM  {index:5d} {pdb_atomname}{alt_loc}{pdb_resname} {chain_id}{res_seq:4d}{icode}   {x:8.3f}{y:8.3f}{z:8.3f}{occupancy_val:6.2f}{temp_factor_val:6.2f}          {element_symbol_pdb}{charge_str}\n")
+            # segID holds the real molid (capped to 4 cols like res_seq), so a round-trip
+            # preserves molid even when res_seq is reindexed per-atom for OpenMM.
+            _seg_molid = ((int(atom.get('molid', 1)) - 1) % 9999) + 1
+            _seg_str = f"{_seg_molid:4d}"
+            f.write(f"ATOM  {index:5d} {pdb_atomname}{alt_loc}{pdb_resname} {chain_id}{res_seq:4d}{icode}   {x:8.3f}{y:8.3f}{z:8.3f}{occupancy_val:6.2f}{temp_factor_val:6.2f}      {_seg_str}{element_symbol_pdb}{charge_str}\n")
         
         # Add ENDMDL record
         f.write("ENDMDL\n")
@@ -453,11 +467,17 @@ def xyz(atoms, Box=None, file_path=None):
             # Write atom entry: AtomType X Y Z with right-aligned coordinates and extra spacing
             f.write(f"{atom_type:<10} {x:>12.5f}    {y:>12.5f}    {z:>12.5f}\n")
 
-def write_pdb(atoms, Box, filename=None, write_conect=True, write_element=True):
+def write_pdb(atoms, Box, filename=None, write_conect=True, write_element=True, reindex_residues=False):
     """
     Wrapper for pdb() for backward compatibility.
+
+    reindex_residues=False (default) writes the residue-number column from molid, so one
+    molecule == one residue (matching the .gro writer). Set True only when the PDB is to be
+    loaded by OpenMM's PDBFile, which needs each identically-named mineral atom in its own
+    residue.
     """
-    pdb(atoms, Box, filename, write_conect=write_conect, write_element=write_element)
+    pdb(atoms, Box, filename, write_conect=write_conect, write_element=write_element,
+        reindex_residues=reindex_residues)
 
 
 def cif(atoms, Box, file_path=None, title='Generated by atomipy'):

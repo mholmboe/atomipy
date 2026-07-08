@@ -185,9 +185,9 @@ def _declash_solvent(solv_atoms, box_dim, heavy_cut=2.0, h_cut=1.0):
     (O···H ≈ 1.8 Å); only true overlaps are removed. Greedy: for each too-close
     inter-molecular pair, drop one of the two molecules.
 
-    For a pure-water box, ``solvate`` derives these from its ``min_distance`` (O–O =
-    min_distance, O–H/H–H = min_distance/2), so that knob tightens/loosens the water
-    packing; with a solute present the fixed physical thresholds are used instead.
+    ``solvate`` always derives these from its general ``min_distance`` knob (O–O =
+    min_distance, O–H/H–H = min_distance/2), whether or not a solute is present, so the
+    knob tightens/loosens the water packing consistently.
     """
     if not solv_atoms:
         return solv_atoms
@@ -283,17 +283,33 @@ def solvate(limits, density=1000.0, min_distance=2.0, max_solvent: Union[str, in
     from .cell_utils import Cell2Box_dim
     from . import import_conf
     
-    # Standardize limits to [xlo, ylo, zlo, xhi, yhi, zhi] format
+    # Standardize limits. len 3 = [xhi,yhi,zhi] (orthogonal, lo=0); len 6 =
+    # [xlo,ylo,zlo,xhi,yhi,zhi] (orthogonal sub-region); len 9 = a full triclinic cell in
+    # GROMACS Box_dim format [lx,ly,lz, 0,0,xy, 0,xz,yz] (origin at 0, whole cell only).
+    is_triclinic = False
+    tri_box = None
     if len(limits) == 3:
         xlo, ylo, zlo = 0, 0, 0
         xhi, yhi, zhi = limits
     elif len(limits) == 6:
         xlo, ylo, zlo, xhi, yhi, zhi = limits
+    elif len(limits) == 9:
+        tri_box = [float(v) for v in limits]
+        # Only a non-zero xy/xz/yz tilt needs the triclinic fill; a zero-tilt 9-vector is
+        # just an orthogonal box and takes the faster rectangular path below.
+        is_triclinic = any(abs(tri_box[i]) > 1e-9 for i in (5, 7, 8))
+        xlo, ylo, zlo = 0.0, 0.0, 0.0
+        xhi, yhi, zhi = tri_box[0], tri_box[1], tri_box[2]
+        if Box is None:
+            Box = tri_box  # PBC for declash / solute-merge uses the real triclinic cell
     else:
-        raise ValueError("Limits must be a list of length 3 [xhi, yhi, zhi] "
-                         "or 6 [xlo, ylo, zlo, xhi, yhi, zhi]")
-    
-    # Calculate Box dimensions
+        raise ValueError(
+            "Limits must be length 3 [xhi,yhi,zhi], 6 [xlo,ylo,zlo,xhi,yhi,zhi], or 9 "
+            "(triclinic Box_dim [lx,ly,lz, 0,0,xy, 0,xz,yz])"
+        )
+
+    # Box dimensions (diagonal). A triclinic GROMACS box is lower-triangular, so its cell
+    # volume is still lx*ly*lz — this is the correct fill volume for the density estimate.
     box_dim = [xhi - xlo, yhi - ylo, zhi - zlo]
     
     # Parse shell thickness if provided
@@ -362,48 +378,91 @@ def solvate(limits, density=1000.0, min_distance=2.0, max_solvent: Union[str, in
     if requested_count is not None:
         n_molecules_needed = requested_count
     
-    # Calculate how many times to replicate the solvent Box
-    nx = int(np.ceil((xhi - xlo) / solvent_box[0]))
-    ny = int(np.ceil((yhi - ylo) / solvent_box[1]))
-    nz = int(np.ceil((zhi - zlo) / solvent_box[2]))
-    
-    # Create the full solvent Box by replication
-    full_solvent = []
-    for ix in range(nx):
-        for iy in range(ny):
-            for iz in range(nz):
-                for atom in solvent_atoms:
-                    new_atom = atom.copy()
-                    new_atom['x'] = atom['x'] + ix * solvent_box[0] + xlo
-                    new_atom['y'] = atom['y'] + iy * solvent_box[1] + ylo
-                    new_atom['z'] = atom['z'] + iz * solvent_box[2] + zlo
-                    # Adjust molid to keep track of different molecules
-                    new_atom['molid'] = atom['molid'] + (ix * ny * nz + iy * nz + iz) * len(unique_molids)
-                    full_solvent.append(new_atom)
-    
-    # Slice to get only atoms within the target region
-    sliced_solvent = build_slice(full_solvent, [xlo, ylo, zlo, xhi, yhi, zhi])
+    if is_triclinic:
+        # Fill a triclinic parallelepiped: tile the template across the cell's orthogonal
+        # bounding box, then keep whole molecules whose reference atom has fractional
+        # coordinates inside the cell (0 <= s < 1). Seam / periodic-image clashes are
+        # cleaned by the triclinic-aware declash below.
+        lx, ly, lz = box_dim[0], box_dim[1], box_dim[2]
+        xy, xz, yz = tri_box[5], tri_box[7], tri_box[8]
+        H = np.array([[lx, 0.0, 0.0], [xy, ly, 0.0], [xz, yz, lz]], dtype=float)  # rows = cell vectors
+        Hinv = np.linalg.inv(H)
+        corners = np.array([a * H[0] + b * H[1] + c * H[2]
+                            for a in (0.0, 1.0) for b in (0.0, 1.0) for c in (0.0, 1.0)])
+        bb_min = corners.min(axis=0)
+        bb_max = corners.max(axis=0)
+        ntx = int(np.ceil((bb_max[0] - bb_min[0]) / solvent_box[0]))
+        nty = int(np.ceil((bb_max[1] - bb_min[1]) / solvent_box[1]))
+        ntz = int(np.ceil((bb_max[2] - bb_min[2]) / solvent_box[2]))
+        full_solvent = []
+        _tile = 0
+        for ix in range(ntx):
+            for iy in range(nty):
+                for iz in range(ntz):
+                    ox = bb_min[0] + ix * solvent_box[0]
+                    oy = bb_min[1] + iy * solvent_box[1]
+                    oz = bb_min[2] + iz * solvent_box[2]
+                    for atom in solvent_atoms:
+                        new_atom = atom.copy()
+                        new_atom['x'] = atom['x'] + ox
+                        new_atom['y'] = atom['y'] + oy
+                        new_atom['z'] = atom['z'] + oz
+                        new_atom['molid'] = atom['molid'] + _tile * len(unique_molids)
+                        full_solvent.append(new_atom)
+                    _tile += 1
+        # Keep molecules whose first atom is inside the cell (0 <= fractional < 1).
+        _mols = {}
+        for a in full_solvent:
+            _mols.setdefault(a['molid'], []).append(a)
+        _eps = 1e-6
+        sliced_solvent = []
+        for _mol in _mols.values():
+            _s = np.array([_mol[0]['x'], _mol[0]['y'], _mol[0]['z']]) @ Hinv
+            if (-_eps <= _s[0] < 1.0) and (-_eps <= _s[1] < 1.0) and (-_eps <= _s[2] < 1.0):
+                sliced_solvent.extend(_mol)
+    else:
+        # Orthogonal box / sub-region: tile then rectangular-slice.
+        nx = int(np.ceil((xhi - xlo) / solvent_box[0]))
+        ny = int(np.ceil((yhi - ylo) / solvent_box[1]))
+        nz = int(np.ceil((zhi - zlo) / solvent_box[2]))
+        full_solvent = []
+        for ix in range(nx):
+            for iy in range(ny):
+                for iz in range(nz):
+                    for atom in solvent_atoms:
+                        new_atom = atom.copy()
+                        new_atom['x'] = atom['x'] + ix * solvent_box[0] + xlo
+                        new_atom['y'] = atom['y'] + iy * solvent_box[1] + ylo
+                        new_atom['z'] = atom['z'] + iz * solvent_box[2] + zlo
+                        # Adjust molid to keep track of different molecules
+                        new_atom['molid'] = atom['molid'] + (ix * ny * nz + iy * nz + iz) * len(unique_molids)
+                        full_solvent.append(new_atom)
+        # Slice to get only atoms within the target region
+        sliced_solvent = build_slice(full_solvent, [xlo, ylo, zlo, xhi, yhi, zhi])
 
     # Remove solvent-solvent overlaps (replicated-template tile-seam / PBC clashes) UP
     # FRONT, so the molecule-count selection below draws from a clash-free pool (and an
     # explicit count isn't undercut by clashes removed after selection).
     #
-    # For a pure-water box (no solute) the water–water clash thresholds follow
-    # `min_distance`: O–O at min_distance, and any pair involving H (O–H, H–H) at
-    # min_distance/2. (A [heavy, h] list is honoured as-is.) The default min_distance=2.0
-    # reproduces the previous fixed 2.0 Å / 1.0 Å behaviour, so existing results are
-    # unchanged. When a solute is present, solvent–solvent declashing keeps the fixed
-    # physical thresholds (min_distance there governs solute↔solvent clearance instead).
-    if solute_atoms is None:
-        if isinstance(min_distance, (list, tuple)):
-            _declash_heavy = float(min_distance[0])
-            _declash_h = float(min_distance[1]) if len(min_distance) > 1 else float(min_distance[0]) / 2.0
-        else:
-            _declash_heavy = float(min_distance)
-            _declash_h = float(min_distance) / 2.0
-        sliced_solvent = _declash_solvent(sliced_solvent, box_dim, heavy_cut=_declash_heavy, h_cut=_declash_h)
+    # `min_distance` is the single, general spacing knob: it governs BOTH solvent↔solvent
+    # declashing here AND solute↔solvent clearance (via merge, below), whether or not a
+    # solute is present. Heavy–heavy pairs use min_distance; any pair involving an H uses
+    # min_distance/2 (H---H / O---H sites can sit closer, preserving genuine H-bonds).
+    # A [heavy, h] list is honoured as-is. The default min_distance=2.0 reproduces the
+    # legacy 2.0 Å / 1.0 Å thresholds, so default results are unchanged.
+    if isinstance(min_distance, (list, tuple)):
+        _declash_heavy = float(min_distance[0])
+        _declash_h = float(min_distance[1]) if len(min_distance) > 1 else float(min_distance[0]) / 2.0
     else:
-        sliced_solvent = _declash_solvent(sliced_solvent, box_dim, heavy_cut=2.0, h_cut=1.0)
+        _declash_heavy = float(min_distance)
+        _declash_h = float(min_distance) / 2.0
+    # Use the REAL cell for PBC in the solvent-solvent neighbour search, not the sliced
+    # sub-region: when `limits` is a slab inside a larger `Box` (e.g. one interlayer),
+    # box_dim would wrap the slab's own faces together and declash molecules that aren't
+    # actually periodic neighbours. Box == box_dim for a full-box solvation, so this is a
+    # no-op there.
+    _declash_box = Box if Box is not None else box_dim
+    sliced_solvent = _declash_solvent(sliced_solvent, _declash_box, heavy_cut=_declash_heavy, h_cut=_declash_h)
 
     # Randomize the order of molecules for unbiased selection
     unique_molids = set(atom['molid'] for atom in sliced_solvent)
@@ -432,11 +491,21 @@ def solvate(limits, density=1000.0, min_distance=2.0, max_solvent: Union[str, in
         
         # Use the central dispatcher to get neighbors and distances
         # It automatically handles Direct vs Sparse based on config.SPARSE_THRESHOLD
+        #
+        # KNOWN LIMITATION (triclinic shell mode): this shell-distance neighbour search
+        # passes `box_dim` (the orthogonal diagonal [lx,ly,lz]), NOT the real triclinic
+        # `Box`. For a tilted cell the PBC minimum image is therefore approximated as
+        # orthogonal, so molecules near the sheared faces may be included/excluded slightly
+        # wrongly at the shell boundary. The full-box fill, declash, and solute-merge paths
+        # all use the true triclinic Box and are correct; only this 'shellNN' cutoff is
+        # affected. Harmless for orthogonal cells (Box == box_dim). If triclinic shell
+        # solvation is ever needed, pass `Box if Box is not None else box_dim` here (and
+        # verify get_neighbor_list's triclinic min-image against a known reference).
         n_solute = len(solute_atoms)
         i_idx, j_idx, dists, _, _, _ = get_neighbor_list(
-            combined, 
-            box_dim, 
-            cutoff=shell_thickness, 
+            combined,
+            box_dim,
+            cutoff=shell_thickness,
             dm_method=None
         )
         

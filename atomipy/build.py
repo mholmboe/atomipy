@@ -2383,6 +2383,59 @@ def create_grid(atom_type, density, limits, resname='ION', molid=None):
     
     return atoms, box
 
+def split_slabs_by_molid(atoms, base_resname=None):
+    """Give each mineral MOLECULE (unique molid) a distinct residue name so the topology
+    writer emits one ``[ moleculetype ]`` per molecule/slab.
+
+    Use for stacked clay layers that differ (e.g. 3 layers with molid 1/2/3 ->
+    residue names MIN1/MIN2/MIN3 -> three ``[ moleculetype ]`` blocks and
+    ``[ molecules ] MIN1 1 / MIN2 1 / MIN3 1``). Water and monatomic counter-ions are
+    left untouched. The atom list is modified in place and returned.
+
+    Guarded against per-atom molids: if the mineral has only one molid, or any molid group
+    has fewer than two atoms (a sign of per-atom ids, e.g. from a stray import), the atoms
+    are returned unchanged with a printed note — so it never explodes into thousands of
+    moleculetypes.
+
+    Parameters
+    ----------
+    atoms : list of dict
+    base_resname : str, optional
+        Stem for the generated names (default: the first mineral atom's resname with any
+        trailing digits stripped, else ``'MIN'``). Names are ``f'{base}{k}'`` for k=1..N in
+        molid order.
+    """
+    import re as _re
+    from .forcefield import _is_solvent_or_ion
+    mineral_idx = [i for i, a in enumerate(atoms) if not _is_solvent_or_ion(a)]
+    if not mineral_idx:
+        return atoms
+    order = []
+    groups = {}
+    for i in mineral_idx:
+        m = atoms[i].get('molid', 1)
+        if m not in groups:
+            groups[m] = []
+            order.append(m)
+        groups[m].append(i)
+    if len(order) <= 1:
+        return atoms
+    if any(len(groups[m]) < 2 for m in order):
+        print("  split_slabs_by_molid: mineral molids look per-atom (a group has < 2 atoms) "
+              "— skipping the split (one [ moleculetype ] kept).")
+        return atoms
+    if base_resname is None:
+        _rn0 = str(atoms[mineral_idx[0]].get('resname', 'MIN') or 'MIN')
+        base_resname = _re.sub(r'\d+$', '', _rn0) or 'MIN'
+    for k, m in enumerate(order, 1):
+        new_rn = f"{base_resname}{k}"
+        for i in groups[m]:
+            atoms[i]['resname'] = new_rn
+    print(f"  split_slabs_by_molid: {len(order)} mineral molecules -> "
+          f"{base_resname}1..{base_resname}{len(order)} (one [ moleculetype ] each).")
+    return atoms
+
+
 def join_and_reorder(*atom_lists) -> list:
     """
     Join multiple atom lists together and sequentially reorder their molecule IDs (molid).
