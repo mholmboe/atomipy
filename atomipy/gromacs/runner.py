@@ -20,6 +20,30 @@ from .mdp import mdp as _mdp_text, build_defines
 _MINFF_SRC = Path(__file__).resolve().parent.parent / "ffparams" / "min.ff"
 
 
+def write_freeze_ndx(workdir, n_frozen, n_total, *, group="frozen", ndx="index.ndx"):
+    """Write a GROMACS index file for freezing the first ``n_frozen`` atoms.
+
+    Used by the frozen "Dummy FF" mineral path: the framework atoms are written
+    FIRST in the .gro/.top (see :func:`atomipy.write_dummy_system_top`), so they are
+    the contiguous 1-based indices ``1..n_frozen``. The file holds two groups:
+
+      * ``System`` — all atoms (so the .mdp's ``tc-grps = System`` still resolves
+        when grompp is given this file with ``-n``);
+      * ``group`` (default ``frozen``) — the framework, referenced by ``freezegrps``.
+
+    Returns the ndx filename (relative to ``workdir``).
+    """
+    def _emit(name, idxs):
+        out = [f"[ {name} ]"]
+        for i in range(0, len(idxs), 15):
+            out.append(" ".join(str(x) for x in idxs[i:i + 15]))
+        return out
+    lines = _emit("System", list(range(1, int(n_total) + 1)))
+    lines += _emit(group, list(range(1, int(n_frozen) + 1)))
+    (Path(workdir) / ndx).write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return ndx
+
+
 def _default_gmx():
     """Preferred default GROMACS when the user hasn't specified a path.
 
@@ -479,8 +503,13 @@ def _stream(cmd, cwd, env):
 
 def run_stage(workdir, stage, struct_in, *, defines=None, gmx="gmx", maxwarn=2,
               restraint=None, top="topol.top", ntmpi=1, ntomp=None, mdp_text=None,
-              **mdp_kwargs):
+              ndx=None, **mdp_kwargs):
     """Generate the .mdp, run grompp then mdrun for one stage; yield log lines.
+
+    ``ndx`` is an optional index file (relative to ``workdir``) passed to grompp
+    with ``-n`` — required when the .mdp references a custom group (e.g. the
+    ``freezegrps`` group for a frozen Dummy FF mineral). Any remaining
+    ``mdp_kwargs`` (including ``freeze_group``) flow to :func:`mdp`.
 
     Yields str log lines, then a final dict {'stage','returncode','gro'} where
     'gro' is the output coordinate file (``{stage}.gro``) if mdrun succeeded.
@@ -499,6 +528,8 @@ def run_stage(workdir, stage, struct_in, *, defines=None, gmx="gmx", maxwarn=2,
               "-o", f"{stage}.tpr", "-maxwarn", str(maxwarn)]
     if restraint:
         grompp += ["-r", restraint]
+    if ndx:
+        grompp += ["-n", ndx]
     rc = 0
     yield f"$ {' '.join(grompp)}"
     for item in _stream(grompp, str(wd), env):

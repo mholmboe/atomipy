@@ -51,7 +51,8 @@ def _render(pairs):
 
 def mdp(stage, *, defines=None, nsteps=None, dt=0.001, temperature=298.0,
         pressure=1.0, nstxtc=1000, nstenergy=100, nstlog=100,
-        emtol=1000.0, emstep=0.01, gen_vel=None, continuation=None):
+        emtol=1000.0, emstep=0.01, gen_vel=None, continuation=None,
+        freeze_group=None, freeze_dim="Y Y Y"):
     """Return .mdp text for a stage: 'em', 'nvt', 'npt', or 'md'.
 
     Parameters
@@ -66,11 +67,23 @@ def mdp(stage, *, defines=None, nsteps=None, dt=0.001, temperature=298.0,
         Timestep in ps (default 0.001 = 1 fs).
     temperature, pressure : float
         Reference T (K) and P (bar) for coupling.
+    freeze_group : str, optional
+        Index-group name to hold rigid via ``freezegrps`` (all dimensions by
+        default). Used for the frozen "Dummy FF" mineral — a bond-free framework
+        that would otherwise drift apart with no bonded terms and no mass=0. The
+        group must exist in the ``.ndx`` passed to grompp (see
+        :func:`atomipy.gromacs.runner.write_freeze_ndx`). Works for EM and dynamics.
+    freeze_dim : str
+        The ``freezedim`` value (default ``"Y Y Y"`` — frozen in x, y and z).
     """
     if defines is None:
         defines = build_defines()
     define_line = " ".join(defines)
     pairs = [("define", define_line)]
+    # freezegrps holds the named group rigid — the .mdp counterpart of OpenMM's
+    # setParticleMass(i, 0). Appended to whichever stage's pairs are returned below.
+    freeze_pairs = ([("freezegrps", freeze_group), ("freezedim", freeze_dim)]
+                    if freeze_group else [])
 
     if stage == "em":
         pairs += [
@@ -85,6 +98,7 @@ def mdp(stage, *, defines=None, nsteps=None, dt=0.001, temperature=298.0,
         ]
         pairs += list(_COMMON.items())
         pairs += [("DispCorr", "No")]
+        pairs += freeze_pairs
         return _render(pairs)
 
     # dynamics stages
@@ -92,8 +106,18 @@ def mdp(stage, *, defines=None, nsteps=None, dt=0.001, temperature=298.0,
         ("integrator", "md"),
         ("nsteps", str(nsteps if nsteps is not None else (50000 if stage == "md" else 20000))),
         ("dt", str(dt)),
-        ("nstcomm", "100"),
-        ("comm-mode", "Linear"),
+    ]
+    # Center-of-mass motion removal. GROMACS COM removal is mass-weighted and a
+    # frozen atom keeps its real mass, so removing the whole-system COM velocity
+    # would translate the frozen framework (it inherits -v_com). OpenMM's mass=0
+    # excludes frozen atoms from the COM entirely, so to match it we disable COM
+    # removal when freezing — the frozen wall then defines the reference frame and
+    # stays exactly put.
+    if freeze_group:
+        pairs += [("comm-mode", "None")]
+    else:
+        pairs += [("nstcomm", "100"), ("comm-mode", "Linear")]
+    pairs += [
         ("nstxout-compressed", str(nstxtc)),
         ("nstenergy", str(nstenergy)),
         ("nstlog", str(nstlog)),
@@ -124,4 +148,5 @@ def mdp(stage, *, defines=None, nsteps=None, dt=0.001, temperature=298.0,
     if gv:
         pairs += [("gen_vel", "yes"), ("gen_temp", str(temperature)), ("gen_seed", "-1")]
     pairs += [("DispCorr", "EnerPres")]
+    pairs += freeze_pairs
     return _render(pairs)

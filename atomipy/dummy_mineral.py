@@ -592,20 +592,26 @@ def write_dummy_system_top(atoms, box, out_top, out_gro, water_model='spce',
         f.write('[ defaults ]\n')
         f.write('; nbfunc   comb-rule   gen-pairs   fudgeLJ   fudgeQQ\n')
         f.write('  1        2           yes         0.5       0.8333333333\n\n')
-        f.write(f'#include "{_os.path.basename(dummy_itp)}"\n')   # dummy [atomtypes] + DUM moltype
-        for oi in organic_itps:
-            f.write(f'#include "{_os.path.basename(oi)}"\n')       # organic [atomtypes] + moltype
-        f.write('\n')
+        # GROMACS requires ALL [ atomtypes ] to appear before the first
+        # [ moleculetype ] (an [atomtypes] after a moleculetype is a fatal
+        # "Invalid order for directive atomtypes"). So emit every atomtypes-bearing
+        # include FIRST — the min.ff water/ion atomtypes (ffnonbonded.itp), then the
+        # dummy [atomtypes]+DUM moleculetype — and only then the moleculetype-only
+        # water/ion includes. (The #defines must precede ffnonbonded, which is
+        # #ifdef-guarded on the water/ion model.)
         if n_water or ion_seq:
             f.write(f'#define {water_define}\n')
             if ion_define:
                 f.write(f'#define {ion_define}\n')   # activates ion atomtypes + moleculetypes
-            f.write('#include "min.ff/ffnonbonded.itp"\n')
-            if n_water:
-                f.write(f'#include "min.ff/{wm_file}.itp"\n')
-            if ion_seq:
-                f.write('#include "min.ff/ions.itp"\n')
-            f.write('\n')
+            f.write('#include "min.ff/ffnonbonded.itp"\n')   # water/ion [atomtypes] (must precede any moleculetype)
+        f.write(f'#include "{_os.path.basename(dummy_itp)}"\n')   # dummy [atomtypes] + DUM moltype
+        for oi in organic_itps:
+            f.write(f'#include "{_os.path.basename(oi)}"\n')       # organic [atomtypes] + moltype
+        if n_water:
+            f.write(f'#include "min.ff/{wm_file}.itp"\n')
+        if ion_seq:
+            f.write('#include "min.ff/ions.itp"\n')
+        f.write('\n')
         f.write('[ system ]\n')
         f.write('Frozen dummy mineral + solvent\n\n')
         f.write('[ molecules ]\n')
