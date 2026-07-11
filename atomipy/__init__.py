@@ -221,7 +221,7 @@ try:
 except ImportError:
     pass
 
-# ===== Frozen dummy mineral (non-MINFF inorganics) =====
+# ===== Frozen dummy mineral / Dummy FF (inorganics not covered by MINFF/CLAYFF) =====
 try:
     from .dummy_mineral import (assign_dummy_mineral_params, write_dummy_mineral_itp,
                                 write_dummy_system_top, pauling_effective_charge,

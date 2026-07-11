@@ -707,7 +707,8 @@ Lennard-Jones parameters come from `lj_mode` (all van der Waals data is from
   clamped to within one order of magnitude of the OPC3-oxygen ε. A very short bond
   (shorter than the OPC3 oxygen radius, e.g. tetrahedral Si⁴⁺) gives M no LJ
   (Coulomb only — a small, buried, shielded core). A pure-metal structure (no
-  anions) uses per-element UFF radii instead.
+  anions) uses per-element UFF radii instead. Needs `Box` for the coordination
+  numbers used in the Shannon lookup.
 - **`element`** — the Dummy FF's own per-element **UFF** LJ (`σ = x_i/2^(1/6)`,
   `ε = D_i·4.184`) for every element including O/F/H. Each element gets its own
   size (Mn ≠ Al), no borrowing. `ap.uff_lj(element)` exposes the conversion.

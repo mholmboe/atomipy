@@ -81,7 +81,7 @@ inorganic-crystal (517) libraries, and provenance headers on every exported file
 * **`assign_dummy_mineral_params`**: a frozen-framework model that lets MINFF-unsupported inorganics interact with water/solutes electrostatically (EM/NVT only).
 * **Pauling effective charges** `q_eff = q_formal·[1 − exp(−¼(χ_O − χ_M)²)]`; H fixed at **+0.4**; **F** supported.
 * **MINFF coordination-resolved oxygen charges** `q_O = −2.0 + Σⱼ (Formalⱼ − Partialⱼ)/CNⱼ`.
-* **Lennard-Jones** (default `lj_mode='shannon'`): O→OPC3 water-oxygen LJ, H→none, every other element's LJ minimum placed at its Shannon-crystal M–O bond distance (r_min matching), ε from per-element UFF clamped to within one order of magnitude of the OPC3-oxygen ε. All vdW from UFF (Rappé 1992); modes `element` and `minff` also available. Frozen under both engines (OpenMM mass=0; GROMACS `freezegrps`).
+* **Lennard-Jones** (default `lj_mode='shannon'`): O→OPC3 water-oxygen LJ, H→none, every other element's LJ minimum placed at its Shannon-crystal M–O bond distance (r_min matching), ε from per-element UFF clamped to within one order of magnitude of the OPC3-oxygen ε. All vdW from UFF (Rappé 1992); modes `element` and `minff` also available. Frozen under both engines (OpenMM mass=0; GROMACS `freezegrps`). Qualitative model — EM/NVT only.
 * Exposes MINFF global cutoffs (`rmaxlong`, `rmaxH`); coordination typing is purely geometric (ignores molids).
 * Self-contained dummy+water topology writer; supports organics/ions; **water/ions/organics are left untouched** (identical to a mixed MINFF run).
 
