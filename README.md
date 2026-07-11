@@ -69,6 +69,7 @@ atominpython/                # Repository root
 │   ├── data/                # Reference data (Shannon radii, BV params)
 │   ├── ffparams/            # Force field parameters (GMINFF/TMINFF JSONs & ITPs)
 │   ├── structures/          # Bundled library of mineral structures
+│   ├── gromacs/             # Local GROMACS engine (detect gmx, .mdp, grompp/mdrun, trjconv, energy)
 │   ├── __init__.py          # Package init, public API exports
 │   ├── analysis.py          # High-performance analysis (RDF, CN, unwrap)
 │   ├── bond_angle.py        # Topology analysis (bonds, angles, dihedrals)
@@ -76,10 +77,17 @@ atominpython/                # Repository root
 │   ├── build.py             # Structure manipulation, merge & substitutions
 │   ├── cell_utils.py        # Box_dim ↔ Cell conversion utilities
 │   ├── charge.py            # Charge assignment logic
+│   ├── composition.py       # System composition / atom classification (water/ion/organic)
+│   ├── dcd.py               # Zero-dependency pure-Python DCD trajectory reader
+│   ├── diffraction.py       # XRD pattern calculation
 │   ├── distances.py         # O(N) Sparse & O(N²) Direct distance dispatchers
+│   ├── dummy_mineral.py     # Dummy FF (frozen framework) for non-MINFF/CLAYFF inorganics
 │   ├── element.py           # Chemical element assignment
 │   ├── forcefield.py        # MINFF/CLAYFF force field logic
+│   ├── merge_top.py         # Merge mineral + organic/water/ion topologies into one .top
 │   ├── move.py              # Translate, rotate, place, center, bend
+│   ├── openmm_interface.py  # OpenMM topology/system loader
+│   ├── oxidation.py         # Oxidation-state guessing (Shannon/ionic)
 │   ├── replicate.py         # Supercell replication
 │   ├── solvent.py           # Solvation & water molecule repairs
 │   ├── transform.py         # Coordinate transformations (frac/cart/wrap)
@@ -149,7 +157,7 @@ Understanding the core containers and fields used in atomipy makes it easier to 
   - Merge multiple complex topology systems and linkages cleanly (`merge_top.py`).
   - Perform residue-level composition counting and system-wide mass calculations (`composition.py`).
 - Support for multiple forcefields: MINFF and CLAYFF atom typing and parameter assignment
-- Import/export PDB, Gromacs GRO, XYZ, CIF/mmCIF, PQR, POSCAR, SDF, and trajectories
+- Import/export PDB, Gromacs GRO, XYZ, CIF/mmCIF, PQR, POSCAR, SDF, and trajectories (multi-frame PDB/GRO plus GROMACS `.xtc`/`.trr` and `.dcd` import)
 - CIF/mmCIF to PDB conversion helper (`scripts/run_cif2pdb.py`) with symmetry expansion
 - Generation of GROMACS n2t (atom name to type) files for use with gmx x2top
 - High-performance X-ray diffraction pattern simulation and plotting
@@ -194,7 +202,7 @@ Understanding the core containers and fields used in atomipy makes it easier to 
 - tqdm (>=4.45.0) - for progress bars
 - Numba (>=0.50.0, optional) - for performance optimization via JIT compilation
 - Matplotlib + SciPy (optional, required for XRD plotting and `.mat` export)
-- GEMMI (optional, required for CIF/mmCIF import/export and `scripts/run_cif2pdb.py`)
+- GEMMI (>=0.7.0, **required** — core dependency; used for CIF/mmCIF import + symmetry expansion and the bundled inorganic crystal library)
 
 ## Installation
 
@@ -216,12 +224,10 @@ If you're new to Python, follow these simple steps to get started with atomipy:
    git clone https://github.com/mholmboe/atomipy.git
    cd atomipy
    pip install -e .
-   # Optional CIF/mmCIF extras:
-   pip install -e ".[cif]"
-   # Optional XRD extras:
+   # Optional XRD extras (Matplotlib + SciPy):
    pip install -e ".[xrd]"
-   # Optional CIF + XRD extras together:
-   pip install -e ".[cif,xrd]"
+   # (gemmi for CIF/mmCIF is a core dependency, installed by default;
+   #  the legacy ".[cif]" extra is now a no-op.)
    ```
 
 #### Method 2: Manual Installation
@@ -236,12 +242,10 @@ If you're new to Python, follow these simple steps to get started with atomipy:
 5. Install the package and its dependencies:
    ```bash
    pip install -e .
-   # Optional CIF/mmCIF extras:
-   pip install -e ".[cif]"
-   # Optional XRD extras:
+   # Optional XRD extras (Matplotlib + SciPy):
    pip install -e ".[xrd]"
-   # Optional CIF + XRD extras together:
-   pip install -e ".[cif,xrd]"
+   # (gemmi for CIF/mmCIF is a core dependency, installed by default;
+   #  the legacy ".[cif]" extra is now a no-op.)
    ```
 
 ### Step 3: Verify Installation
@@ -505,7 +509,7 @@ What it supports:
 - `import_cjson(file_path, resname=None)`: Import a Chemical JSON (`.cjson`/`.json`) file (Avogadro2 / Open Chemistry format), returning `(atoms, Cell)`. Carries 3D coordinates, bonds (with order), formal charges, and partial charges.
 - `import_pqr(file_path)`: Import a PQR file (charge and radius in place of occupancy/temp).
 - `import_poscar(file_path)`: Import VASP POSCAR/CONTCAR files (fractional or Cartesian).
-- `import_traj(file_path)`: Multi-frame importer for .pdb or .gro trajectory files.
+- `import_traj(file_path, top=None, stride=1, start=0, stop=None)`: Multi-frame importer for `.pdb`/`.gro`, GROMACS `.xtc`/`.trr` (via the optional `libxdrfile`, or a `gmx trjconv` fallback — pass `top=` a companion `.gro`/`.pdb`/`.cif` for atom names/types), and `.dcd` (built-in zero-dependency reader) / `.nc`/`.h5`/`.lammpstrj` (via optional `mdtraj`). `stride`/`start`/`stop` subsample frames.
 - `import_auto(file_path)`: Auto-detect format and import.
 - `write_pdb(atoms, Box, file_path, ...)`: Write atoms to a PDB file with formal charge and scale matrices.
 - `write_gro(atoms, Box, file_path)`: Write atoms to a Gromacs GRO file (coordinates in nm).
@@ -625,10 +629,12 @@ standalone wherever a `gmx` binary is available.
 
 - `detect_gmx(gmx='gmx')`: locate/validate a GROMACS install (a `gmx` binary, a `GMXRC`, or an install dir) and report its version.
 - `mdp(stage, ...)` / `build_defines(...)`: generate `.mdp` text for `em`/`nvt`/`npt`/`md` and the MINFF/CLAYFF `-D` defines.
-- `stage_minff(workdir, defines=...)`: copy the (define-aware) `min.ff` force field into the run directory.
-- `run_stage(...)`, `run_pipeline(...)`, `run_local_gmx(workdir, top, gro, stages, ...)`: run grompp + mdrun for one or more stages; accepts a verbatim `mdp_text` to override the generated `.mdp`.
+- `stage_run_dir(...)` / `stage_minff(workdir, defines=...)`: stage the run directory / copy the (define-aware) `min.ff` force field into it.
+- `write_freeze_ndx(workdir, n_frozen, n_total)`: write an index file (`[System]` + `[frozen]`) for the frozen **Dummy FF** framework, passed to `grompp -n` so `freezegrps`/`freezedim` hold it rigid (`mdp(..., freeze_group='frozen')` also sets `comm-mode=None`).
+- `run_stage(...)`, `run_pipeline(...)`, `run_local_gmx(workdir, top, gro, stages, ..., ndx=..., freeze_group=...)`: run grompp + mdrun for one or more stages; accepts a verbatim `mdp_text` to override the generated `.mdp`, and an `ndx`/`freeze_group` for a frozen framework.
 - `trjconv_to_pdb(workdir, tpr=..., xtc=..., out=..., pbc='atom', ...)`: convert an `.xtc`/`.trr` trajectory to a multi-frame PDB (box per frame) for viewing/analysis.
-- `energy_timeseries(workdir, edr, terms=..., ...)`: parse `.edr` thermodynamics (potential/temperature/pressure/volume/density vs time) via `gmx energy`.
+- `trjconv(workdir, tpr=..., src=..., out=..., pbc='mol', ...)`: general format conversion via `gmx trjconv` — the output format follows the `out` extension (`.xtc`/`.trr`/`.gro`/`.pdb`).
+- `energy_timeseries(workdir, edr, terms=..., ...)`: parse `.edr` thermodynamics (potential/temperature/pressure/volume/density vs time) via `gmx energy`, returning a `{time, series}` dict (one series per requested term).
 
 ### Cell Utilities
 
@@ -690,20 +696,32 @@ builds a crude qualitative model. Charges follow one of two modes:
   neutral (`ap.pauling_effective_charge(ox, element)` exposes the cation formula).
 - **`half`** — legacy `charge_scale × oxidation state` for every atom.
 
-Lennard-Jones parameters come from `lj_mode`:
-- **`element`** (default) — the Dummy FF computes its *own* per-element LJ from
-  van der Waals data: the curated `ELEMENT_LJ` (Heinz et al. 2008 fcc metals
-  Cu/Ag/Au/Ni/Pd/Pt/Al/Pb) for a **pure metal/alloy**, otherwise **UFF**
-  (`σ = x_i/2^(1/6)`, `ε = D_i`; Rappé 1992) for every element including O/F/H.
-  Each element gets its own size (Mn ≠ Al), no borrowing. `ap.uff_lj(element)`
-  exposes the conversion.
+Lennard-Jones parameters come from `lj_mode` (all van der Waals data is from
+**UFF**, Rappé 1992):
+- **`shannon`** (default) — oxygen (any) gets the **OPC3** water-oxygen LJ
+  (σ=0.31743 nm, ε=0.68369 kJ/mol); hydrogen gets **zero** LJ; every other element
+  M has its LJ *minimum* placed at the Shannon **crystal** M–O bond distance
+  `d_MO = r_M + r_O`. Under Lorentz–Berthelot the M–O pair minimum is
+  `(r_min_M + r_min_O)/2`, so `r_min_M = 2·d_MO − r_min_O(OPC3)` and
+  `σ_M = r_min_M / 2^(1/6)`. The well *depth* ε_M is the per-element UFF value,
+  clamped to within one order of magnitude of the OPC3-oxygen ε. A very short bond
+  (shorter than the OPC3 oxygen radius, e.g. tetrahedral Si⁴⁺) gives M no LJ
+  (Coulomb only — a small, buried, shielded core). A pure-metal structure (no
+  anions) uses per-element UFF radii instead.
+- **`element`** — the Dummy FF's own per-element **UFF** LJ (`σ = x_i/2^(1/6)`,
+  `ε = D_i·4.184`) for every element including O/F/H. Each element gets its own
+  size (Mn ≠ Al), no borrowing. `ap.uff_lj(element)` exposes the conversion.
 - **`minff`** — borrow from MINFF: oxygen → OPC3-O, fluorine → F⁻, H → none,
   metals → a small buried site (default `metal_site='Alo'`). Stronger O–water
-  attraction. The framework is flagged **frozen**. Freezing means
-**no bonded parameters are needed**, so only nonbonded terms remain — the
-material interacts with water/solutes via electrostatics + LJ.
+  attraction.
 
-- `assign_dummy_mineral_params(atoms, Box=None, charge_mode='pauling', lj_mode='element', metal_site='Alo', rmaxlong=2.45, rmaxH=1.2)`: assign per-atom charge/LJ + the frozen flag (in place). Pass `Box` for the coordination-resolved oxygen charges. Returns `(atoms, report)`.
+The framework is flagged **frozen**. Freezing means **no bonded parameters are
+needed**, so only nonbonded terms remain — the material interacts with
+water/solutes via electrostatics + LJ. In OpenMM the frozen particles get mass 0;
+in the local GROMACS engine they are held rigid via `freezegrps`/`freezedim` in
+the `.mdp` plus an index group written by `ap.gromacs.write_freeze_ndx`.
+
+- `assign_dummy_mineral_params(atoms, Box=None, charge_mode='pauling', lj_mode='shannon', metal_site='Alo', rmaxlong=2.45, rmaxH=1.2)`: assign per-atom charge/LJ + the frozen flag (in place). Pass `Box` (needed by `shannon` for coordination) and for the coordination-resolved oxygen charges. Returns `(atoms, report)`.
 - `write_dummy_mineral_itp(atoms, 'dummy.itp', mol_name='DUM')`: a self-contained `.itp` (own `[ atomtypes ]` + bond-free `[ moleculetype ]`) that `#include`s like an organic itp.
 - `write_dummy_system_top(atoms, box, out_top, out_gro, water_model='spce', organic_itps=None)`: a complete `.top` + `.gro` for a frozen framework **plus organics, water and ions** — multiple dummy minerals, several different organics (each `#include`d), and Na/Cl etc. are all supported; returns `(ordered_atoms, n_frozen)` so the caller freezes the leading framework particles. Atoms are ordered framework → organics → ions → water (SOL last).
 
@@ -1114,6 +1132,22 @@ run_openmm_simulation(
 ## Differences from atom MATLAB library
 
 This Python implementation is designed to provide similar functionality to the MATLAB atom library while following Python's conventions and making use of NumPy for efficient numerical operations. The data structure is dictionary-based rather than struct-based, and the function interfaces are designed for Python's style.
+
+## Acknowledgements & External Tools
+
+atomipy relies on and interoperates with several external projects, each the property of its
+respective authors and used under its own license:
+
+- **Numerics** — [NumPy](https://numpy.org/), [Numba](https://numba.pydata.org/) (optional), [tqdm](https://tqdm.github.io/).
+- **Structure & trajectory I/O** — [GEMMI](https://gemmi.readthedocs.io/) (CIF/mmCIF, optional); GROMACS `libxdrfile` (`.xtc`/`.trr`) and [MDTraj](https://www.mdtraj.org/) (optional binary trajectories). The bundled inorganic crystal library derives from the [Avogadro](https://avogadro.cc/) collection.
+- **Simulation** — [OpenMM](https://openmm.org/) and [GROMACS](https://www.gromacs.org/).
+- **Organic force fields** — [OpenFF Toolkit / Interchange](https://openforcefield.org/) (Sage, Parsley), [openmmforcefields](https://github.com/openmm/openmmforcefields) + [ParmEd](https://parmed.github.io/ParmEd/) and/or [ACPYPE](https://github.com/alanwilter/acpype) + AmberTools *antechamber* (GAFF), with [RDKit](https://www.rdkit.org/) / [Open Babel](https://openbabel.org/).
+- **Force fields** — [MINFF](https://github.com/mholmboe/minff); CLAYFF (Cygan, Liang & Kalinichev, *J. Phys. Chem. B* **2004**, *108*, 1255); GAFF; OpenFF (Sage/Parsley).
+- Ported from the MATLAB [atom](https://github.com/mholmboe/atom) toolbox.
+
+## Disclaimer
+
+atomipy and its bundled force-field implementations (e.g. MINFF, CLAYFF, and the Dummy FF) are provided **as-is** as a beta/research tool, with **no warranty** of any kind. There is **no guarantee** that the generated structures, topologies, force-field parameters, or analysis/simulation results are correct. The author accepts **no responsibility or liability** for the accuracy of atomipy or the force-field implementations, or for any use of their output. **Users are responsible** for verifying that all generated files and results are reasonable and suitable for their purposes. **Use at your own risk.**
 
 ## License
 

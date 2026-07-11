@@ -223,7 +223,7 @@ except ImportError:
 
 # ===== Frozen dummy mineral (non-MINFF inorganics) =====
 try:
-    from .dummy_mineral import (assign_dummy_mineral_params, write_dummy_mineral_itp, ELEMENT_LJ,
+    from .dummy_mineral import (assign_dummy_mineral_params, write_dummy_mineral_itp,
                                 write_dummy_system_top, pauling_effective_charge,
                                 uff_lj, UFF_VDW,
                                 MINFF_LJ_SITES, MINFF_FRAMEWORK_ELEMENTS)
@@ -291,7 +291,7 @@ __all__ = [
     'compute_bvs', 'global_instability_index', 'load_bv_params', 'load_shannon_radii', 'bond_valence', 'summarize_bvs',
     'analyze_bvs', 'conf2bvs', 'add_hydrogens_bvs',
     'guess_oxidation_states', 'PAULING_EN',
-    'assign_dummy_mineral_params', 'write_dummy_mineral_itp', 'write_dummy_system_top', 'ELEMENT_LJ', 'pauling_effective_charge', 'uff_lj', 'UFF_VDW', 'MINFF_LJ_SITES', 'MINFF_FRAMEWORK_ELEMENTS',
+    'assign_dummy_mineral_params', 'write_dummy_mineral_itp', 'write_dummy_system_top', 'pauling_effective_charge', 'uff_lj', 'UFF_VDW', 'MINFF_LJ_SITES', 'MINFF_FRAMEWORK_ELEMENTS',
     'get_radius', 'bond_distance',
     'unwrap_coordinates', 'calculate_rdf', 'coordination_number', 'closest_atom', 'min_distances',
     'density_profile', 'rdf_frames', 'density_frames', 'msd', 'displacement_distribution',

@@ -6,13 +6,19 @@ For a material whose framework atom types the built-in force fields can't assign
 (e.g. MnO, NiO, Cr2O3, …), this builds a crude-but-usable model so it can still
 interact with water and solutes in a qualitative simulation:
 
-  * Partial charges  = ``charge_scale`` (default 0.5) × the guessed oxidation
-    state (see :func:`atomipy.guess_oxidation_states`). Half the formal charge
-    mirrors the reduced charges of CLAYFF / MINFF and keeps a neutral lattice
-    neutral.
-  * Lennard-Jones    = borrowed: every oxygen gets the OPC3 water oxygen
-    (σ=0.31743 nm, ε=0.68369 kJ/mol), and every metal/cation gets a small buried
-    metal site (default ``Alo``, σ=0.14410 nm). Hydrogens get zero LJ.
+  * Partial charges  = (default ``charge_mode='pauling'``) each cation gets a
+    Pauling effective charge and the anions balance it via a coordination-resolved
+    formula, keeping a neutral lattice neutral; the legacy ``'half'`` mode uses
+    ``charge_scale`` (default 0.5) × the guessed oxidation state
+    (see :func:`atomipy.guess_oxidation_states`).
+  * Lennard-Jones    = (default ``lj_mode='shannon'``) every oxygen gets the OPC3
+    water oxygen (σ=0.31743 nm, ε=0.68369 kJ/mol); hydrogens get zero LJ; every
+    other element M has its LJ minimum placed at the Shannon **crystal** M–O bond
+    distance (r_min matching, so r_min_M = 2·d_MO − r_min_O; ε_M = per-element UFF well
+    depth clamped to within one order of magnitude of the OPC3-O ε). Very short M–O
+    bonds (shorter than the OPC3 oxygen radius, e.g. tetrahedral Si⁴⁺) give M no LJ
+    (Coulomb only). A pure-metal structure uses neutral-atom radii. Other
+    modes ('element', 'minff') are available — see :func:`assign_dummy_mineral_params`.
   * The framework is **frozen** (atoms flagged ``frozen=True``; the OpenMM layer
     sets their mass to 0). Freezing removes the need for ANY bonded parameters —
     exactly what's missing for an unsupported framework — so only nonbonded
@@ -89,27 +95,6 @@ def uff_lj(element):
         return None
     x_i, d_i = entry
     return (round(x_i * _TWO_POW_NEG_SIXTH / 10.0, 6), round(d_i * _KCAL_TO_KJ, 6))
-
-# Element-appropriate metal Lennard-Jones (sigma_nm, epsilon_kJ/mol), for *pure
-# metals / alloys* where the borrowed buried-cation site is inappropriate. The
-# face-centred-cubic metals use the well-validated 12-6 parameters of Heinz et
-# al., J. Phys. Chem. C 2008, 112, 17281 (good for metal–water/biomolecule
-# interfaces with Lorentz-Berthelot mixing); the remaining metals use UFF
-# (Rappe et al., JACS 1992) converted as sigma = x1 / 2^(1/6), eps = D1·4.184.
-# Generic/approximate — intended for a qualitative frozen wall, not energetics.
-ELEMENT_LJ = {
-    # fcc metals — Heinz 2008 12-6
-    'Al': (0.25527, 16.82), 'Ni': (0.22200, 23.64), 'Cu': (0.22770, 19.75),
-    'Pd': (0.24510, 25.73), 'Ag': (0.25740, 19.08), 'Pt': (0.24720, 32.64),
-    'Au': (0.25690, 22.13), 'Pb': (0.31190, 12.26),
-    # other common metals — UFF
-    'Li': (0.19457, 0.10460), 'Na': (0.23681, 0.12552), 'K': (0.30255, 0.14644),
-    'Mg': (0.23975, 0.46442), 'Ca': (0.26977, 0.99579), 'Sc': (0.26157, 0.07950),
-    'Ti': (0.25204, 0.07113), 'V': (0.24954, 0.06694), 'Cr': (0.23992, 0.06276),
-    'Mn': (0.23502, 0.05439), 'Fe': (0.23110, 0.05439), 'Co': (0.22798, 0.05858),
-    'Zn': (0.21934, 0.51882), 'Zr': (0.24793, 0.28886), 'Mo': (0.24224, 0.23430),
-    'Cd': (0.25373, 0.95395), 'W': (0.24358, 0.28033), 'Hg': (0.24099, 1.61084),
-}
 
 # Atomic masses (g/mol) for the topology. Frozen atoms get mass 0 in OpenMM, but
 # the .itp keeps real masses so the same topology is valid for a GROMACS export.
@@ -202,17 +187,62 @@ def _anion_charges_minff(atoms, ox, anion_idx, Box, verbose, rmaxlong=2.45, rmax
               f"(net charge will be non-zero).")
 
 
-def _element_lj(element):
-    """Best self-calculated LJ (sigma_nm, epsilon_kJ) for an element: the curated
-    ELEMENT_LJ value (Heinz metals + selected UFF) if present, else UFF computed
-    from vdW data, else None."""
-    if element in ELEMENT_LJ:
-        return ELEMENT_LJ[element]
-    return uff_lj(element)
+
+
+_TWO_POW_SIXTH = 2.0 ** (1.0 / 6.0)   # r_min = 2^(1/6) * sigma
+
+# Most common oxidation state in oxides, per element — used to pick the Shannon
+# radius when an element has several tabulated oxidation states (the 'shannon' LJ
+# mode). The structure-guessed oxidation state is tried as a fallback.
+MOST_COMMON_OXIDE_OX = {
+    'Li': 1, 'Be': 2, 'B': 3, 'C': 4, 'N': 5, 'Na': 1, 'Mg': 2, 'Al': 3, 'Si': 4,
+    'P': 5, 'S': 6, 'Cl': -1, 'K': 1, 'Ca': 2, 'Sc': 3, 'Ti': 4, 'V': 3, 'Cr': 3,
+    'Mn': 2, 'Fe': 3, 'Co': 2, 'Ni': 2, 'Cu': 2, 'Zn': 2, 'Ga': 3, 'Ge': 4, 'As': 5,
+    'Se': -2, 'Br': -1, 'Rb': 1, 'Sr': 2, 'Y': 3, 'Zr': 4, 'Nb': 5, 'Mo': 6, 'Ag': 1,
+    'Cd': 2, 'In': 3, 'Sn': 4, 'Sb': 3, 'Te': -2, 'I': -1, 'Cs': 1, 'Ba': 2, 'La': 3,
+    'W': 6, 'Pb': 2, 'Bi': 3, 'F': -1,
+}
+
+
+def _shannon_rmin_lj(element, ox_candidates, coordination, radii, r_O_crystal,
+                     rmin_O, eps_O):
+    """LJ (sigma_nm, epsilon_kJ/mol) for a metal/anion M so the M–O LJ *minimum* sits
+    at the Shannon crystal M–O bond distance.
+
+    The M–O bond distance is ``d_MO = (r_M + r_O)`` from Shannon CRYSTAL radii. Under
+    Lorentz–Berthelot the M–O pair minimum is ``(r_min_M + r_min_O)/2``, so requiring it
+    to equal d_MO gives ``r_min_M = 2·d_MO − r_min_O`` and ``sigma_M = r_min_M / 2^(1/6)``.
+    Because the minimum is placed exactly at d_MO, the LJ force there is zero for ANY
+    epsilon, so epsilon (the well *depth*) is a separate, free choice: the per-element UFF
+    well depth, clamped to within one order of magnitude of the OPC3 oxygen epsilon
+    (``eps_O``) so every M has a depth comparable to water oxygen.
+
+    ``r_min_O`` is the OPC3 oxygen r_min (nm). Tries each oxidation state in
+    ``ox_candidates`` in order. Returns:
+      * (sigma_M, eps_M) when r_min_M > 0;
+      * (0.0, 0.0) when the bond is shorter than the OPC3 oxygen radius (r_min_M ≤ 0) —
+        M then has no LJ (Coulomb only), being a small buried, shielded, frozen core;
+      * None when no Shannon crystal radius exists for any candidate (caller → UFF).
+    """
+    from .radius import get_radius
+    for ox in ox_candidates:
+        if ox is None:
+            continue
+        rM = get_radius(element, int(ox), int(coordination), radii=radii, prefer='crystal')
+        if rM and rM > 0:
+            d_MO = (rM + r_O_crystal) / 10.0            # Angstrom -> nm
+            rmin_M = 2.0 * d_MO - rmin_O
+            if rmin_M > 1e-3:
+                _u = uff_lj(element)
+                _e = _u[1] if _u else eps_O             # per-element UFF well depth
+                eps_M = min(max(_e, eps_O / 10.0), eps_O * 10.0)   # within 1 order of OPC3 O
+                return (round(rmin_M / _TWO_POW_SIXTH, 6), round(eps_M, 6))
+            return (0.0, 0.0)                           # floored: M–O shorter than OPC3 O radius
+    return None
 
 
 def assign_dummy_mineral_params(atoms, Box=None, charge_mode='pauling', charge_scale=0.5,
-                                h_charge=0.4, lj_mode='element', metal_site='Alo',
+                                h_charge=0.4, lj_mode='shannon', metal_site='Alo',
                                 resname='DUM', rmaxlong=2.45, rmaxH=1.2,
                                 freeze=True, verbose=True):
     """Assign Dummy FF parameters to a mineral framework in place.
@@ -247,12 +277,24 @@ def assign_dummy_mineral_params(atoms, Box=None, charge_mode='pauling', charge_s
         Multiplier for the 'half' mode (default 0.5).
     h_charge : float
         Fixed hydrogen charge in 'pauling' mode (default 0.4).
-    lj_mode : {'element', 'minff'}
-        Lennard-Jones source. 'element' (default): the Dummy FF computes its OWN
-        per-element LJ from vdW data — ELEMENT_LJ (Heinz metals + selected UFF)
-        where available, else UFF (σ = x_i/2^(1/6), ε = D_i) for every element
-        including O/F/H. 'minff': borrow from MINFF (O→OPC3, F→F⁻, H→none,
-        metals→`metal_site`), which gives stronger O–water attraction.
+    lj_mode : {'shannon', 'element', 'minff'}
+        Lennard-Jones source. 'shannon' (default):
+          * O (any oxygen) → the OPC3 water-oxygen LJ (σ=0.31743 nm, ε=0.68369 kJ/mol);
+          * H → zero LJ (σ=ε=0);
+          * every other element M → its LJ minimum is placed at the Shannon-crystal M–O
+            bond distance d_MO = r_M + r_O. Under Lorentz–Berthelot the M–O pair minimum
+            is (r_min_M + r_min_O)/2, so r_min_M = 2·d_MO − r_min_O(OPC3) and
+            σ_M = r_min_M / 2^(1/6). The well *depth* ε_M is independent of that (the force
+            is zero at d_MO for any ε): it is the per-element UFF well depth, clamped to
+            within one order of magnitude of the OPC3-oxygen ε. The oxidation state is the
+            element's most common one in oxides (see :data:`MOST_COMMON_OXIDE_OX`), falling
+            back to the structure-guessed state. If d_MO is shorter than the OPC3 oxygen
+            radius (r_min_M ≤ 0 — e.g. tetrahedral Si⁴⁺) M gets NO LJ (Coulomb only; it is
+            a small buried, shielded core). A PURE-METAL structure (no anions) instead uses
+            neutral-atom UFF vdW. Needs ``Box`` for coordination numbers.
+        'element': the Dummy FF's OWN per-element UFF LJ (σ = x_i/2^(1/6), ε = D_i·4.184)
+        for every element incl. O/F/H.
+        'minff': borrow from MINFF (O→OPC3, F→F⁻, H→none, metals→`metal_site`).
     metal_site : str
         MINFF LJ site used in 'minff' mode (and as the fallback for elements in
         no LJ table): 'Alo' (default), 'Sit', or 'Mgo'.
@@ -332,18 +374,40 @@ def assign_dummy_mineral_params(atoms, Box=None, charge_mode='pauling', charge_s
 
     # --- LJ, type, mass, freeze ---
     # lj_mode controls where Lennard-Jones parameters come from:
-    #   'element' (default) — the Dummy FF's OWN per-element LJ, computed from vdW
-    #       data: ELEMENT_LJ (Heinz metals + selected UFF) where available, else
-    #       UFF (sigma = x_i/2^(1/6), epsilon = D_i) for every element incl. O/F/H.
-    #       No MINFF borrowing; each element gets its own size.
+    #   'element' — the Dummy FF's OWN per-element UFF LJ (sigma = x_i/2^(1/6),
+    #       epsilon = D_i·4.184) for every element incl. O/F/H. Each element gets its
+    #       own size; no MINFF borrowing.
     #   'minff' — borrow from MINFF: O→OPC3 oxygen, F→F⁻, H→none, metals→the
     #       small buried-cation site (`metal_site`). Stronger O–water attraction.
-    # The curated metallic ELEMENT_LJ (Heinz 12-6) only makes sense for a PURE
-    # metal/alloy. In an ionic framework (anions present) those deep metallic
-    # wells are wrong for a cation, so use the UFF vdW LJ for every element.
+    # All metal/vdW LJ comes from UFF (Rappe 1992).
     _pure_metal = not any(float(o) < 0 for o in ox)
     non_minff = set()
     fallback_elems = set()
+    floored_elems = set()
+
+    # 'shannon' mode needs per-atom coordination numbers, the Shannon table, and the
+    # OPC3 oxygen r_min / Shannon O radius for the M–O r_min matching.
+    shannon_radii = None
+    cn_list = None
+    _O_opc3_sig, _O_opc3_eps = MINFF_LJ_SITES['O_opc3']
+    _rmin_O_opc3 = _TWO_POW_SIXTH * _O_opc3_sig     # OPC3 oxygen r_min (nm)
+    _rO_crystal = 1.26                              # Shannon crystal O^2- radius (Angstrom); refined below
+    if lj_mode == 'shannon':
+        from .bond_valence import load_shannon_radii
+        from .radius import get_radius as _get_radius
+        shannon_radii = load_shannon_radii()
+        _rO_crystal = _get_radius('O', -2, 6, radii=shannon_radii, prefer='crystal') or 1.26
+        # Coordination number = geometric neighbour count. Reuse the 'neigh' populated
+        # by the charge step if present, else compute it once (needs Box).
+        if Box is not None and not all(a.get('neigh') is not None for a in framework):
+            try:
+                from .bond_angle import bond_angle
+                bond_angle(framework, Box, rmaxM=rmaxlong, rmaxH=rmaxH,
+                           same_molecule_only=False, verbose=False)
+            except Exception:
+                pass
+        cn_list = [max(1, len(a.get('neigh') or [])) for a in framework]
+
     for i, atom in enumerate(framework):
         el = elements[i]
         if el not in MINFF_FRAMEWORK_ELEMENTS:
@@ -357,9 +421,32 @@ def assign_dummy_mineral_params(atoms, Box=None, charge_mode='pauling', charge_s
                 atom['sigma'], atom['epsilon'] = MINFF_LJ_SITES['H']
             else:
                 atom['sigma'], atom['epsilon'] = metal_sigma, metal_eps
-        else:  # 'element' — self-calculated per-element LJ from vdW data
-            lj = _element_lj(el) if _pure_metal else uff_lj(el)
-            if lj is None:                      # exotic element not in any table
+        elif lj_mode == 'shannon':
+            # O -> OPC3 water-oxygen LJ; H -> no LJ; every other element -> its LJ minimum
+            # placed at the Shannon crystal M–O bond distance (r_min matching, ε=OPC3-O ε).
+            # A pure-metal structure (no anions) uses neutral-atom radii instead.
+            if el == 'O':
+                atom['sigma'], atom['epsilon'] = (_O_opc3_sig, _O_opc3_eps)
+            elif el == 'H':
+                atom['sigma'], atom['epsilon'] = (0.0, 0.0)
+            elif _pure_metal:
+                lj = uff_lj(el)                    # neutral-atom UFF vdW
+                if lj is None:
+                    lj = (metal_sigma, metal_eps); fallback_elems.add(el)
+                atom['sigma'], atom['epsilon'] = lj
+            else:
+                lj = _shannon_rmin_lj(
+                    el, [MOST_COMMON_OXIDE_OX.get(el), int(round(float(ox[i])))],
+                    cn_list[i], shannon_radii, _rO_crystal, _rmin_O_opc3, _O_opc3_eps)
+                if lj is None:                     # no Shannon crystal radius -> UFF
+                    lj = uff_lj(el) or (metal_sigma, metal_eps)
+                    fallback_elems.add(el)
+                elif lj == (0.0, 0.0):             # bond shorter than OPC3 O radius -> no LJ
+                    floored_elems.add(el)
+                atom['sigma'], atom['epsilon'] = lj
+        else:  # 'element' — self-calculated per-element UFF LJ from vdW data
+            lj = uff_lj(el)
+            if lj is None:                      # exotic element not in the UFF table
                 lj = (metal_sigma, metal_eps)
                 fallback_elems.add(el)
             atom['sigma'], atom['epsilon'] = lj
@@ -373,8 +460,18 @@ def assign_dummy_mineral_params(atoms, Box=None, charge_mode='pauling', charge_s
     net_charge = round(sum(a['charge'] for a in framework), 6)
     if lj_mode == 'minff':
         _lj_desc = f"MINFF-borrowed (O=OPC3, F=F⁻, metals=site '{metal_site}')"
+    elif lj_mode == 'shannon':
+        if _pure_metal:
+            _lj_desc = "pure metal — neutral-atom UFF vdW; H=none"
+        else:
+            _lj_desc = ("O=OPC3, H=none, others: LJ minimum at Shannon-crystal M–O bond "
+                        "distance (r_min matching), ε=UFF clamped to ±1 order of OPC3-O ε")
+        if fallback_elems:
+            _lj_desc += f"; UFF fallback for {sorted(fallback_elems)}"
+        if floored_elems:
+            _lj_desc += f"; no-LJ (bond < OPC3-O radius) for {sorted(floored_elems)}"
     else:
-        _lj_desc = "self-calculated per-element (ELEMENT_LJ/UFF)"
+        _lj_desc = "self-calculated per-element UFF vdW"
         if fallback_elems:
             _lj_desc += f"; borrowed '{metal_site}' for {sorted(fallback_elems)}"
     report = {
