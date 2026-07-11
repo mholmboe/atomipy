@@ -374,6 +374,9 @@ def assign_dummy_mineral_params(atoms, Box=None, charge_mode='pauling', charge_s
 
     # --- LJ, type, mass, freeze ---
     # lj_mode controls where Lennard-Jones parameters come from:
+    #   'shannon' (default) — O→OPC3 water-oxygen LJ, H→none, and every other element M
+    #       has its LJ minimum placed at the Shannon-crystal M–O bond distance (ε from
+    #       per-element UFF clamped near the OPC3-oxygen ε); see the docstring above.
     #   'element' — the Dummy FF's OWN per-element UFF LJ (sigma = x_i/2^(1/6),
     #       epsilon = D_i·4.184) for every element incl. O/F/H. Each element gets its
     #       own size; no MINFF borrowing.
