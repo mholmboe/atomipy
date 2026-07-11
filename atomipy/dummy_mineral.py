@@ -419,13 +419,30 @@ def _unique_dummy_types(atoms):
     return types
 
 
-def write_dummy_mineral_itp(atoms, file_path, mol_name='DUM'):
+def _format_dummy_atomtypes(types):
+    """Return the ``[ atomtypes ]`` block text for a dummy-type map (the dict from
+    :func:`_unique_dummy_types`). Shared by the standalone .itp writer and the
+    consolidated (hoisted) ``[ atomtypes ]`` block in :func:`write_dummy_system_top`."""
+    out = ["[ atomtypes ]",
+           ";name  at.num   mass      charge  ptype     sigma       epsilon"]
+    for name, (el, sig, eps, mass, atn) in types.items():
+        out.append(f"{name:<6} {atn:>4}  {mass:>9.5f}  {0.0:>8.5f}  A  "
+                   f"{sig:>11.6f} {eps:>11.6f}")
+    return "\n".join(out) + "\n"
+
+
+def write_dummy_mineral_itp(atoms, file_path, mol_name='DUM', include_atomtypes=True):
     """Write a self-contained GROMACS .itp for a dummy mineral framework.
 
     Emits its own ``[ atomtypes ]`` (the borrowed LJ sites), a bond-free
     ``[ moleculetype ]`` and ``[ atoms ]`` (per-atom dummy type + scaled charge).
     No bonds/angles/dihedrals — the framework is held rigid by freezing, so the
     topology needs no MINFF bonded parameters. #include this like a GAFF itp.
+
+    ``include_atomtypes=False`` writes a moleculetype-ONLY itp (no ``[ atomtypes ]``);
+    used by :func:`write_dummy_system_top`, which hoists all atom types into a single
+    ``[ atomtypes ]`` block in the .top ahead of every moleculetype (GROMACS forbids
+    an ``[ atomtypes ]`` after a ``[ moleculetype ]``).
 
     Call :func:`assign_dummy_mineral_params` first.
     """
@@ -434,12 +451,9 @@ def write_dummy_mineral_itp(atoms, file_path, mol_name='DUM'):
         f.write(f"; {provenance_string()} — Dummy FF mineral topology\n")
         f.write(f"; FROZEN framework — nonbonded only (EM/NVT). Qualitative model.\n\n")
 
-        f.write("[ atomtypes ]\n")
-        f.write(";name  at.num   mass      charge  ptype     sigma       epsilon\n")
-        for name, (el, sig, eps, mass, atn) in types.items():
-            f.write(f"{name:<6} {atn:>4}  {mass:>9.5f}  {0.0:>8.5f}  A  "
-                    f"{sig:>11.6f} {eps:>11.6f}\n")
-        f.write("\n")
+        if include_atomtypes:
+            f.write(_format_dummy_atomtypes(types))
+            f.write("\n")
 
         f.write("[ moleculetype ]\n")
         f.write(";name            nrexcl\n")
@@ -484,6 +498,43 @@ def _parse_itp_moltype(itp_path):
             elif section == 'atoms':
                 natoms += 1
     return name, natoms
+
+
+def _hoist_itp_atomtypes(itp_path, out_path):
+    """Split a GROMACS .itp so its atom types can be hoisted into the .top.
+
+    Extracts the ``[ atomtypes ]`` data rows and writes a copy of the .itp WITHOUT
+    the ``[ atomtypes ]`` and ``[ defaults ]`` sections to ``out_path`` (a
+    moleculetype-only include). GROMACS requires every ``[ atomtypes ]`` to appear
+    before the first ``[ moleculetype ]``; an organic (GAFF/OpenFF) .itp bundles its
+    atomtypes with its moleculetype, so when combined with the dummy DUM moleculetype
+    the organic atomtypes would illegally follow a moleculetype. Hoisting the rows
+    into the .top's consolidated ``[ atomtypes ]`` avoids that.
+
+    Returns a list of ``(type_name, raw_line)`` for the atomtypes rows (verbatim, so
+    the original column format is preserved). ``[ defaults ]`` is dropped from the
+    copy so it can't duplicate/override the .top's own ``[ defaults ]``.
+    """
+    at_rows, kept, section = [], [], None
+    with open(itp_path, 'r', encoding='utf-8', errors='ignore') as f:
+        for line in f:
+            s = line.split(';', 1)[0].strip()
+            if s.startswith('['):
+                section = s.strip('[] ').lower()
+                if section in ('atomtypes', 'defaults'):
+                    continue           # drop these section headers from the copy
+                kept.append(line)
+                continue
+            if section == 'atomtypes':
+                if s:                  # a data row (not a comment/blank)
+                    at_rows.append((s.split()[0], line.rstrip('\n')))
+                continue               # skip all atomtypes lines from the copy
+            if section == 'defaults':
+                continue               # skip [ defaults ] body entirely
+            kept.append(line)
+    with open(out_path, 'w', encoding='utf-8') as f:
+        f.writelines(kept)
+    return at_rows
 
 
 def write_dummy_system_top(atoms, box, out_top, out_gro, water_model='spce',
@@ -535,7 +586,7 @@ def write_dummy_system_top(atoms, box, out_top, out_gro, water_model='spce',
     water = [a for a in rest if str(a.get('resname', '')).upper() in _SOLVENT_RES]
     nonwater = [a for a in rest if str(a.get('resname', '')).upper() not in _SOLVENT_RES]
 
-    # Map each organic .itp to (moltype name, atoms/molecule), and write the dummy itp.
+    # Map each organic .itp to (moltype name, atoms/molecule).
     org_info = []
     for oi in organic_itps:
         p = oi if _os.path.isabs(oi) else _os.path.join(out_dir, _os.path.basename(oi))
@@ -547,8 +598,32 @@ def write_dummy_system_top(atoms, box, out_top, out_gro, water_model='spce',
             pass
     natoms_to_moltype = {nat: mt for (_f, mt, nat) in org_info}
 
+    # Hoist the [ atomtypes ] out of each organic .itp. GROMACS forbids an
+    # [ atomtypes ] after a [ moleculetype ], and organic (GAFF/OpenFF) itps bundle
+    # their atom types with their moleculetype — so combined with the DUM moleculetype
+    # the organic atomtypes would come too late. We collect the rows (deduped by type
+    # name) for the .top's consolidated [ atomtypes ] and #include a moleculetype-only
+    # stripped copy of each organic .itp instead of the original.
+    hoisted_at, seen_at, org_includes = [], set(), []
+    for oi in organic_itps:
+        src = oi if _os.path.isabs(oi) else _os.path.join(out_dir, _os.path.basename(oi))
+        stem = _os.path.splitext(_os.path.basename(oi))[0]
+        stripped = f"{stem}_noat.itp"
+        try:
+            rows = _hoist_itp_atomtypes(src, _os.path.join(out_dir, stripped))
+        except OSError:
+            org_includes.append(_os.path.basename(oi))   # unreadable — fall back to as-is
+            continue
+        for name, raw in rows:
+            if name not in seen_at:
+                seen_at.add(name); hoisted_at.append(raw)
+        org_includes.append(stripped)
+
+    # Dummy framework atom types + a moleculetype-ONLY dummy .itp (its atomtypes are
+    # written into the .top's consolidated [ atomtypes ] block below, ahead of any moltype).
+    dummy_types = _unique_dummy_types(frame)
     itp_path = _os.path.join(out_dir, _os.path.basename(dummy_itp))
-    write_dummy_mineral_itp(frame, itp_path, mol_name=mol_name)
+    write_dummy_mineral_itp(frame, itp_path, mol_name=mol_name, include_atomtypes=False)
 
     # Bucket the non-water solute by molid group: multi-atom groups are organic
     # molecules (keyed by their moleculetype), single-atom groups are monatomic
@@ -594,19 +669,28 @@ def write_dummy_system_top(atoms, box, out_top, out_gro, water_model='spce',
         f.write('  1        2           yes         0.5       0.8333333333\n\n')
         # GROMACS requires ALL [ atomtypes ] to appear before the first
         # [ moleculetype ] (an [atomtypes] after a moleculetype is a fatal
-        # "Invalid order for directive atomtypes"). So emit every atomtypes-bearing
-        # include FIRST — the min.ff water/ion atomtypes (ffnonbonded.itp), then the
-        # dummy [atomtypes]+DUM moleculetype — and only then the moleculetype-only
-        # water/ion includes. (The #defines must precede ffnonbonded, which is
-        # #ifdef-guarded on the water/ion model.)
+        # "Invalid order for directive atomtypes"). So write every atom type FIRST —
+        # the dummy framework types, then any hoisted organic (GAFF/OpenFF) types,
+        # then the min.ff water/ion types (ffnonbonded.itp) — and only THEN the
+        # moleculetypes (dummy, organics, water, ions). The #defines must precede
+        # ffnonbonded, which is #ifdef-guarded on the water/ion model.
+        f.write(_format_dummy_atomtypes(dummy_types))   # dummy framework [atomtypes]
+        f.write('\n')
+        if hoisted_at:
+            f.write('[ atomtypes ]\n')
+            f.write('; hoisted from organic .itp(s) so all atomtypes precede the moleculetypes\n')
+            for raw in hoisted_at:
+                f.write(raw + '\n')
+            f.write('\n')
         if n_water or ion_seq:
             f.write(f'#define {water_define}\n')
             if ion_define:
                 f.write(f'#define {ion_define}\n')   # activates ion atomtypes + moleculetypes
-            f.write('#include "min.ff/ffnonbonded.itp"\n')   # water/ion [atomtypes] (must precede any moleculetype)
-        f.write(f'#include "{_os.path.basename(dummy_itp)}"\n')   # dummy [atomtypes] + DUM moltype
-        for oi in organic_itps:
-            f.write(f'#include "{_os.path.basename(oi)}"\n')       # organic [atomtypes] + moltype
+            f.write('#include "min.ff/ffnonbonded.itp"\n')   # water/ion [atomtypes]
+            f.write('\n')
+        f.write(f'#include "{_os.path.basename(dummy_itp)}"\n')   # DUM [moleculetype] (atomtypes hoisted above)
+        for inc in org_includes:
+            f.write(f'#include "{inc}"\n')                        # organic [moleculetype] (atomtypes hoisted above)
         if n_water:
             f.write(f'#include "min.ff/{wm_file}.itp"\n')
         if ion_seq:
