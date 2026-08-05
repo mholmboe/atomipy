@@ -166,8 +166,13 @@ HW_tip4p OW_tip4p HW_tip4p 1 104.52  628.02
                 for e in [' ', '\t', '\n']:
                     text = text.replace(f'{w}Ow{e}', f'{w}{water_o}{e}')
                     text = text.replace(f'{w}Hw{e}', f'{w}{water_h}{e}')
-                    text = text.replace(f'{w}Na{e}', f'{w}Na+{e}')
-                    # Halide anions are bare-named in min.ff (Cl/Br/F/I) — no translation needed.
+                    # All ions are signed (ASCII +/-) in min.ff; defensively map any bare
+                    # ion token a structure might still carry to the signed name so OpenMM
+                    # matches min.ff. Whitespace-bounded, so 'Fe'/'Feo3'/'Cs' etc. are safe.
+                    for _cat in ('Na', 'K', 'Li', 'Cs', 'Rb'):
+                        text = text.replace(f'{w}{_cat}{e}', f'{w}{_cat}+{e}')
+                    for _an in ('Cl', 'Br', 'F', 'I'):
+                        text = text.replace(f'{w}{_an}{e}', f'{w}{_an}-{e}')
                     if self.is_clayff_2004:
                         text = text.replace(f'{w}Alo{e}', f'{w}ao{e}')
                         text = text.replace(f'{w}Sit{e}', f'{w}st{e}')
