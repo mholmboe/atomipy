@@ -153,8 +153,8 @@
           "mass": 18.9984,
           "charge": -0.76,
           "ptype": "A",
-          "sigma": 0.316217,
-          "epsilon": 0.189059
+          "sigma": 0.317622,
+          "epsilon": 0.192769
         },
         "Mgh": {
           "mass": 24.305,
@@ -202,15 +202,15 @@
           "mass": 40.078,
           "charge": 1.52,
           "ptype": "A",
-          "sigma": 0.271827,
-          "epsilon": 0.873097
+          "sigma": 0.254786,
+          "epsilon": 0.872777
         },
         "Cao": {
           "mass": 40.078,
           "charge": 1.66,
           "ptype": "A",
-          "sigma": 0.260744,
-          "epsilon": 1.461522
+          "sigma": 0.26931,
+          "epsilon": 1.577302
         },
         "Fet2": {
           "mass": 55.845,
@@ -416,8 +416,8 @@
           "mass": 18.9984,
           "charge": -0.76,
           "ptype": "A",
-          "sigma": 0.315598,
-          "epsilon": 0.187339
+          "sigma": 0.318354,
+          "epsilon": 0.189745
         },
         "Mgh": {
           "mass": 24.305,
@@ -465,15 +465,15 @@
           "mass": 40.078,
           "charge": 1.52,
           "ptype": "A",
-          "sigma": 0.270122,
-          "epsilon": 0.886849
+          "sigma": 0.255577,
+          "epsilon": 0.908704
         },
         "Cao": {
           "mass": 40.078,
           "charge": 1.66,
           "ptype": "A",
-          "sigma": 0.263864,
-          "epsilon": 1.442661
+          "sigma": 0.270104,
+          "epsilon": 1.511493
         },
         "Fet2": {
           "mass": 55.845,
@@ -679,8 +679,8 @@
           "mass": 18.9984,
           "charge": -0.76,
           "ptype": "A",
-          "sigma": 0.315315,
-          "epsilon": 0.190389
+          "sigma": 0.320267,
+          "epsilon": 0.185651
         },
         "Mgh": {
           "mass": 24.305,
@@ -728,15 +728,15 @@
           "mass": 40.078,
           "charge": 1.52,
           "ptype": "A",
-          "sigma": 0.268331,
-          "epsilon": 0.884879
+          "sigma": 0.255225,
+          "epsilon": 0.88917
         },
         "Cao": {
           "mass": 40.078,
           "charge": 1.66,
           "ptype": "A",
-          "sigma": 0.266332,
-          "epsilon": 1.463888
+          "sigma": 0.270147,
+          "epsilon": 1.577941
         },
         "Fet2": {
           "mass": 55.845,
@@ -942,8 +942,8 @@
           "mass": 18.9984,
           "charge": -0.76,
           "ptype": "A",
-          "sigma": 0.313217,
-          "epsilon": 0.189979
+          "sigma": 0.321464,
+          "epsilon": 0.190145
         },
         "Mgh": {
           "mass": 24.305,
@@ -991,15 +991,15 @@
           "mass": 40.078,
           "charge": 1.52,
           "ptype": "A",
-          "sigma": 0.269984,
-          "epsilon": 0.914708
+          "sigma": 0.257601,
+          "epsilon": 0.909985
         },
         "Cao": {
           "mass": 40.078,
           "charge": 1.66,
           "ptype": "A",
-          "sigma": 0.265181,
-          "epsilon": 1.486737
+          "sigma": 0.269989,
+          "epsilon": 1.509434
         },
         "Fet2": {
           "mass": 55.845,

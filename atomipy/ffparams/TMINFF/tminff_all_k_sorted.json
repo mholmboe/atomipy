@@ -2380,97 +2380,18 @@
         }
       }
     },
-    "CaF2_k0": {
-      "atomtypes": {
-        "Cao": {
-          "mass": 40.078,
-          "charge": 1.66,
-          "ptype": "A",
-          "sigma": 0.269776,
-          "epsilon": 1.543146
-        },
-        "Ob": {
-          "mass": 15.99941,
-          "charge": -1.66,
-          "ptype": "A",
-          "sigma": 0.317427,
-          "epsilon": 0.68369
-        }
-      }
-    },
-    "CaF2_k250": {
-      "atomtypes": {
-        "Cao": {
-          "mass": 40.078,
-          "charge": 1.66,
-          "ptype": "A",
-          "sigma": 0.270456,
-          "epsilon": 1.496099
-        },
-        "Ob": {
-          "mass": 15.99941,
-          "charge": -1.66,
-          "ptype": "A",
-          "sigma": 0.317427,
-          "epsilon": 0.68369
-        }
-      }
-    },
-    "CaF2_k500": {
-      "atomtypes": {
-        "Cao": {
-          "mass": 40.078,
-          "charge": 1.66,
-          "ptype": "A",
-          "sigma": 0.270718,
-          "epsilon": 1.532592
-        },
-        "Ob": {
-          "mass": 15.99941,
-          "charge": -1.66,
-          "ptype": "A",
-          "sigma": 0.317427,
-          "epsilon": 0.68369
-        }
-      }
-    },
-    "CaF2_k1500": {
-      "atomtypes": {
-        "Cao": {
-          "mass": 40.078,
-          "charge": 1.66,
-          "ptype": "A",
-          "sigma": 0.270061,
-          "epsilon": 1.554735
-        },
-        "Ob": {
-          "mass": 15.99941,
-          "charge": -1.66,
-          "ptype": "A",
-          "sigma": 0.317427,
-          "epsilon": 0.68369
-        }
-      }
-    },
     "CaO_k0": {
       "atomtypes": {
-        "H": {
-          "mass": 1.00794,
-          "charge": 0.4,
-          "ptype": "A",
-          "sigma": 0.0,
-          "epsilon": 0.0
-        },
         "Cao": {
           "mass": 40.078,
           "charge": 1.66,
           "ptype": "A",
-          "sigma": 0.249012,
-          "epsilon": 1.379411
+          "sigma": 0.26931,
+          "epsilon": 1.577304
         },
-        "Oh": {
+        "Ob": {
           "mass": 15.99941,
-          "charge": -1.23,
+          "charge": -1.66,
           "ptype": "A",
           "sigma": 0.317427,
           "epsilon": 0.68369
@@ -2479,23 +2400,16 @@
     },
     "CaO_k250": {
       "atomtypes": {
-        "H": {
-          "mass": 1.00794,
-          "charge": 0.4,
-          "ptype": "A",
-          "sigma": 0.0,
-          "epsilon": 0.0
-        },
         "Cao": {
           "mass": 40.078,
           "charge": 1.66,
           "ptype": "A",
-          "sigma": 0.251187,
-          "epsilon": 1.39146
+          "sigma": 0.269824,
+          "epsilon": 1.578207
         },
-        "Oh": {
+        "Ob": {
           "mass": 15.99941,
-          "charge": -1.23,
+          "charge": -1.66,
           "ptype": "A",
           "sigma": 0.317427,
           "epsilon": 0.68369
@@ -2504,23 +2418,16 @@
     },
     "CaO_k500": {
       "atomtypes": {
-        "H": {
-          "mass": 1.00794,
-          "charge": 0.4,
-          "ptype": "A",
-          "sigma": 0.0,
-          "epsilon": 0.0
-        },
         "Cao": {
           "mass": 40.078,
           "charge": 1.66,
           "ptype": "A",
-          "sigma": 0.252101,
-          "epsilon": 1.39738
+          "sigma": 0.270067,
+          "epsilon": 1.577898
         },
-        "Oh": {
+        "Ob": {
           "mass": 15.99941,
-          "charge": -1.23,
+          "charge": -1.66,
           "ptype": "A",
           "sigma": 0.317427,
           "epsilon": 0.68369
@@ -2529,23 +2436,16 @@
     },
     "CaO_k1500": {
       "atomtypes": {
-        "H": {
-          "mass": 1.00794,
-          "charge": 0.4,
-          "ptype": "A",
-          "sigma": 0.0,
-          "epsilon": 0.0
-        },
         "Cao": {
           "mass": 40.078,
           "charge": 1.66,
           "ptype": "A",
-          "sigma": 0.252984,
-          "epsilon": 1.422867
+          "sigma": 0.269902,
+          "epsilon": 1.593755
         },
-        "Oh": {
+        "Ob": {
           "mass": 15.99941,
-          "charge": -1.23,
+          "charge": -1.66,
           "ptype": "A",
           "sigma": 0.317427,
           "epsilon": 0.68369
@@ -2554,73 +2454,173 @@
     },
     "Portlandite_k0": {
       "atomtypes": {
-        "Fs": {
-          "mass": 18.9984,
-          "charge": -0.76,
+        "H": {
+          "mass": 1.00794,
+          "charge": 0.4,
           "ptype": "A",
-          "sigma": 0.303053,
-          "epsilon": 0.184684
+          "sigma": 0.0,
+          "epsilon": 0.0
         },
         "Cah": {
           "mass": 40.078,
           "charge": 1.52,
           "ptype": "A",
-          "sigma": 0.275757,
-          "epsilon": 0.872831
+          "sigma": 0.252334,
+          "epsilon": 0.867839
+        },
+        "Oh": {
+          "mass": 15.99941,
+          "charge": -1.16,
+          "ptype": "A",
+          "sigma": 0.317427,
+          "epsilon": 0.68369
         }
       }
     },
     "Portlandite_k250": {
       "atomtypes": {
-        "Fs": {
-          "mass": 18.9984,
-          "charge": -0.76,
+        "H": {
+          "mass": 1.00794,
+          "charge": 0.4,
           "ptype": "A",
-          "sigma": 0.303362,
-          "epsilon": 0.188292
+          "sigma": 0.0,
+          "epsilon": 0.0
         },
         "Cah": {
           "mass": 40.078,
           "charge": 1.52,
           "ptype": "A",
-          "sigma": 0.27595,
-          "epsilon": 0.890203
+          "sigma": 0.253696,
+          "epsilon": 0.903701
+        },
+        "Oh": {
+          "mass": 15.99941,
+          "charge": -1.16,
+          "ptype": "A",
+          "sigma": 0.317427,
+          "epsilon": 0.68369
         }
       }
     },
     "Portlandite_k500": {
       "atomtypes": {
-        "Fs": {
-          "mass": 18.9984,
-          "charge": -0.76,
+        "H": {
+          "mass": 1.00794,
+          "charge": 0.4,
           "ptype": "A",
-          "sigma": 0.303294,
-          "epsilon": 0.188092
+          "sigma": 0.0,
+          "epsilon": 0.0
         },
         "Cah": {
           "mass": 40.078,
           "charge": 1.52,
           "ptype": "A",
-          "sigma": 0.276708,
-          "epsilon": 0.889614
+          "sigma": 0.262071,
+          "epsilon": 0.63896
+        },
+        "Oh": {
+          "mass": 15.99941,
+          "charge": -1.16,
+          "ptype": "A",
+          "sigma": 0.317427,
+          "epsilon": 0.68369
         }
       }
     },
     "Portlandite_k1500": {
       "atomtypes": {
-        "Fs": {
-          "mass": 18.9984,
-          "charge": -0.76,
+        "H": {
+          "mass": 1.00794,
+          "charge": 0.4,
           "ptype": "A",
-          "sigma": 0.303211,
-          "epsilon": 0.192663
+          "sigma": 0.0,
+          "epsilon": 0.0
         },
         "Cah": {
           "mass": 40.078,
           "charge": 1.52,
           "ptype": "A",
-          "sigma": 0.276169,
-          "epsilon": 0.910568
+          "sigma": 0.255784,
+          "epsilon": 0.906193
+        },
+        "Oh": {
+          "mass": 15.99941,
+          "charge": -1.16,
+          "ptype": "A",
+          "sigma": 0.317427,
+          "epsilon": 0.68369
+        }
+      }
+    },
+    "CaF2_k0": {
+      "atomtypes": {
+        "Fs": {
+          "mass": 18.9984,
+          "charge": -0.76,
+          "ptype": "A",
+          "sigma": 0.316767,
+          "epsilon": 0.197396
+        },
+        "Cah": {
+          "mass": 40.078,
+          "charge": 1.52,
+          "ptype": "A",
+          "sigma": 0.255603,
+          "epsilon": 0.891915
+        }
+      }
+    },
+    "CaF2_k250": {
+      "atomtypes": {
+        "Fs": {
+          "mass": 18.9984,
+          "charge": -0.76,
+          "ptype": "A",
+          "sigma": 0.317848,
+          "epsilon": 0.194159
+        },
+        "Cah": {
+          "mass": 40.078,
+          "charge": 1.52,
+          "ptype": "A",
+          "sigma": 0.2556,
+          "epsilon": 0.931942
+        }
+      }
+    },
+    "CaF2_k500": {
+      "atomtypes": {
+        "Fs": {
+          "mass": 18.9984,
+          "charge": -0.76,
+          "ptype": "A",
+          "sigma": 0.320267,
+          "epsilon": 0.185651
+        },
+        "Cah": {
+          "mass": 40.078,
+          "charge": 1.52,
+          "ptype": "A",
+          "sigma": 0.255225,
+          "epsilon": 0.88917
+        }
+      }
+    },
+    "CaF2_k1500": {
+      "atomtypes": {
+        "Fs": {
+          "mass": 18.9984,
+          "charge": -0.76,
+          "ptype": "A",
+          "sigma": 0.317199,
+          "epsilon": 0.19419
+        },
+        "Cah": {
+          "mass": 40.078,
+          "charge": 1.52,
+          "ptype": "A",
+          "sigma": 0.257873,
+          "epsilon": 0.929519
         }
       }
     },
@@ -3266,22 +3266,22 @@
           "mass": 18.9984,
           "charge": -0.87,
           "ptype": "A",
-          "sigma": 0.31238,
-          "epsilon": 0.192567
+          "sigma": 0.325503,
+          "epsilon": 0.191707
         },
         "Mgh": {
           "mass": 24.305,
           "charge": 1.74,
           "ptype": "A",
-          "sigma": 0.198319,
-          "epsilon": 1.037432
+          "sigma": 0.190547,
+          "epsilon": 1.001225
         },
         "Sit": {
           "mass": 28.08538,
           "charge": 1.884,
           "ptype": "A",
-          "sigma": 0.069803,
-          "epsilon": 0.38043
+          "sigma": 0.073613,
+          "epsilon": 0.379939
         },
         "Ob": {
           "mass": 15.99941,
@@ -3305,22 +3305,22 @@
           "mass": 18.9984,
           "charge": -0.87,
           "ptype": "A",
-          "sigma": 0.311255,
-          "epsilon": 0.184818
+          "sigma": 0.31158,
+          "epsilon": 0.187973
         },
         "Mgh": {
           "mass": 24.305,
           "charge": 1.74,
           "ptype": "A",
-          "sigma": 0.198319,
-          "epsilon": 1.037432
+          "sigma": 0.190547,
+          "epsilon": 1.001225
         },
         "Sit": {
           "mass": 28.08538,
           "charge": 1.884,
           "ptype": "A",
-          "sigma": 0.082297,
-          "epsilon": 0.429442
+          "sigma": 0.091627,
+          "epsilon": 0.441924
         },
         "Ob": {
           "mass": 15.99941,
@@ -3344,22 +3344,22 @@
           "mass": 18.9984,
           "charge": -0.87,
           "ptype": "A",
-          "sigma": 0.305207,
-          "epsilon": 0.188157
+          "sigma": 0.320483,
+          "epsilon": 0.179752
         },
         "Mgh": {
           "mass": 24.305,
           "charge": 1.74,
           "ptype": "A",
-          "sigma": 0.198319,
-          "epsilon": 1.037432
+          "sigma": 0.190547,
+          "epsilon": 1.001225
         },
         "Sit": {
           "mass": 28.08538,
           "charge": 1.884,
           "ptype": "A",
-          "sigma": 0.091267,
-          "epsilon": 0.450107
+          "sigma": 0.094879,
+          "epsilon": 0.443316
         },
         "Ob": {
           "mass": 15.99941,
@@ -3383,22 +3383,22 @@
           "mass": 18.9984,
           "charge": -0.87,
           "ptype": "A",
-          "sigma": 0.310902,
-          "epsilon": 0.187347
+          "sigma": 0.323329,
+          "epsilon": 0.190721
         },
         "Mgh": {
           "mass": 24.305,
           "charge": 1.74,
           "ptype": "A",
-          "sigma": 0.198319,
-          "epsilon": 1.037432
+          "sigma": 0.190547,
+          "epsilon": 1.001225
         },
         "Sit": {
           "mass": 28.08538,
           "charge": 1.884,
           "ptype": "A",
-          "sigma": 0.097114,
-          "epsilon": 0.459656
+          "sigma": 0.101552,
+          "epsilon": 0.464932
         },
         "Ob": {
           "mass": 15.99941,
@@ -13603,10 +13603,6 @@
       "Magnetite_k250",
       "Magnetite_k500",
       "Magnetite_k1500",
-      "CaF2_k0",
-      "CaF2_k250",
-      "CaF2_k500",
-      "CaF2_k1500",
       "CaO_k0",
       "CaO_k250",
       "CaO_k500",
@@ -13615,6 +13611,10 @@
       "Portlandite_k250",
       "Portlandite_k500",
       "Portlandite_k1500",
+      "CaF2_k0",
+      "CaF2_k250",
+      "CaF2_k500",
+      "CaF2_k1500",
       "Nontronite_k0",
       "Nontronite_k250",
       "Nontronite_k500",
@@ -13824,10 +13824,6 @@
       "Magnetite_k250",
       "Magnetite_k500",
       "Magnetite_k1500",
-      "CaF2_k0",
-      "CaF2_k250",
-      "CaF2_k500",
-      "CaF2_k1500",
       "CaO_k0",
       "CaO_k250",
       "CaO_k500",
@@ -13836,6 +13832,10 @@
       "Portlandite_k250",
       "Portlandite_k500",
       "Portlandite_k1500",
+      "CaF2_k0",
+      "CaF2_k250",
+      "CaF2_k500",
+      "CaF2_k1500",
       "Nontronite_k0",
       "Nontronite_k250",
       "Nontronite_k500",

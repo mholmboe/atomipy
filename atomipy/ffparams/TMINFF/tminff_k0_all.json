@@ -606,14 +606,14 @@
         }
       }
     },
-    "CaF2_k0": {
+    "CaO_k0": {
       "atomtypes": {
         "Cao": {
           "mass": 40.078,
           "charge": 1.66,
           "ptype": "A",
-          "sigma": 0.269776,
-          "epsilon": 1.543146
+          "sigma": 0.26931,
+          "epsilon": 1.577304
         },
         "Ob": {
           "mass": 15.99941,
@@ -624,7 +624,7 @@
         }
       }
     },
-    "CaO_k0": {
+    "Portlandite_k0": {
       "atomtypes": {
         "H": {
           "mass": 1.00794,
@@ -633,37 +633,37 @@
           "sigma": 0.0,
           "epsilon": 0.0
         },
-        "Cao": {
+        "Cah": {
           "mass": 40.078,
-          "charge": 1.66,
+          "charge": 1.52,
           "ptype": "A",
-          "sigma": 0.249012,
-          "epsilon": 1.379411
+          "sigma": 0.252334,
+          "epsilon": 0.867839
         },
         "Oh": {
           "mass": 15.99941,
-          "charge": -1.23,
+          "charge": -1.16,
           "ptype": "A",
           "sigma": 0.317427,
           "epsilon": 0.68369
         }
       }
     },
-    "Portlandite_k0": {
+    "CaF2_k0": {
       "atomtypes": {
         "Fs": {
           "mass": 18.9984,
           "charge": -0.76,
           "ptype": "A",
-          "sigma": 0.303053,
-          "epsilon": 0.184684
+          "sigma": 0.316767,
+          "epsilon": 0.197396
         },
         "Cah": {
           "mass": 40.078,
           "charge": 1.52,
           "ptype": "A",
-          "sigma": 0.275757,
-          "epsilon": 0.872831
+          "sigma": 0.255603,
+          "epsilon": 0.891915
         }
       }
     },
@@ -832,22 +832,22 @@
           "mass": 18.9984,
           "charge": -0.87,
           "ptype": "A",
-          "sigma": 0.31238,
-          "epsilon": 0.192567
+          "sigma": 0.325503,
+          "epsilon": 0.191707
         },
         "Mgh": {
           "mass": 24.305,
           "charge": 1.74,
           "ptype": "A",
-          "sigma": 0.198319,
-          "epsilon": 1.037432
+          "sigma": 0.190547,
+          "epsilon": 1.001225
         },
         "Sit": {
           "mass": 28.08538,
           "charge": 1.884,
           "ptype": "A",
-          "sigma": 0.069803,
-          "epsilon": 0.38043
+          "sigma": 0.073613,
+          "epsilon": 0.379939
         },
         "Ob": {
           "mass": 15.99941,
@@ -8278,9 +8278,9 @@
       "Lepidocrocite_k0",
       "Wustite_k0",
       "Magnetite_k0",
-      "CaF2_k0",
       "CaO_k0",
       "Portlandite_k0",
+      "CaF2_k0",
       "Nontronite_k0",
       "Montmorillonite_k0",
       "Dickite_k0",
@@ -8368,9 +8368,9 @@
       "Lepidocrocite_k0",
       "Wustite_k0",
       "Magnetite_k0",
-      "CaF2_k0",
       "CaO_k0",
       "Portlandite_k0",
+      "CaF2_k0",
       "Nontronite_k0",
       "Montmorillonite_k0",
       "Dickite_k0",

@@ -284,30 +284,30 @@ Ob         8	 15.99941	-1.04600   A  	 0.317427	 0.683690
 ; Ob         8	 15.99941	-1.04600   A  	 0.317427	 0.683690
 #endif
 
-#ifdef CaF2_k500
+#ifdef CaO_k500
 ; name  number   mass        charge  ptype   sigma       epsilon ;
-Cao       20	 40.07800	 1.66000   A  	 0.270718	 1.532592
+Cao       20	 40.07800	 1.66000   A  	 0.270067	 1.577898
 Ob         8	 15.99941	-1.66000   A  	 0.317427	 0.683690
 ; Optimized sigma and epsilon values for the O atomtypes
 ; Ob         8	 15.99941	-1.66000   A  	 0.317427	 0.683690
 #endif
 
-#ifdef CaO_k500
-; name  number   mass        charge  ptype   sigma       epsilon ;
-H          1	 1.00794	 0.40000   A  	 0.000000	 0.000000
-Cao       20	 40.07800	 1.66000   A  	 0.252101	 1.397380
-Oh         8	 15.99941	-1.23000   A  	 0.317427	 0.683690
-; Optimized sigma and epsilon values for the O atomtypes
-; Oh         8	 15.99941	-1.23000   A  	 0.317583	 0.683725
-#endif
-
 #ifdef Portlandite_k500
 ; name  number   mass        charge  ptype   sigma       epsilon ;
-Fs         9	 18.99840	-0.76000   A  	 0.303294	 0.188092
-Cah       20	 40.07800	 1.52000   A  	 0.276708	 0.889614
+H          1	 1.00794	 0.40000   A  	 0.000000	 0.000000
+Cah       20	 40.07800	 1.52000   A  	 0.262071	 0.638960
+Oh         8	 15.99941	-1.16000   A  	 0.317427	 0.683690
 ; Optimized sigma and epsilon values for the O atomtypes
-; Fs         9	 18.99840	-0.76000   A  	 0.303294	 0.188092
-; Cah       20	 40.07800	 1.52000   A  	 0.276708	 0.889614
+; Oh         8	 15.99941	-1.16000   A  	 0.320136	 0.685494
+#endif
+
+#ifdef CaF2_k500
+; name  number   mass        charge  ptype   sigma       epsilon ;
+Fs         9	 18.99840	-0.76000   A  	 0.320267	 0.185651
+Cah       20	 40.07800	 1.52000   A  	 0.255225	 0.889170
+; Optimized sigma and epsilon values for the O atomtypes
+; Fs         9	 18.99840	-0.76000   A  	 0.320267	 0.185651
+; Cah       20	 40.07800	 1.52000   A  	 0.255225	 0.889170
 #endif
 
 #ifdef Nontronite_k500
@@ -359,14 +359,14 @@ Op         8	 15.99941	-1.06500   A  	 0.317427	 0.683690
 
 #ifdef Hectorite-F_k500
 ; name  number   mass        charge  ptype   sigma       epsilon ;
-Fs         9	 18.99840	-0.87000   A  	 0.305207	 0.188157
-Mgh       12	 24.30500	 1.74000   A  	 0.198319	 1.037432
-Sit       14	 28.08538	 1.88400   A  	 0.091267	 0.450107
+Fs         9	 18.99840	-0.87000   A  	 0.320483	 0.179752
+Mgh       12	 24.30500	 1.74000   A  	 0.190547	 1.001225
+Sit       14	 28.08538	 1.88400   A  	 0.094879	 0.443316
 Ob         8	 15.99941	-0.94200   A  	 0.317427	 0.683690
 Op         8	 15.99941	-1.34100   A  	 0.317427	 0.683690
 ; Optimized sigma and epsilon values for the O atomtypes
-; Ob         8	 15.99941	-0.94200   A  	 0.317427	 0.683690
-; Op         8	 15.99941	-1.34100   A  	 0.317427	 0.683690
+; Ob         8	 15.99941	-0.94200   A  	 0.319926	 0.686139
+; Op         8	 15.99941	-1.34100   A  	 0.320424	 0.685500
 #endif
 
 #ifdef Hectorite-H_k500
