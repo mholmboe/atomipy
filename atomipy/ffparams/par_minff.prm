@@ -173,7 +173,7 @@ Osi       0.0      -0.163406     1.7815    ! Edge Si-O
 Osih      0.0      -0.163406     1.7815    ! Edge Si-O-H
 !
 ! Fluorine
-Fs        0.0      -0.045186     1.7747    ! Fluorine
+Fs        0.0      -0.046073     1.7826    ! Fluorine
 !
 ! Magnesium types
 Mgh       0.0      -0.236294     1.0555    ! Mg hydroxide
@@ -188,8 +188,8 @@ Alt       0.0      -0.042601     0.9498    ! Tetrahedral Al
 Sit       0.0      -0.100961     0.4615    ! Tetrahedral Si
 !
 ! Calcium types
-Cah       0.0      -0.208675     1.5256    ! Ca hydroxide
-Cao       0.0      -0.349312     1.4634    ! Ca oxide
+Cah       0.0      -0.208599     1.4299    ! Ca hydroxide
+Cao       0.0      -0.376984     1.5115    ! Ca oxide
 !
 ! Iron types Fe2+
 Fet2      0.0      -0.040930     0.8266    ! Tetrahedral Fe2+

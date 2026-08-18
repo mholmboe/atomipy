@@ -1029,6 +1029,13 @@
           "sigma": 0.191267,
           "epsilon": 0.116022
         },
+        "Fee3": {
+          "mass": 55.845,
+          "charge": 1.75,
+          "ptype": "A",
+          "sigma": 0.17026,
+          "epsilon": 0.38147
+        },
         "Feo3": {
           "mass": 55.845,
           "charge": 1.5,
@@ -1338,14 +1345,14 @@
           "sigma": 0.316556,
           "epsilon": 0.65017
         },
-        "Si": {
+        "Sit": {
           "mass": 28.0855,
           "charge": 2.1,
           "ptype": "A",
           "sigma": 0.3302,
           "epsilon": 7.70065e-06
         },
-        "Al": {
+        "Alo": {
           "mass": 26.98154,
           "charge": 1.575,
           "ptype": "A",
@@ -1419,35 +1426,35 @@
     },
     "SPC_JC": {
       "atomtypes": {
-        "Li": {
+        "Li+": {
           "mass": 6.941,
           "charge": 1.0,
           "ptype": "A",
           "sigma": 0.14094,
           "epsilon": 1.4089
         },
-        "Na": {
+        "Na+": {
           "mass": 22.98977,
           "charge": 1.0,
           "ptype": "A",
           "sigma": 0.215954,
           "epsilon": 1.47545
         },
-        "K": {
+        "K+": {
           "mass": 39.0983,
           "charge": 1.0,
           "ptype": "A",
           "sigma": 0.28384,
           "epsilon": 1.79789
         },
-        "Rb": {
+        "Rb+": {
           "mass": 85.46783,
           "charge": 1.0,
           "ptype": "A",
           "sigma": 0.309498,
           "epsilon": 1.8623
         },
-        "Cs": {
+        "Cs+": {
           "mass": 132.9055,
           "charge": 1.0,
           "ptype": "A",
@@ -1486,35 +1493,35 @@
     },
     "SPCE_JC": {
       "atomtypes": {
-        "Li": {
+        "Li+": {
           "mass": 6.941,
           "charge": 1.0,
           "ptype": "A",
           "sigma": 0.14094,
           "epsilon": 1.4089
         },
-        "Na": {
+        "Na+": {
           "mass": 22.98977,
           "charge": 1.0,
           "ptype": "A",
           "sigma": 0.215954,
           "epsilon": 1.47545
         },
-        "K": {
+        "K+": {
           "mass": 39.0983,
           "charge": 1.0,
           "ptype": "A",
           "sigma": 0.28384,
           "epsilon": 1.79789
         },
-        "Rb": {
+        "Rb+": {
           "mass": 85.46783,
           "charge": 1.0,
           "ptype": "A",
           "sigma": 0.309498,
           "epsilon": 1.8623
         },
-        "Cs": {
+        "Cs+": {
           "mass": 132.9055,
           "charge": 1.0,
           "ptype": "A",
@@ -1553,35 +1560,35 @@
     },
     "TIP3P_JC": {
       "atomtypes": {
-        "Li": {
+        "Li+": {
           "mass": 6.941,
           "charge": 1.0,
           "ptype": "A",
           "sigma": 0.182634,
           "epsilon": 0.11711
         },
-        "Na": {
+        "Na+": {
           "mass": 22.98977,
           "charge": 1.0,
           "ptype": "A",
           "sigma": 0.243928,
           "epsilon": 0.36585
         },
-        "K": {
+        "K+": {
           "mass": 39.0983,
           "charge": 1.0,
           "ptype": "A",
           "sigma": 0.303796,
           "epsilon": 0.81037
         },
-        "Rb": {
+        "Rb+": {
           "mass": 85.4678,
           "charge": 1.0,
           "ptype": "A",
           "sigma": 0.32304,
           "epsilon": 1.37161
         },
-        "Cs": {
+        "Cs+": {
           "mass": 132.90545,
           "charge": 1.0,
           "ptype": "A",
@@ -1620,35 +1627,35 @@
     },
     "TIP4P_JC": {
       "atomtypes": {
-        "Li": {
+        "Li+": {
           "mass": 6.941,
           "charge": 1.0,
           "ptype": "A",
           "sigma": 0.143969,
           "epsilon": 0.43509
         },
-        "Na": {
+        "Na+": {
           "mass": 22.98977,
           "charge": 1.0,
           "ptype": "A",
           "sigma": 0.218448,
           "epsilon": 0.70474
         },
-        "K": {
+        "K+": {
           "mass": 39.0983,
           "charge": 1.0,
           "ptype": "A",
           "sigma": 0.283306,
           "epsilon": 1.16928
         },
-        "Rb": {
+        "Rb+": {
           "mass": 85.4678,
           "charge": 1.0,
           "ptype": "A",
           "sigma": 0.304509,
           "epsilon": 1.8123
         },
-        "Cs": {
+        "Cs+": {
           "mass": 132.90545,
           "charge": 1.0,
           "ptype": "A",
@@ -1687,35 +1694,35 @@
     },
     "TIP5P_JC": {
       "atomtypes": {
-        "Li": {
+        "Li+": {
           "mass": 6.941,
           "charge": 1.0,
           "ptype": "A",
           "sigma": 0.143969,
           "epsilon": 0.43509
         },
-        "Na": {
+        "Na+": {
           "mass": 22.98977,
           "charge": 1.0,
           "ptype": "A",
           "sigma": 0.218448,
           "epsilon": 0.70474
         },
-        "K": {
+        "K+": {
           "mass": 39.0983,
           "charge": 1.0,
           "ptype": "A",
           "sigma": 0.283306,
           "epsilon": 1.16928
         },
-        "Rb": {
+        "Rb+": {
           "mass": 85.4678,
           "charge": 1.0,
           "ptype": "A",
           "sigma": 0.304509,
           "epsilon": 1.8123
         },
-        "Cs": {
+        "Cs+": {
           "mass": 132.90545,
           "charge": 1.0,
           "ptype": "A",
@@ -1754,49 +1761,49 @@
     },
     "TIP3P_BL": {
       "atomtypes": {
-        "Ba": {
+        "Ba2+": {
           "mass": 137.33,
           "charge": 2.0,
           "ptype": "A",
           "sigma": 0.400031342,
           "epsilon": 0.8338712
         },
-        "Ca": {
+        "Ca2+": {
           "mass": 40.078,
           "charge": 2.0,
           "ptype": "A",
           "sigma": 0.345027256,
           "epsilon": 0.1330512
         },
-        "Cu": {
+        "Cu2+": {
           "mass": 63.55,
           "charge": 2.0,
           "ptype": "A",
           "sigma": 0.184059675,
           "epsilon": 0.1786568
         },
-        "Mg": {
+        "Mg2+": {
           "mass": 24.305,
           "charge": 2.0,
           "ptype": "A",
           "sigma": 0.242965898,
           "epsilon": 0.1112944
         },
-        "Ni": {
+        "Ni2+": {
           "mass": 58.69,
           "charge": 2.0,
           "ptype": "A",
           "sigma": 0.194946458,
           "epsilon": 0.1531344
         },
-        "Sr": {
+        "Sr2+": {
           "mass": 87.62,
           "charge": 2.0,
           "ptype": "A",
           "sigma": 0.372805478,
           "epsilon": 0.2778176
         },
-        "Zn": {
+        "Zn2+": {
           "mass": 65.41,
           "charge": 2.0,
           "ptype": "A",
@@ -1807,49 +1814,49 @@
     },
     "SPC_AQVIST": {
       "atomtypes": {
-        "Mg": {
+        "Mg2+": {
           "mass": 24.305,
           "charge": 2.0,
           "ptype": "A",
           "sigma": 0.13977,
           "epsilon": 3.65874
         },
-        "Ca": {
+        "Ca2+": {
           "mass": 40.078,
           "charge": 2.0,
           "ptype": "A",
           "sigma": 0.23609,
           "epsilon": 1.88011
         },
-        "Sr": {
+        "Sr2+": {
           "mass": 87.62,
           "charge": 2.0,
           "ptype": "A",
           "sigma": 0.31024,
           "epsilon": 0.49433
         },
-        "Ba": {
+        "Ba2+": {
           "mass": 137.33,
           "charge": 2.0,
           "ptype": "A",
           "sigma": 0.37862,
           "epsilon": 0.19692
         },
-        "Cu": {
+        "Cu2+": {
           "mass": 63.55,
           "charge": 2.0,
           "ptype": "A",
           "sigma": 0.184059675,
           "epsilon": 0.1786568
         },
-        "Ni": {
+        "Ni2+": {
           "mass": 58.69,
           "charge": 2.0,
           "ptype": "A",
           "sigma": 0.194946458,
           "epsilon": 0.1531344
         },
-        "Zn": {
+        "Zn2+": {
           "mass": 65.41,
           "charge": 2.0,
           "ptype": "A",
@@ -7370,7 +7377,7 @@
     },
     "TIP4PF": {
       "atomtypes": {
-        "IW_tip4pf": {
+        "MW": {
           "mass": 0.0,
           "charge": -1.1128,
           "ptype": "D",
