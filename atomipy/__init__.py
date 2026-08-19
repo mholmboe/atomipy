@@ -140,6 +140,7 @@ direct_fractional_to_cartesian = transform.direct_fractional_to_cartesian
 
 from . import replicate
 replicate_system = replicate.replicate_system
+reduce_supercell = replicate.reduce_supercell
 
 from . import move
 translate = move.translate
