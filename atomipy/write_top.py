@@ -71,8 +71,7 @@ def is_solvent_or_ion(atom):
     solvent_ion_resnames = {
         'SOL', 'WAT', 'HOH', 'TIP3', 'OPC', 'OPC3', 'SPC', 'SPCE', 'TIP4', 'TIP5',
         'ION', 'NA', 'CL', 'K', 'LI', 'CS', 'RB', 'F', 'BR', 'I', 'CA', 'MG', 'ZN',
-        'NA+', 'CL-', 'CL−', 'K+', 'LI+', 'CS+', 'RB+', 'F-', 'F−', 'BR-', 'BR−',
-        'I-', 'I−', 'CA2+', 'MG2+', 'ZN2+'
+        'NA+', 'CL-', 'K+', 'LI+', 'CS+', 'RB+', 'F-', 'BR-', 'I-', 'CA2+', 'MG2+', 'ZN2+'
     }
     if res and res not in solvent_ion_resnames:
         return False
@@ -92,7 +91,7 @@ def is_solvent_or_ion(atom):
         return True
         
     # Standard ion resnames
-    if res in ('ION', 'NA', 'CL', 'K', 'LI', 'CS', 'RB', 'F', 'BR', 'I', 'CA', 'MG', 'ZN', 'NA+', 'CL-', 'CL−', 'K+', 'LI+', 'CS+', 'RB+', 'F-', 'F−', 'BR-', 'BR−', 'I-', 'I−', 'CA2+', 'MG2+', 'ZN2+'):
+    if res in ('ION', 'NA', 'CL', 'K', 'LI', 'CS', 'RB', 'F', 'BR', 'I', 'CA', 'MG', 'ZN', 'NA+', 'CL-', 'K+', 'LI+', 'CS+', 'RB+', 'F-', 'BR-', 'I-', 'CA2+', 'MG2+', 'ZN2+'):
         return True
         
     # Standard water atom types
