@@ -555,6 +555,42 @@ def bragg_law(wavelength, value, mode='distance', n=1):
         raise ValueError("Mode must be 'distance' or 'twotheta'")
 
 
+def _accumulate_profile(centres, weights, widths, grid, shape):
+    """Sum one peak profile per reflection onto the 2theta grid, in chunks.
+
+    Writing this as one broadcast -- np.meshgrid(grid, centres) and a single
+    (n_reflections x n_grid) array -- is the obvious NumPy phrasing, but for
+    127k reflections against a 4401-point scan that is two 4.5 GB float arrays
+    plus a third for the peaks.  The sum is the same taken a slice at a time,
+    and the arithmetic is identical, so the result is unchanged to the last
+    bit while nothing larger than one chunk is ever held.
+
+    Parameters
+    ----------
+    centres : 2theta of each reflection
+    weights : |F|^2 of each reflection
+    widths  : FWHM of each reflection
+    grid    : the 2theta scan
+    shape   : 'gaussian' or 'lorentzian'
+    """
+    out = np.zeros(grid.size, dtype=float)
+    if centres.size == 0:
+        return out
+    # ~32 MB per temporary, whatever the scan length
+    chunk = max(1, int(4_000_000 // max(grid.size, 1)))
+    for start in range(0, centres.size, chunk):
+        stop = min(start + chunk, centres.size)
+        delta = grid[np.newaxis, :] - centres[start:stop, np.newaxis]
+        w = widths[start:stop, np.newaxis]
+        if shape == 'gaussian':
+            c_g = w / (2 * np.sqrt(2 * np.log(2)))
+            block = weights[start:stop, np.newaxis] * np.exp(-delta**2 / (2 * c_g**2))
+        else:
+            block = weights[start:stop, np.newaxis] / (delta**2 + (0.5 * w)**2)
+        out += block.sum(axis=0)
+    return out
+
+
 def xrd(atoms, Box, wavelength=1.54187, angle_step=0.02, 
         two_theta_range=(2, 90), b_all=0.0, lorentzian_factor=1.0,
         neutral_atoms=False, hkl_max=0, fwhm_00l=1.0, fwhm_hk0=0.5, 
@@ -780,17 +816,23 @@ def xrd(atoms, Box, wavelength=1.54187, angle_step=0.02,
     k_values = np.arange(-kmax, kmax + 1)
     l_values = np.arange(-lmax, lmax + 1)
     
-    hkl_list = []
-    for h in h_values:
-        for k in k_values:
-            for l in l_values:
-                if not (h == 0 and k == 0 and l == 0):  # Exclude 000 reflection
-                    hkl_list.append([h, k, l])
-    
-    hkl = np.array(hkl_list)
-    h = hkl[:, 0]
-    k = hkl[:, 1] 
-    l = hkl[:, 2]
+    # Built with meshgrid rather than a triple Python loop: for a 31x36x38 A
+    # box this is ~397k iterations of list.append, which costs more than the
+    # diffraction physics that follows it.  The ordering (l fastest, then k,
+    # then h) matches the loop it replaces, and the grid shape is kept so the
+    # structure factor below can be assembled on it.
+    hgrid, kgrid, lgrid = np.meshgrid(h_values, k_values, l_values, indexing='ij')
+    grid_shape = hgrid.shape
+    h = hgrid.reshape(-1)
+    k = kgrid.reshape(-1)
+    l = lgrid.reshape(-1)
+    nonzero = ~((h == 0) & (k == 0) & (l == 0))    # exclude the 000 reflection
+    # Where each surviving reflection sits on the full grid, so the separable
+    # structure factor can be computed on the grid and read back out here.
+    grid_index = np.arange(h.size)[nonzero]
+    h = h[nonzero]; k = k[nonzero]; l = l[nonzero]
+    hkl = np.column_stack((h, k, l))
+    n_generated = hkl.shape[0]      # reported later, before the range filter
     
     print(f"Generated {len(hkl)} reflections")
     
@@ -830,6 +872,7 @@ def xrd(atoms, Box, wavelength=1.54187, angle_step=0.02,
         & (two_theta_disc <= two_theta_range[1])
     )
     hkl = hkl[valid_indices]
+    grid_index = grid_index[valid_indices]
     h = h[valid_indices]
     k = k[valid_indices]
     l = l[valid_indices]
@@ -898,9 +941,29 @@ def xrd(atoms, Box, wavelength=1.54187, angle_step=0.02,
         
         print(f"Processing {len(type_indices)} atoms of type {atom_type}")
         
-        # Vectorized calculation for all atoms of this type
+        # The phase sum for this atom type, computed on the h,k,l grid.
+        #
+        # The straightforward way to write this is to broadcast every atom
+        # against every reflection at once:
+        #
+        #     phases = 2j*np.pi*(h[None,:]*x[:,None] + k[None,:]*y[:,None] + ...)
+        #     contributions = f[None,:] * occ[:,None] * temp * np.exp(phases)
+        #     f_hkl += contributions.sum(axis=0)
+        #
+        # which is correct but allocates several (n_atoms x n_hkl) complex
+        # arrays.  For 720 atoms of one type against 139k reflections that is
+        # 1.6 GB apiece and about 6 GB live at once, so a 4000-atom box spends
+        # its time swapping rather than computing.
+        #
+        # The phase factor separates, though:
+        #
+        #     exp(2*pi*i*(h*x + k*y + l*z)) = Ex(h,n) * Ey(k,n) * Ez(l,n)
+        #
+        # so one table per axis costs n_atoms*(nH+nK+nL) exponentials instead
+        # of n_atoms*n_hkl -- 909k rather than 1.6e9 for that box -- and the
+        # rest is a complex matrix product.  Nothing larger than the
+        # reflection grid is ever allocated.
         if len(type_indices) > 0:
-            # Get arrays for this atom type
             idx_array = np.array(type_indices)
             b_type = b_values[idx_array]
             occ_type = occupancy_values[idx_array]
@@ -908,23 +971,35 @@ def xrd(atoms, Box, wavelength=1.54187, angle_step=0.02,
             y_type = y_frac[idx_array]
             z_type = z_frac[idx_array]
             
-            # Vectorized temperature factor calculation
             sin_theta_lambda = np.sin(np.radians(two_theta_disc / 2)) / wavelength
-            temp_factors = np.exp(-b_type[:, np.newaxis] * sin_theta_lambda[np.newaxis, :]**2)
             
-            # Vectorized phase factor calculation: 2πi(hx + ky + lz)
-            phases = 2j * np.pi * (h[np.newaxis, :] * x_type[:, np.newaxis] + 
-                                   k[np.newaxis, :] * y_type[:, np.newaxis] + 
-                                   l[np.newaxis, :] * z_type[:, np.newaxis])
-            
-            # Vectorized contribution calculation
-            contributions = (f_values[np.newaxis, :] * 
-                           occ_type[:, np.newaxis] * 
-                           temp_factors * 
-                           np.exp(phases))
-            
-            # Sum contributions from all atoms of this type
-            f_hkl += np.sum(contributions, axis=0)
+            nH, nK, nL = grid_shape
+            # Atoms of this type that share a B factor share a Debye-Waller
+            # term, which is what lets that term come out of the phase sum.
+            for b_val in np.unique(b_type):
+                sub = np.flatnonzero(b_type == b_val)
+                xs = x_type[sub]; ys = y_type[sub]; zs = z_type[sub]
+                ws = occ_type[sub]
+                
+                Ex = np.exp(2j * np.pi * np.outer(h_values, xs))    # nH x n_sub
+                Ey = np.exp(2j * np.pi * np.outer(k_values, ys))    # nK x n_sub
+                Ez = np.exp(2j * np.pi * np.outer(l_values, zs))    # nL x n_sub
+                Ezw = (Ez * ws).T                                   # n_sub x nL
+                
+                Se = np.empty(grid_shape, dtype=complex)
+                # Friedel's law: these are Waasmaier-Kirfel f0 with no
+                # anomalous terms, so every scattering factor is real and
+                # F(-h,-k,-l) = conj(F(h,k,l)) exactly.  Only h >= 0 is
+                # computed; the rest is the conjugate mirror.
+                ih0 = int(np.searchsorted(h_values, 0))
+                for ih in range(ih0, nH):
+                    # (nK x n_sub) @ (n_sub x nL) -> nK x nL, one gemm per h
+                    Se[ih] = (Ey * Ex[ih]) @ Ezw
+                if ih0 > 0:
+                    Se[:ih0] = np.conj(Se[nH - 1:nH - 1 - ih0:-1, ::-1, ::-1])
+                
+                dw = np.exp(-b_val * sin_theta_lambda**2)
+                f_hkl += f_values * dw * Se.reshape(-1)[grid_index]
     
     # Calculate |F|^2
     f_squared = np.real(f_hkl * np.conj(f_hkl))
@@ -968,15 +1043,9 @@ def xrd(atoms, Box, wavelength=1.54187, angle_step=0.02,
         # Vectorized Gaussian width parameters
         c_g_array = fwhm_array / (2 * np.sqrt(2 * np.log(2)))
         
-        # Vectorized Gaussian peak calculation
-        # Create meshgrid for broadcasting
-        twotheta_mesh, twotheta_disc_mesh = np.meshgrid(exp_twotheta, two_theta_disc)
-        c_g_mesh = c_g_array[:, np.newaxis]
-        f_squared_mesh = f_squared[:, np.newaxis]
-        
-        # Calculate all Gaussian peaks at once
-        gauss_peaks = f_squared_mesh * np.exp(-(twotheta_mesh - twotheta_disc_mesh)**2 / (2 * c_g_mesh**2))
-        gauss_component = np.sum(gauss_peaks, axis=0)
+        # Accumulated in chunks; see _accumulate_profile for why.
+        gauss_component = _accumulate_profile(
+            two_theta_disc, f_squared, fwhm_array, exp_twotheta, 'gaussian')
         
         if np.max(gauss_component) > 0:
             gauss_part = gauss_component / np.max(gauss_component)
@@ -997,20 +1066,9 @@ def xrd(atoms, Box, wavelength=1.54187, angle_step=0.02,
                           np.where((h == 0) & (k == 0), fwhm_00l,  # 00l reflections
                                   fwhm_hkl))  # general hkl reflections
         
-        # Vectorized Lorentzian peak calculation
-        # Reuse meshgrids if they exist, otherwise create them
-        if lorentzian_factor < 1:
-            # Meshgrids already exist from Gaussian calculation
-            pass
-        else:
-            twotheta_mesh, twotheta_disc_mesh = np.meshgrid(exp_twotheta, two_theta_disc)
-            f_squared_mesh = f_squared[:, np.newaxis]
-        
-        fwhm_lorentz_mesh = fwhm_lorentz[:, np.newaxis]
-        
-        # Calculate all Lorentzian peaks at once
-        lorentz_peaks = f_squared_mesh / ((twotheta_mesh - twotheta_disc_mesh)**2 + (0.5 * fwhm_lorentz_mesh)**2)
-        lorentz_component = np.sum(lorentz_peaks, axis=0)
+        # Accumulated in chunks; see _accumulate_profile for why.
+        lorentz_component = _accumulate_profile(
+            two_theta_disc, f_squared, fwhm_lorentz, exp_twotheta, 'lorentzian')
         
         if np.max(lorentz_component) > 0:
             lorentz_part = lorentz_component / np.max(lorentz_component)
@@ -1063,7 +1121,7 @@ def xrd(atoms, Box, wavelength=1.54187, angle_step=0.02,
             f.write(f"h_max = {hmax}\n")
             f.write(f"k_max = {kmax}\n")
             f.write(f"l_max = {lmax}\n")
-            f.write(f"Total reflections generated: {len(hkl_list)}\n")
+            f.write(f"Total reflections generated: {n_generated}\n")
             f.write(f"Valid reflections in 2θ range: {len(two_theta_disc)}\n")
         
         # Save atomic scattering factors to a text file
