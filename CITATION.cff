@@ -1,0 +1,27 @@
+cff-version: 1.2.0
+title: "atomipy: Atomistic Topology Operations in Python"
+message: "If you use atomipy in your research, please cite it using the metadata below."
+type: software
+authors:
+  - family-names: Holmboe
+    given-names: Michael
+    email: michael.holmboe@umu.se
+    affiliation: "Umeå University, Sweden"
+version: "0.98"
+license: MIT
+repository-code: "https://github.com/mholmboe/atomipy"
+url: "https://github.com/mholmboe/atomipy"
+abstract: >-
+  A Python toolbox for building and analysing atomistic models of minerals and
+  molecular systems, and for generating topology files for the MINFF and CLAYFF
+  force fields. A lightweight port of the MATLAB atom Toolbox.
+keywords:
+  - molecular modelling
+  - molecular dynamics
+  - clay minerals
+  - force field
+  - topology
+  - MINFF
+  - CLAYFF
+  - GROMACS
+  - Python

@@ -1,6 +1,7 @@
 include LICENSE
 include NOTICE
 include README.md
+include CITATION.cff
 include CHANGELOG.md
 recursive-include atomipy/data *.cif *.json *.csv *.txt
 recursive-include atomipy/ffparams *.json *.itp *.md *.prm *.dat *.atp *.n2t *.txt

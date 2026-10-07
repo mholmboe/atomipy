@@ -26,8 +26,46 @@ structure, cite its original publication / database entry.
 -------------------------------------------------------------------------------
 Force-field parameters — atomipy/ffparams/min.ff/
 -------------------------------------------------------------------------------
+This covers the MINFF and CLAYFF files of that directory, that is forcefield.itp,
+ffnonbonded.itp, ffbonded.itp, atomtypes.atp, atomname2type.n2t and the
+ffnonbonded_tminff_*, ffnonbonded_gminff and Alternative_ffnonbonded_* variants.
+The GROMACS files that live in the same directory are covered by the next
+section.
+
 The MINFF force field (https://github.com/mholmboe/minff) and the CLAYFF
 parameters are compiled from the published literature. Cite the original papers
 referenced in the force-field files when using these parameters, including:
   - MINFF: see https://github.com/mholmboe/minff
   - CLAYFF: Cygan, Liang & Kalinichev, J. Phys. Chem. B 2004, 108, 1255.
+
+-------------------------------------------------------------------------------
+GROMACS data and water models — atomipy/ffparams/min.ff/
+-------------------------------------------------------------------------------
+The same directory ships standard data and topology files taken unmodified from
+the GROMACS distribution (https://www.gromacs.org), so that the generated force
+field directory can be used directly with GROMACS. GROMACS is licensed under the
+GNU Lesser General Public License version 2.1 or later, which governs these
+files:
+
+  atommass.dat, electroneg.dat, elements.dat, nsfactor.dat, residuetypes.dat,
+  watermodels.dat
+
+  flexwat-ferguson.itp, ions.itp, opc.itp, opc3.itp, spc.itp, spce.itp,
+  tip3p.itp, tip3p-fb.itp, tip4p.itp, tip4p-fb.itp, tip4p2005.itp,
+  tip4p2005f.itp, tip4p2005_nrexcl2.itp, tip4p2005_nrxcl1.itp, tip4pew.itp,
+  tip4pice.itp, tip5p.itp, tips3p.itp
+
+Note that atomipy itself does not link against GROMACS. The optional
+atomipy/xdrfile.py is an independent ctypes wrapper that loads a libxdrfile
+shared library supplied by the user at runtime; no GROMACS code is bundled with
+atomipy.
+
+-------------------------------------------------------------------------------
+Reference data — atomipy/data/
+-------------------------------------------------------------------------------
+Tabulated values taken from the scientific literature, which should be cited
+when the data is used:
+  - bvparm2020.cif: the accumulated table of bond valence parameters
+    distributed by the IUCr, https://www.iucr.org/resources/data/datasets/
+    bond-valence-parameters
+  - Revised_Shannon_radii.txt: the revised Shannon ionic and crystal radii
