@@ -1,0 +1,33 @@
+atomipy
+Copyright (c) 2024-2026 Michael Holmboe
+
+The atomipy source code is licensed under the MIT License (see LICENSE).
+
+This product bundles third-party reference data that retains its own license
+and attribution. The MIT License covering the source code does not re-license
+this data; the terms below apply to it.
+
+-------------------------------------------------------------------------------
+Molecular fragments — atomipy/structures/molecules/
+-------------------------------------------------------------------------------
+Derived from the Avogadro2 project.
+Licensed under the BSD 3-Clause License.
+Copyright (c) 2016 Geoffrey Hutchison, University of Pittsburgh.
+Full license text: atomipy/structures/molecules/LICENSE
+
+-------------------------------------------------------------------------------
+Crystallographic structures — atomipy/structures/ (minerals, crystals, …)
+-------------------------------------------------------------------------------
+Derived from open crystallographic databases (e.g. the Crystallography Open
+Database (COD) and the American Mineralogist Crystal Structure Database
+(AMCSD)). Their original terms and attribution apply. When using a specific
+structure, cite its original publication / database entry.
+
+-------------------------------------------------------------------------------
+Force-field parameters — atomipy/ffparams/min.ff/
+-------------------------------------------------------------------------------
+The MINFF force field (https://github.com/mholmboe/minff) and the CLAYFF
+parameters are compiled from the published literature. Cite the original papers
+referenced in the force-field files when using these parameters, including:
+  - MINFF: see https://github.com/mholmboe/minff
+  - CLAYFF: Cygan, Liang & Kalinichev, J. Phys. Chem. B 2004, 108, 1255.

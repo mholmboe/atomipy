@@ -47,7 +47,7 @@ setup(
         ],
     },
     license="MIT",
-    license_files=["LICENSE"],
+    license_files=["LICENSE", "NOTICE"],
     author="Michael Holmboe",
     author_email="michael.holmboe@umu.se",
     description="A Python toolbox for molecular structure analysis and simulation with support for both orthogonal and triclinic periodic boundary conditions",
