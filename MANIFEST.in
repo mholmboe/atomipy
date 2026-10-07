@@ -1,4 +1,9 @@
+include LICENSE
+include README.md
+include CHANGELOG.md
 recursive-include atomipy/data *.cif *.json *.csv *.txt
 recursive-include atomipy/ffparams *.json *.itp *.md *.prm *.dat *.atp *.n2t *.txt
 recursive-include atomipy/structures *.cif *.pdb *.gro *.dat *.txt
+# Keep the notices/licenses that bundled third-party data requires (Avogadro2 BSD-3, etc.)
+recursive-include atomipy/structures LICENSE *.md
 include atomipy/data/bvparm2020.cif

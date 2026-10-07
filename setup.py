@@ -25,6 +25,10 @@ setup(
             "structures/**/*.gro",
             "structures/**/*.dat",
             "structures/**/*.txt",
+            # Ship the notices/licenses that bundled third-party data requires
+            # (e.g. the Avogadro2 BSD-3 LICENSE for structures/molecules/).
+            "structures/**/LICENSE",
+            "structures/**/*.md",
         ],
     },
     install_requires=[
@@ -42,6 +46,8 @@ setup(
             "gemmi>=0.7.0",
         ],
     },
+    license="MIT",
+    license_files=["LICENSE"],
     author="Michael Holmboe",
     author_email="michael.holmboe@umu.se",
     description="A Python toolbox for molecular structure analysis and simulation with support for both orthogonal and triclinic periodic boundary conditions",
