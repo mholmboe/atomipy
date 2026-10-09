@@ -66,7 +66,7 @@ ap.write_itp(MIN, Box=Box_dim, file_path='minff.itp')
 ap.write_psf(System, Box=Box_dim, file_path='minff.psf', detect_bimodal=True, max_angle=150)
 
 # Load GMINFF forcefield parameters for LAMMPS Pair Coeffs, with and without bimodal detection of atomtype triplet angle terms
-ff_params = ap.load_forcefield('GMINFF/gminff_all.json', blocks=['GMINFF_k500', 'OPC3_HFE_LM', 'OPC3'])
+ff_params = ap.load_forcefield('GMINFF/gminff_all.json', blocks=['MINFF_k500', 'OPC3_HFE_LM', 'OPC3'])
 ap.write_lmp(System, Box=Box_dim, file_path='minff.data', forcefield=ff_params,detect_bimodal=True)
 ap.write_lmp(System, Box=Box_dim, file_path='minff_no150angles.data', forcefield=ff_params, detect_bimodal=True, max_angle=150)
 

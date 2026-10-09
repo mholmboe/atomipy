@@ -1,3 +1,5 @@
+; This is basically a copy of the ffnonbonded_gminff.itp file
+;
 ; General (G)MINFF parameters Aug 13 2026
 ; Please report errors to michael.holmboe@umu.se
 ;
@@ -14,7 +16,7 @@
 ; -D{abbreviation} syntax in the Gromacs .mdp file, hence in gromacs, use the -D flag 
 ; in the .mdp file to activate the specific param set, like:
 ; 
-; define = -DGMINFF_k500 -DOPC3_IOD_LM ; see line 148-187
+; define = -DMINFF_k500 -DOPC3_IOD_LM ; see line 148-187
 ;
 ; The last part of this file contain parameters for different common water models
 ;
@@ -60,10 +62,10 @@
 ; 0.01 Å. The CM set is a compromise between HFE and IOD data sets for the divalent ions.
 
 
-
 [ atomtypes ]
 ; name  number  mass  charge  ptype  sigma   epsilon ;
-#ifdef GMINFF_k0
+;
+#ifdef MINFF_k0
 ; GMINFF k0 kJ/mol/rad2
 H          1	 1.00794	 0.40000   A  	 0.000000	 0.000000 ; Hydroxyl hydrogen
 He         1	 1.00794	 0.40000   A  	 0.000000	 0.000000 ; Edge hydroxyl hydrogen
@@ -104,7 +106,7 @@ Feo3      26	 55.84500	 1.50000   A  	 0.168158	 0.385264 ; Ex. Hematite
 Tio       22	 47.86700	 2.48000   A  	 0.188206	 0.806177 ; Ex. TiO2
 #endif
 
-#ifdef GMINFF_k250
+#ifdef MINFF_k250
 ; GMINFF k250 kJ/mol/rad2
 H          1	 1.00794	 0.40000   A  	 0.000000	 0.000000
 He         1	 1.00794	 0.40000   A  	 0.000000	 0.000000
@@ -145,7 +147,7 @@ Feo3      26	 55.84500	 1.50000   A  	 0.168158	 0.385264
 Tio       22	 47.86700	 2.48000   A  	 0.189407	 0.806691
 #endif
 
-#ifdef GMINFF_k500
+#ifdef MINFF_k500
 ; GMINFF k500kJ/mol/rad2
 H          1	 1.00794	 0.40000   A  	 0.000000	 0.000000
 He         1	 1.00794	 0.40000   A  	 0.000000	 0.000000
@@ -186,7 +188,7 @@ Feo3      26	 55.84500	 1.50000   A  	 0.169565	 0.387325
 Tio       22	 47.86700	 2.48000   A  	 0.188503	 0.808327
 #endif
 
-#ifdef GMINFF_k1500
+#ifdef MINFF_k1500
 ; GMINFF k1500kJ/mol/rad2
 H          1	 1.00794	 0.40000   A  	 0.000000	 0.000000
 He         1	 1.00794	 0.40000   A  	 0.000000	 0.000000
@@ -1235,61 +1237,109 @@ Pu4+          94	 244.000000	 4.000000   A	 0.304509	 0.488675
 #endif
 
 ; Various atomtypes for the different water models (To do: Add references)
-; spc water
-HW_spc         1	 1.00794 	 0.410000   A  	 0.000000e+00	 0.000000e+00
-OW_spc         8	 15.99940	-0.820000   A  	 3.165570e-01	 6.501700e-01
-; spce water              
-HW_spce        1	 1.00794 	 0.423800   A  	 0.000000e+00	 0.000000e+00
-OW_spce        8	 15.99940	-0.847600   A  	 3.165570e-01	 6.501700e-01
-; Ferguson SPC water
-HW_flx         1	 1.00794 	 0.413000   A  	 0.000000e+00	 0.000000e+00
-OW_flx         8	 15.99940	-0.826000   A  	 3.182600e-01	 6.296200e-01
-; tip3p
-HW_tip3p       1	 1.00794 	 0.417000   A  	 0.000000e+00	 0.000000e+00
-OW_tip3p       8	 15.99940	-0.834000   A  	 3.150580e-01	 6.363860e-01
-; tips3p CHARMM TIP3P with LJ also for H's
-HW_tips3p      1	 1.00800 	 0.417000   A  	 4.000100e-02	 1.924640e-01
-OW_tips3p      8	 15.99940	-0.834000   A  	 3.150570e-01	 6.363860e-01
-; TIP3PFB
-HW_TIP3PFB     1	 1.00794 	 0.424224   A  	 0.000000e+00	 0.000000e+00
-OW_TIP3PFB     8	 15.99940	-0.848448   A  	 3.177965e-01	 6.521435e-01
-; tip4p
-HW_tip4p       1	 1.00794 	 0.520000   A  	 0.000000e+00	 0.000000e+00
-OW_tip4p       8	 15.99940	 0.000000   A  	 3.153650e-01	 6.485200e-01
-; tip4p/2005
-HW_tip4p2005   1	 1.00794 	 0.556400   A  	 0.000000e+00	 0.000000e+00
-OW_tip4p2005   8	 15.99940	 0.000000   A  	 3.158900e-01	 7.748980e-01
-;tip4p-EW
-HW_tip4pew     1	 1.00794 	 0.524220   A  	 0.000000e+00	 0.000000e+00
-OW_tip4pew     8	 15.99940	 0.000000   A  	 3.164350e-01	 6.809460e-01
-;tip4p-Ice
-HW_ice         1	 1.00800 	 0.589700   A  	 0.000000e+00	 0.000000e+00
-OW_ice         8	 15.99940	 0.000000   A  	 3.166800e-01	 8.821600e-01
-;tip4p/flex by m.gonzalez12@imperial.ac.uk
-IW_tip4pf      0     0.0000     -1.1128     D    0.000000e+00    0.000000e+00
-HW_tip4pf      1	 1.00794 	 0.556400   A  	 0.000000e+00	 0.000000e+00
-OW_tip4pf      8	 15.99940	 0.000000   A  	 3.164400e-01	 7.749000e-01
-; TIP4PFB
-HW_TIP4PFB     1	 1.00794 	 0.525870   A  	 0.000000e+00	 0.000000e+00
-OW_TIP4PFB     8	 15.99940	 0.000000   A  	 3.165550e-01	 7.492790e-01
-;tip5p
-HW_tip5p       1	 1.00794 	 0.000000   A  	 0.000000e+00	 0.000000e+00
-OW_tip5p       8	 15.99940	 0.000000   A  	 3.120000e-01	 6.694400e-01
+; 3-site models
+#ifdef OPC3
+; OPC3 - Default for MINFF
+HW_opc3        1	 1.00794 	 0.447585   A  	 0.000000e+00	 0.000000e+00
+OW_opc3        8	 15.99940	-0.895170   A  	 3.174270e-01	 6.836900e-01
+#endif
+
+#ifdef OPC
 ; OPC
 HW_opc         1	 1.00794 	 0.679100   A  	 0.000000e+00	 0.000000e+00
 OW_opc         8	 15.99940	 0.000000   A  	 3.166560e-01	 8.903100e-01
-; OPC3
-HW_opc3        1	 1.00794 	 0.447585   A  	 0.000000e+00	 0.000000e+00
-OW_opc3        8	 15.99940	-0.895170   A  	 3.174270e-01	 6.836900e-01
+MW             0     0.0000     -1.358200   A    0.00000e+00     0.00000e+000
+#endif
+
+#ifdef SPC
+; spc water
+HW_spc         1	 1.00794 	 0.410000   A  	 0.000000e+00	 0.000000e+00
+OW_spc         8	 15.99940	-0.820000   A  	 3.165570e-01	 6.501700e-01
+#endif
+
+#ifdef SPCE
+; spce water              
+HW_spce        1	 1.00794 	 0.423800   A  	 0.000000e+00	 0.000000e+00
+OW_spce        8	 15.99940	-0.847600   A  	 3.165570e-01	 6.501700e-01
+#endif
+
+#ifdef SPC
+; Ferguson SPC water
+HW_flx         1	 1.00794 	 0.413000   A  	 0.000000e+00	 0.000000e+00
+OW_flx         8	 15.99940	-0.826000   A  	 3.182600e-01	 6.296200e-01
+#endif
+
+#ifdef TIP3P
+; tip3p
+HW_tip3p       1	 1.00794 	 0.417000   A  	 0.000000e+00	 0.000000e+00
+OW_tip3p       8	 15.99940	-0.834000   A  	 3.150580e-01	 6.363860e-01
+#endif
+
+#ifdef TIPS3P
+; tips3p CHARMM TIP3P with LJ also for H's
+HW_tips3p      1	 1.00800 	 0.417000   A  	 4.000100e-02	 1.924640e-01
+OW_tips3p      8	 15.99940	-0.834000   A  	 3.150570e-01	 6.363860e-01
+#endif
+
+#ifdef TIP3PFB
+; TIP3PFB
+HW_TIP3PFB     1	 1.00794 	 0.424224   A  	 0.000000e+00	 0.000000e+00
+OW_TIP3PFB     8	 15.99940	-0.848448   A  	 3.177965e-01	 6.521435e-01
+#endif
+
+; 4-site models
+#ifdef TIP4P
+; tip4p
+HW_tip4p       1	 1.00794 	 0.520000   A  	 0.000000e+00	 0.000000e+00
+OW_tip4p       8	 15.99940	 0.000000   A  	 3.153650e-01	 6.485200e-01
+MW             0     0.0000     -1.040000   A    0.00000e+00     0.00000e+000
+#endif
+
+#ifdef TIP4P2005
+; tip4p/2005
+HW_tip4p2005   1	 1.00794 	 0.556400   A  	 0.000000e+00	 0.000000e+00
+OW_tip4p2005   8	 15.99940	 0.000000   A  	 3.158900e-01	 7.748980e-01
+MW             0     0.0000     -1.112800   A    0.00000e+00     0.00000e+000
+#endif
+
+#ifdef TIP4PEW
+;tip4p-EW
+HW_tip4pew     1	 1.00794 	 0.524220   A  	 0.000000e+00	 0.000000e+00
+OW_tip4pew     8	 15.99940	 0.000000   A  	 3.164350e-01	 6.809460e-01
+MW             0     0.0000     -1.048440   A    0.00000e+00     0.00000e+000
+#endif
+
+#ifdef TIP4PICE
+;tip4p-Ice
+HW_ice         1	 1.00800 	 0.589700   A  	 0.000000e+00	 0.000000e+00
+OW_ice         8	 15.99940	 0.000000   A  	 3.166800e-01	 8.821600e-01
+MW             0     0.0000     -1.179400   A    0.00000e+00     0.00000e+000
+#endif
+
+#ifdef TIP4PF
+;tip4p/flex by m.gonzalez12@imperial.ac.uk
+HW_tip4pf      1	 1.00794 	 0.556400   A  	 0.000000e+00	 0.000000e+00
+OW_tip4pf      8	 15.99940	 0.000000   A  	 3.164400e-01	 7.749000e-01
+MW             0     0.0000     -1.1128     D    0.000000e+00    0.000000e+00
+#endif
+
+#ifdef TIP4PFB
+; TIP4PFB
+HW_TIP4PFB     1	 1.00794 	 0.525870   A  	 0.000000e+00	 0.000000e+00
+OW_TIP4PFB     8	 15.99940	 0.000000   A  	 3.165550e-01	 7.492790e-01
+MW             0     0.0000     -1.051740   A    0.00000e+00     0.00000e+000
+#endif
+
+; 5-site models
+#ifdef TIP5P
+;tip5p
+HW_tip5p       1	 1.00794 	 0.000000   A  	 0.000000e+00	 0.000000e+00
+OW_tip5p       8	 15.99940	 0.000000   A  	 3.120000e-01	 6.694400e-01
+MW             0     0.0000      0.000000   A    0.00000e+00     0.00000e+000
+#endif
+
+#ifdef DUMMY
 ; dummy defs
-; MW=Dummy mass for tip4p/5p water extra point charge 
 MW             0     0.0000      0.0000     A    0.00000e+00     0.00000e+00
-
-
-
-
-
-
-
-	
+#endif
 

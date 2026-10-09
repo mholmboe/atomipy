@@ -26,7 +26,7 @@ def main():
     topology, system, positions = ap.load_minff_into_openmm(
         top_path='system_minff.top',
         gro_path='system_minff.gro',
-        defines=['GMINFF_k500', 'OPC3_IOD_LM', 'OPC3'],
+        defines=['MINFF_k500', 'OPC3_IOD_LM', 'OPC3'],
         include_dir=inc_dir,
         nonbonded_cutoff_nm=0.9, # To ensure it's < half box size
         constraints=None,        # MINFF needs flexible bonds

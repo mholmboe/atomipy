@@ -29,7 +29,7 @@ merge_top_files(*pairs, out_top, out_gro, defines=None, box=None)
     Reads each pair with import_gaff_top + import_conf, merges, writes files.
 
 write_merged_top(atoms_merged, itp_merged, box_merged, out_top, out_gro,
-                 mineral_ff='minff', minff_variant='GMINFF_k500',
+                 mineral_ff='minff', minff_variant='MINFF_k500',
                  water_model='spce', ion_model='SPCE_HFE_LM',
                  molecule_name='System')
     Writes the final self-contained .top and .gro files.
@@ -45,6 +45,7 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 from ._provenance import provenance_string
+from .minff_defines import minff_defines
 
 # atomipy-native atom dict type alias for documentation
 AtomList = List[Dict[str, Any]]
@@ -833,7 +834,7 @@ def write_merged_top(
     *,
     # Mineral force field include
     mineral_ff:    str  = 'minff',
-    minff_variant: str  = 'GMINFF_k500',
+    minff_variant: str  = 'MINFF_k500',
     water_model:   str  = 'spce',
     ion_model:     str  = 'SPCE_HFE_LM',
     molecule_name: str  = 'Mixed System',
@@ -842,7 +843,7 @@ def write_merged_top(
     # Angle force constant Ka (kJ/mol/rad²) for mineral O-M-O / M-O-M angles.
     # None  -> emit NO [ angles ] at all (CLAYFF default, MINFF "No angles").
     # 0/250/500/1500 -> write explicit angles: scanned θ0 for metal angles at
-    # this Ka, and the standard θ0/k for M-O-H. The GMINFF_k nonbonded block is
+    # this Ka, and the standard θ0/k for M-O-H. The MINFF_k nonbonded block is
     # unaffected (written separately).
     angle_ka:  Optional[float] = 500.0,
     # Optional explicit [ molecules ] override: a sequence of (name, count) pairs.
@@ -875,13 +876,27 @@ def write_merged_top(
     out_top        : path for the output .top file
     out_gro        : path for the output .gro file
     mineral_ff     : 'minff', 'clayff', or 'gminff' — selects the #ifdef macro
-    minff_variant  : preprocessor define for the mineral FF variant
+    minff_variant  : preprocessor define for the general MINFF set, i.e. the angle force
+                     constant ('MINFF_k0', 'MINFF_k250', 'MINFF_k500', 'MINFF_k1500').
+                     The pre-v1.0 'GMINFF_k500' is still accepted, with a FutureWarning.
+                     Tailored (TMINFF) sets are not supported here: they need two defines
+                     and the ffnonbonded_tminff.itp / ffbonded_tminff.itp includes.
     water_model    : water model include (spce, opc3, tip3p, ...)
     ion_model      : ion parametrisation set (SPCE_HFE_LM, OPC3_IOD_LM, ...)
     organic_itps   : list of organic .itp filenames to #include (relative paths)
     """
     from .write_conf import gro  as write_gro_fn
     from .cell_utils  import Cell2Box_dim
+
+    # The defines that select the general MINFF set. Done first, so that a variant that
+    # cannot work is reported before any file is written (a define that selects nothing
+    # only shows up later as undeclared atomtypes in grompp).
+    _minff_flags = minff_defines(minff_variant)
+    if len(_minff_flags) > 1:
+        raise ValueError(
+            f"minff_variant={minff_variant!r} selects a tailored (TMINFF) set "
+            f"({', '.join('-D' + d for d in _minff_flags)}), which write_merged_top does not "
+            "support: it includes the general ffnonbonded.itp/ffbonded.itp only")
 
     total_charge = sum(_charge_to_float(a.get('charge')) for a in atoms_merged)
 
@@ -967,7 +982,8 @@ def write_merged_top(
             # Activate only the atomtype blocks the system actually uses, so a
             # MINFF-free / ion-free topology never pulls in unused parameter sets.
             if has_mineral:
-                f.write(f'#define {minff_variant}\n')
+                for _minff_define in _minff_flags:
+                    f.write(f'#define {_minff_define}\n')
             if has_water:
                 # Activate the water-model atomtype block (#ifdef OPC3 / SPCE /
                 # TIP4PEW / ...) in ffnonbonded.itp. The water .itp only
@@ -1189,7 +1205,7 @@ def merge_top_files(
     defines: Optional[list] = None,
     box: Optional[list] = None,
     mineral_ff: str = 'minff',
-    minff_variant: str = 'GMINFF_k500',
+    minff_variant: str = 'MINFF_k500',
     water_model: str = 'spce',
     ion_model: str = 'SPCE_HFE_LM',
     angle_ka: Optional[float] = 500.0,

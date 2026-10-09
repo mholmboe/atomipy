@@ -429,7 +429,7 @@ atoms, Box = ap.import_gro("system.gro")
 # This automatically handles unit conversion (Gromacs -> LAMMPS real by default)
 ff = ap.load_forcefield(
     'GMINFF/gminff_all.json', 
-    blocks=['GMINFF_k500', 'OPC3', 'OPC3_HFE_LM']
+    blocks=['MINFF_k500', 'OPC3', 'OPC3_HFE_LM']
 )
 
 # Write LAMMPS data file with Pair Coeffs included

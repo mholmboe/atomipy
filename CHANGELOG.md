@@ -2,6 +2,33 @@
 
 All notable changes to **atomipy** are documented here.
 
+## Unreleased
+
+### Force field (MINFF v1.0 define names)
+MINFF v1.0 selects parameter sets with different GROMACS defines: the angle force
+constant is a define of its own (`-DMINFF_k500`), and a tailored (TMINFF) set needs
+the mineral as well (`-DMontmorillonite -DMINFF_k500`). The old `-DGMINFF_k500` and
+`-DMontmorillonite_k500` no longer select anything (there is no shim in `min.ff`).
+- **Bundled `min.ff` and parameter files synced wholesale** to the canonical
+  [`mholmboe/minff`](https://github.com/mholmboe/minff) v1.0: the per-k and
+  all-k `ffnonbonded_tminff*.itp` files are replaced by `ffnonbonded_tminff.itp`,
+  `ffbonded_tminff.itp`, `forcefield_tminff.itp`, `ffbonded_gminff.itp` and
+  `forcefield_gminff.itp`; the GMINFF/TMINFF `.json` files carry the corrected
+  Ca-mineral parameters, `Fee3` in k1500, the `MW` sites of 4-site waters and ASCII ion signs.
+  TMINFF users should include `forcefield_tminff.itp`.
+- **JSON block keys:** the general keys are renamed `GMINFF_k500` -> `MINFF_k500` (all four
+  force constants); the tailored keys are unchanged (`Montmorillonite_k500`, ...).
+  `load_forcefield(..., blocks=['GMINFF_k500'])` must become `blocks=['MINFF_k500']`.
+- **Defines:** new `atomipy.minff_defines.minff_defines()` builds the defines for a
+  general or tailored set, and `gromacs.build_defines()` gains `mineral=`
+  (`build_defines(mineral="Montmorillonite")` -> `-DMontmorillonite -DMINFF_k500 -DFLEXIBLE`).
+  The default `minff_variant` of `build_defines`, `write_merged_top` and `merge_and_write`
+  is now `'MINFF_k500'`. The old spellings `'GMINFF_k500'` and `'<Mineral>_k500'` are still
+  accepted for one release and are converted, with a `FutureWarning`; a tailored set that
+  lacks the force constant (or the mineral) raises `ValueError` instead of selecting nothing.
+  `write_merged_top` writes the general sets only and rejects a tailored `minff_variant`.
+- Docs, examples and scripts use the new names.
+
 ## 0.98
 
 ### Force field (MINFF / CLAYFF)

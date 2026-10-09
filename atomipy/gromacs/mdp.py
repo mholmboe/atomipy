@@ -10,6 +10,8 @@ group (no custom index file). Splitting into mineral vs water/ion groups is a
 later (Phase-2) addition that needs an auto-generated ``.ndx``.
 """
 
+from ..minff_defines import minff_defines
+
 # Defaults common to all dynamics stages (nm, ps, K, bar).
 _COMMON = {
     "cutoff-scheme": "Verlet",
@@ -31,11 +33,22 @@ _COMMON = {
 }
 
 
-def build_defines(minff_variant="GMINFF_k500", ion_model=None, flexible=True, posres=None):
-    """Assemble the ``define`` flag list, e.g. ['-DGMINFF_k500','-DOPC3_IOD_LM']."""
-    flags = []
-    if minff_variant:
-        flags.append(f"-D{minff_variant}")
+def build_defines(minff_variant="MINFF_k500", ion_model=None, flexible=True, posres=None,
+                  mineral=None):
+    """Assemble the ``define`` flag list, e.g. ['-DMINFF_k500','-DOPC3_IOD_LM'].
+
+    The general MINFF parameters are selected by the angle force constant alone
+    (``minff_variant='MINFF_k500'``). The tailored (TMINFF) parameters need the mineral
+    as well, which is given with ``mineral``::
+
+        build_defines(mineral="Montmorillonite")
+        # ['-DMontmorillonite', '-DMINFF_k500', '-DFLEXIBLE']
+
+    The pre-v1.0 spellings ``'GMINFF_k500'`` and ``'Montmorillonite_k500'`` are still
+    accepted for ``minff_variant`` and turned into the new defines, with a
+    ``FutureWarning`` (see :func:`atomipy.minff_defines.minff_defines`).
+    """
+    flags = [f"-D{d}" for d in minff_defines(minff_variant, mineral)]
     if ion_model:
         flags.append(f"-D{ion_model}")
     if flexible:
@@ -60,7 +73,7 @@ def mdp(stage, *, defines=None, nsteps=None, dt=0.001, temperature=298.0,
     stage : str
         'em' (steepest-descent minimization), 'nvt', 'npt', or 'md'.
     defines : list of str, optional
-        ``define`` flags (see :func:`build_defines`). Default GMINFF_k500+flexible.
+        ``define`` flags (see :func:`build_defines`). Default MINFF_k500+flexible.
     nsteps : int, optional
         Step count (stage defaults: em 5000, nvt/npt 20000, md 50000).
     dt : float

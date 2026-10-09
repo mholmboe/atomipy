@@ -1176,7 +1176,7 @@ def lmp(atoms, Box=None, file_path=None, forcefield=None, rmaxH=1.2, rmaxM=2.45,
     
     # With forcefield parameters from JSON (uses bundled data)
     import atomipy as ap
-    ff = ap.load_forcefield('GMINFF/gminff_opc3_hfe_lm_k500.json', blocks=['GMINFF_k500'])
+    ff = ap.load_forcefield('GMINFF/gminff_opc3_hfe_lm_k500.json', blocks=['MINFF_k500'])
     ap.write_lmp(atoms, Box, "system.data", forcefield=ff)
     """
     import numpy as np

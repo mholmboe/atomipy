@@ -159,7 +159,7 @@ def main():
     
     # Also generate a LAMMPS topology file for use with other minff dynamics packages
     print("Writing LAMMPS topology file...")
-    ff_params = ap.load_forcefield('GMINFF/gminff_all.json', blocks=['GMINFF_k500', 'OPC3_HFE_LM', 'OPC3'])
+    ff_params = ap.load_forcefield('GMINFF/gminff_all.json', blocks=['MINFF_k500', 'OPC3_HFE_LM', 'OPC3'])
     ap.write_lmp(
         minff_atoms,
         Box=Box_dim,

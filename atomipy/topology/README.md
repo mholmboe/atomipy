@@ -11,7 +11,7 @@ Implements the spec `atomipy_topology_interchange_plan.md` (resolved decisions Â
 from atomipy.import_topology import read_itp, read_json, read_data, read_psf, from_atoms_box
 from atomipy.write_topology  import write_itp, write_json, write_data, write_psf, to_atoms_box
 
-top = read_itp("system.itp", defines=["GMINFF_k500"])   # -> Topology (params inline)
+top = read_itp("system.itp", defines=["MINFF_k500"])   # -> Topology (params inline)
 write_data(top, "system.data", units="real", emit_input_snippet="in.settings")  # unique terms -> unique types
 write_json(top, "system.json")                            # canonical artifact
 
@@ -70,8 +70,8 @@ the preprocessor) **or** the bundled `ffparams/*.json` â€” the two are
 interchangeable (a test parametrizes a bare structure from each and asserts the
 bond/angle/LJ values match exactly). Usage:
 ```python
-ff = read_forcefield_itp(["ffnonbonded_gminff.itp", "ffbonded.itp"], defines=["GMINFF_k500"])
-# or: ff = read_forcefield_json("GMINFF/gminff_all.json", variant="GMINFF_k500")
+ff = read_forcefield_itp(["ffnonbonded_gminff.itp", "ffbonded.itp"], defines=["MINFF_k500"])
+# or: ff = read_forcefield_json("GMINFF/gminff_all.json", variant="MINFF_k500")
 apply_forcefield(structure_topology, ff)   # fills AtomType LJ/mass/charge + per-instance bond/angle params
 ```
 

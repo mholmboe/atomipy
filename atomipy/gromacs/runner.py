@@ -148,7 +148,7 @@ def _active_atomtypes(ffdir, defines):
     """Set of [atomtypes] names active in ffnonbonded.itp under the given defines.
 
     Honors #ifdef/#ifndef/#else/#endif so the result reflects which mineral
-    parameter block (GMINFF_k* vs CLAYFF_EXT, ion sets, …) is selected. Returns
+    parameter block (MINFF_k* vs CLAYFF_EXT, ion sets, …) is selected. Returns
     None if ffnonbonded.itp is absent.
     """
     fn = Path(ffdir) / "ffnonbonded.itp"
@@ -275,7 +275,7 @@ def stage_minff(workdir, *, minff_src=None, sanitize=True, defines=None):
 
     Lighter than stage_run_dir: only the force field. Use when the topology and
     coordinates were already written into ``workdir`` (e.g. by the web-module
-    codegen). ``defines`` (the active FF defines, e.g. ['GMINFF_k500','OPC3'] or
+    codegen). ``defines`` (the active FF defines, e.g. ['MINFF_k500','OPC3'] or
     ['CLAYFF_EXT', …]) makes sanitization define-aware. Returns #lines sanitized.
     """
     wd = Path(workdir)
