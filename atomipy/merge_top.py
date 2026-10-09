@@ -577,6 +577,7 @@ def _split_mineral_components_by_resname(components):
     only to parts that are genuinely separate molecules (stacked layers have no inter-layer
     bonds, so this is safe).
     """
+    from .composition import classify_atom
     out = []
     for c in components:
         atoms = c.get('atoms', [])
@@ -591,11 +592,23 @@ def _split_mineral_components_by_resname(components):
                 groups[rn] = []
                 order.append(rn)
             groups[rn].append(a)
-        if len(order) <= 1:
+        # Fast path: a single mineral resname with no ion/water passes through unchanged.
+        if len(order) == 1 and classify_atom(groups[order[0]][0]) not in ('ion', 'water'):
             out.append(c)
             continue
         for rn in order:
-            out.append({'atoms': groups[rn], 'itp': None, 'box': c.get('box')})
+            grp = groups[rn]
+            comp = {'atoms': grp, 'itp': None, 'box': c.get('box')}
+            # Ion/water groups must NOT become a mineral [ moleculetype ]: they would
+            # carry an unsigned atomtype (e.g. 'Na' from the assigned fftype) that the
+            # forcefield does not define (ffnonbonded defines the signed 'Na+'), so grompp
+            # fails with "Atomtype Na not found". Flag them so merge_top keeps the atoms in
+            # the system (for the .gro and the [ molecules ] count) but leaves their
+            # [ moleculetype ] to min.ff/ions.itp (and the water .itp).
+            kind = classify_atom(grp[0])
+            if kind in ('ion', 'water'):
+                comp['_passthrough'] = kind
+            out.append(comp)
     return out
 
 
@@ -647,7 +660,9 @@ def merge_top(
     original_itps = []
     for c in components:
         raw_itp = c.get('itp')
-        if raw_itp is None:
+        if c.get('_passthrough'):
+            raw_itp = {}   # ion/water: no mineral itp — min.ff/ions.itp + water .itp provide it
+        elif raw_itp is None:
             raw_itp = _build_mineral_itp(c.get('atoms', []), c.get('box'))
         itp_list.append(_normalize_itp(raw_itp))
         original_itps.append(raw_itp)
@@ -693,6 +708,24 @@ def merge_top(
         atoms_in = comp.get('atoms', [])
         n_atoms  = len(atoms_in)
         if n_atoms == 0:
+            continue
+
+        # Ion/water passthrough: add the atoms to the merged system (so the .gro and the
+        # get_mol_sequence-based [ molecules ] count are correct) but emit NO mineral
+        # [ moleculetype ] — min.ff/ions.itp and the water .itp provide those, with the
+        # correct signed ion atomtypes ('Na+', not 'Na'). Resnames are kept as-is so
+        # get_mol_sequence names the molecules correctly.
+        if comp.get('_passthrough'):
+            for local_i, atom in enumerate(atoms_in):
+                new_atom = dict(atom)
+                new_atom['index'] = atom_offset + local_i + 1
+                new_atom['molid'] = molid_offset + int(atom.get('molid', 1))
+                if 'component' not in new_atom:
+                    new_atom['component'] = comp_idx
+                atoms_merged.append(new_atom)
+            molids = [int(a.get('molid', 1)) for a in atoms_in]
+            molid_offset += max(molids) - min(molids) + 1
+            atom_offset += n_atoms
             continue
 
         # Determine a unique molecule name for this component
