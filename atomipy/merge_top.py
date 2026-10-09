@@ -858,6 +858,33 @@ def merge_top(
 # File-level writer
 # ---------------------------------------------------------------------------
 
+def _renumber_molids_contiguous(atoms):
+    """Reassign globally-unique, 1-based molids by contiguous runs: a new molecule
+    starts whenever the incoming molid changes between consecutive atoms.
+
+    This repairs molid *collisions* between non-adjacent molecules that came from
+    different build branches (e.g. an ion at molid 35 and the first organic also
+    at molid 35, because the organic branch was never offset past the ions).
+    ``get_mol_sequence`` keys the [ molecules ] table on globally-unique molids,
+    so a collision silently merges two molecules into one entry — the topology
+    then has one molecule fewer than the .gro and grompp aborts with
+    "number of coordinates ... does not match topology". Each molecule's atoms are
+    contiguous in a GROMACS-ordered system, so renumbering by runs is safe and
+    makes the [ molecules ] count match the coordinates exactly.
+    """
+    if not atoms:
+        return
+    _sentinel = object()
+    prev = _sentinel
+    new_id = 0
+    for a in atoms:
+        cur = a.get('molid', 1)
+        if cur != prev:
+            new_id += 1
+            prev = cur
+        a['molid'] = new_id
+
+
 def _hoist_organic_atomtypes(organic_itps, out_top_dir):
     """Split each organic (GAFF/ACPYPE) .itp into its [ atomtypes ] block and the
     rest of the topology.
@@ -1003,6 +1030,11 @@ def write_merged_top(
             f"minff_variant={minff_variant!r} selects a tailored (TMINFF) set "
             f"({', '.join('-D' + d for d in _minff_flags)}), which write_merged_top does not "
             "support: it includes the general ffnonbonded.itp/ffbonded.itp only")
+
+    # Repair any molid collisions between non-adjacent molecules from different
+    # build branches before the .gro and [ molecules ] table are derived from them
+    # (both key on molid), so their molecule counts can never disagree.
+    _renumber_molids_contiguous(atoms_merged)
 
     total_charge = sum(_charge_to_float(a.get('charge')) for a in atoms_merged)
 
