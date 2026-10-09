@@ -34,12 +34,32 @@ from typing import Iterable, List, Optional, Sequence, Union
 #: Angle force constants (kJ/mol/rad2) that the parameter sets are made for.
 FORCE_CONSTANTS = ("k0", "k250", "k500", "k1500")
 
+#: Minerals with a tailored (TMINFF) parameter set, from the #ifdef blocks of
+#: ffparams/min.ff/ffnonbonded_tminff.itp. Used only to tell a mineral name from
+#: any other define, so that a mineral given without an angle force constant is
+#: reported rather than passed through. Add to this if a mineral is added.
+MINERALS = (
+    "Akdalaite", "Anatase", "Boehmite", "Brucite", "CaF2", "CaO", "Coesite",
+    "Corundum", "Cristobalite", "Diaspore", "Dickite", "Forsterite",
+    "Gibbsite", "Goethite", "Hectorite-F", "Hectorite-H", "Hematite",
+    "Imogolite", "Kaolinite", "Lepidocrocite", "Li2O", "Maghemite",
+    "Magnetite", "Montmorillonite", "Muscovite", "Nacrite", "Nontronite",
+    "Periclase", "Portlandite", "Pyrophyllite", "Quartz", "Rutile", "Talc",
+    "Wustite", "cis_Oct_Fe2_cis", "cis_Oct_Fe2_trans",
+    "cis_Oct_Mg2cis_Fe3cis", "cis_Oct_Mg2cis_Fe3trans",
+    "cis_Oct_Mg2trans_Fe3cis", "cis_Oct_Mg2trans_Fe3trans", "cis_Tet_Fe3",
+    "trans_Oct_Fe2_cis", "trans_Oct_Mg2cis_Fe3cis", "trans_Tet_Fe3",
+)
+
 _K = r"k(?:0|250|500|1500)"
 # <Mineral>_k500, as in the tailored JSON block keys and the old combined defines.
 # The mineral may itself contain underscores and hyphens (cis_Oct_Fe2_cis, Hectorite-F).
 _COMBINED = re.compile(rf"^(?P<mineral>[A-Za-z][A-Za-z0-9_-]*)_(?P<k>{_K})$")
 _MINERAL = re.compile(r"^[A-Za-z][A-Za-z0-9_-]*$")
 _GENERAL = re.compile(rf"^MINFF_{_K}$")
+# Anything shaped like a force-constant define, so that a wrong value such as
+# MINFF_k999 or Montmorillonite_k42 is reported instead of passed through.
+_LOOKS_LIKE_K = re.compile(r"^(?P<stem>[A-Za-z][A-Za-z0-9_-]*?)_k(?P<n>\d+)$")
 
 #: The default parameter set: the general MINFF at the 500 kJ/mol/rad2 angle force constant.
 DEFAULT_VARIANT = "MINFF_k500"
@@ -73,6 +93,11 @@ def _normalize(name: str) -> List[str]:
             new = [mineral, f"MINFF_{k}"]
         _warn_old(name, new)
         return new
+    bad = _LOOKS_LIKE_K.match(name)
+    if bad and f"k{bad.group('n')}" not in FORCE_CONSTANTS:
+        raise ValueError(
+            f"{name!r} names the angle force constant k{bad.group('n')}, which MINFF does "
+            f"not provide; the available ones are {', '.join(FORCE_CONSTANTS)}")
     return [name]  # CLAYFF_EXT, OPC3, ... are defines of their own
 
 
@@ -124,6 +149,17 @@ def minff_defines(variant: Union[str, Iterable[str], None] = DEFAULT_VARIANT,
                 f"constant define such as 'MINFF_k500'; got variant={variant!r}, "
                 f"mineral={mineral!r}")
         names = [mineral] + names
+
+    # A mineral on its own selects nothing: the tailored blocks are nested inside
+    # the force-constant guard, so both defines are needed. Catch it here as well as
+    # in the mineral= branch above, since the mineral may arrive as the variant.
+    if not any(_GENERAL.match(n) for n in names):
+        stray = [n for n in names if n in MINERALS]
+        if stray:
+            raise ValueError(
+                f"{stray[0]!r} is a tailored (TMINFF) mineral and selects nothing on its own; "
+                f"it needs an angle force constant define as well, for example "
+                f"minff_defines('MINFF_k500', {stray[0]!r})")
 
     out: List[str] = []
     for n in names:  # keep the order, drop repeats
