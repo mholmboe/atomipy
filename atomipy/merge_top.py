@@ -858,6 +858,79 @@ def merge_top(
 # File-level writer
 # ---------------------------------------------------------------------------
 
+def _hoist_organic_atomtypes(organic_itps, out_top_dir):
+    """Split each organic (GAFF/ACPYPE) .itp into its [ atomtypes ] block and the
+    rest of the topology.
+
+    GROMACS requires every [ atomtypes ] directive to appear before the first
+    [ moleculetype ]. An ACPYPE ``*_GMX.itp`` opens with its own [ atomtypes ]
+    block, so #including it *after* the mineral moleculetypes makes grompp abort
+    with "Invalid order for directive atomtypes". We therefore lift the atomtypes
+    out and emit them in the hoisted atomtypes region of the merged .top, writing
+    an atomtype-free ``<stem>_mt.itp`` that is #included where the molecule
+    topology belongs.
+
+    Returns ``(atomtype_lines, include_names)`` where ``atomtype_lines`` are the
+    de-duplicated body rows of every organic [ atomtypes ] block (type name is the
+    first whitespace token) and ``include_names`` are the basenames to #include in
+    place of the originals (the rewritten ``_mt.itp`` when a split happened, else
+    the original basename).
+    """
+    atomtype_lines = []
+    seen_types = set()
+    include_names = []
+    for oitp in organic_itps or []:
+        base = os.path.basename(oitp)
+        src = os.path.join(out_top_dir or '.', base)
+        try:
+            with open(src, 'r', encoding='utf-8') as fh:
+                lines = fh.readlines()
+        except OSError:
+            # Can't read it here — fall back to including it verbatim.
+            include_names.append(base)
+            continue
+
+        in_at = False
+        has_at = False
+        rest = []
+        for ln in lines:
+            s = ln.strip()
+            if s.startswith('[') and s.endswith(']'):
+                directive = s.strip('[] ').lower()
+                in_at = (directive == 'atomtypes')
+                if in_at:
+                    has_at = True
+                    continue  # drop the [ atomtypes ] header from the rest file
+            if in_at:
+                # Collect atomtype rows (skip blanks/comments), de-dup by type name.
+                if s and not s.startswith(';'):
+                    key = s.split()[0]
+                    if key not in seen_types:
+                        seen_types.add(key)
+                        atomtype_lines.append(ln.rstrip('\n'))
+                continue
+            rest.append(ln)
+
+        if not has_at:
+            include_names.append(base)
+            continue
+
+        stem, ext = os.path.splitext(base)
+        mt_name = f"{stem}_mt{ext or '.itp'}"
+        try:
+            with open(os.path.join(out_top_dir or '.', mt_name), 'w', encoding='utf-8') as fh:
+                fh.write(f'; atomtypes hoisted into the merged .top (see merge_top.py); '
+                         f'molecule topology only\n')
+                fh.writelines(rest)
+            include_names.append(mt_name)
+        except OSError:
+            # Couldn't write the split file — include the original and hope the
+            # ordering works (pure-organic systems are fine either way).
+            include_names.append(base)
+
+    return atomtype_lines, include_names
+
+
 def write_merged_top(
     atoms_merged: AtomList,
     itp_merged:   ITPDict,
@@ -1035,6 +1108,22 @@ def write_merged_top(
                 f.write('#include "min.ff/ffbonded.itp"\n')  # O-H + edge bond/angle types
             f.write('\n')
 
+        # Organic (GAFF/ACPYPE) [ atomtypes ] must precede every [ moleculetype ],
+        # so hoist them here — above the mineral moleculetype includes — and #include
+        # only the atomtype-free molecule topology below. Otherwise grompp aborts:
+        # "Invalid order for directive atomtypes".
+        _organic_includes = list(organic_itps) if organic_itps else None
+        if organic_itps:
+            _org_at_lines, _organic_includes = _hoist_organic_atomtypes(
+                organic_itps, os.path.dirname(out_top))
+            if _org_at_lines:
+                f.write('; Organic (GAFF) atomtypes — hoisted so they precede all moleculetypes\n')
+                f.write('[ atomtypes ]\n')
+                f.write(';name   bond_type     mass     charge   ptype   sigma         epsilon\n')
+                for _l in _org_at_lines:
+                    f.write(_l + '\n')
+                f.write('\n')
+
         # Mineral moleculetype(s): one self-contained .itp per slab, #included like the
         # water/ion topologies (local 1-based indexing + a shared '#ifdef POSRES' block).
         if has_mineral:
@@ -1046,10 +1135,11 @@ def write_merged_top(
                     f.write(f'#include "{_fn}"\n')
                 f.write('\n')
 
-        # Organic itp includes (GAFF atomtypes + molecule topology, incl. explicit [ pairs ])
-        if organic_itps:
+        # Organic molecule topologies (atomtypes already hoisted above; these are the
+        # atomtype-free *_mt.itp rewrites, incl. explicit [ pairs ])
+        if _organic_includes:
             f.write('; Organic molecule topologies\n')
-            for oitp in organic_itps:
+            for oitp in _organic_includes:
                 f.write(f'#include "{os.path.basename(oitp)}"\n')
             f.write('\n')
 
