@@ -20,8 +20,10 @@ APPS=(
   "$ROOT/atomipy-web-module/atomipy"
   "$ROOT/atomipy-topology-generator/atomipy"
 )
-# Caches / OS junk are never part of the package.
-EXCLUDES=(--exclude=__pycache__ --exclude='*.pyc' --exclude=.DS_Store)
+# Caches / OS junk are never part of the package. LICENSE and NOTICE exist only in the
+# embedded copies (they are added there on purpose, see the license commits), so they are
+# neither compared nor deleted by the mirror.
+EXCLUDES=(--exclude=__pycache__ --exclude='*.pyc' --exclude=.DS_Store --exclude=LICENSE --exclude=NOTICE)
 
 CHECK_ONLY=0
 [ "${1:-}" = "--check" ] && CHECK_ONLY=1
