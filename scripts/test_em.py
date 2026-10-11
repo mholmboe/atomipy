@@ -9,7 +9,7 @@ atoms, Box = ap.import_gro(struct_path)
 atoms, Box, _ = ap.replicate_system(atoms, Box, replicate=[6, 4, 3])
 atoms = ap.minff(atoms, Box=Box)
 
-ap.write_top(atoms, Box=Box, file_path='system_minff.top')
+ap.write_gmx_top(atoms, Box=Box, file_path='system_minff.top')
 ap.write_gro(atoms, Box=Box, file_path='system_minff.gro')
 
 inc_dir = ap.get_ffparams_dir()
