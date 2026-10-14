@@ -678,6 +678,22 @@ def minff(atoms, Box, ffname='minff', rmaxlong=2.45, rmaxH=1.2, log=False, log_f
                 
                 if o_neighbors == 6:
                     atom['fftype'] = 'Cao'  # Octahedral Ca
+
+                    # Same composition logic as for Mg: Cah for Ca in hydroxides and
+                    # Ca-silicates, Cao for lime and Al-rich silicates
+                    h_count = sum(1 for a in atoms if a.get('element') == 'H')
+                    ca_count = sum(1 for a in atoms if a.get('element') == 'Ca')
+                    si_count = sum(1 for a in atoms if a.get('element') == 'Si')
+                    al_count = sum(1 for a in atoms if a.get('element') == 'Al')
+
+                    if ca_count > si_count:
+                        atom['fftype'] = 'Cao'  # E.g. in lime
+                        if ca_count < h_count:
+                            atom['fftype'] = 'Cah'  # E.g. in portlandite
+                    elif ca_count < si_count:
+                        atom['fftype'] = 'Cah'
+                        if al_count > ca_count:
+                            atom['fftype'] = 'Cao'  # E.g. in Al-rich silicates
                 elif o_neighbors == 4:
                     atom['fftype'] = 'Cah'  # 4-coordinated Ca
                 elif f_neighbors == 8:
