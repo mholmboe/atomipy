@@ -25,3 +25,17 @@ keywords:
   - CLAYFF
   - GROMACS
   - Python
+references:
+  - type: generic
+    title: "MINFF: A Family of Classical Force Fields for Minerals with Tunable Angle Terms"
+    authors:
+      - family-names: Holmboe
+        given-names: Michael
+      - family-names: Lavauzelle
+        given-names: Nathan
+      - family-names: Swai
+        given-names: Rogers E.
+    year: 2026
+    doi: "10.48550/arXiv.2610.18220"
+    url: "https://doi.org/10.48550/arXiv.2610.18220"
+    notes: "arXiv preprint describing the MINFF force field"

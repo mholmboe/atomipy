@@ -391,6 +391,8 @@ This script auto-detects the input format, forwards the Box dimensions, and writ
 
 Assign [**MINFF**](https://github.com/mholmboe/minff) atom types/charges and write topology files directly from a structure:
 
+If you use MINFF, please cite the preprint: Holmboe, M., Lavauzelle, N., Swai, R. E. (2026). *MINFF: A Family of Classical Force Fields for Minerals with Tunable Angle Terms.* arXiv preprint. [doi:10.48550/arXiv.2610.18220](https://doi.org/10.48550/arXiv.2610.18220).
+
 ```python
 import atomipy as ap
 
@@ -1133,6 +1135,12 @@ run_openmm_simulation(
 ## Differences from atom MATLAB library
 
 This Python implementation is designed to provide similar functionality to the MATLAB atom library while following Python's conventions and making use of NumPy for efficient numerical operations. The data structure is dictionary-based rather than struct-based, and the function interfaces are designed for Python's style.
+
+## Citing
+
+If you use atomipy, please cite it using [`CITATION.cff`](CITATION.cff). If you use the MINFF force field (atom typing, charges, or the bundled parameters), please also cite:
+
+> Holmboe, M., Lavauzelle, N., Swai, R. E. (2026). *MINFF: A Family of Classical Force Fields for Minerals with Tunable Angle Terms.* arXiv preprint. [doi:10.48550/arXiv.2610.18220](https://doi.org/10.48550/arXiv.2610.18220)
 
 ## Acknowledgements & External Tools
 

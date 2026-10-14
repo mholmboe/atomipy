@@ -9,6 +9,8 @@ This directory provides force field data in two distinct formats:
 
 The JSON files include atomtype definitions, non-bonded parameters (sigma, epsilon), and bonded parameters (bondtypes, angletypes) for the [**MINFF**](https://github.com/mholmboe/minff) forcefield, TMINFF, ion parameters, and water models.
 
+Please cite the MINFF preprint if you use these parameters: Holmboe, M., Lavauzelle, N., Swai, R. E. (2026). *MINFF: A Family of Classical Force Fields for Minerals with Tunable Angle Terms.* arXiv preprint. [doi:10.48550/arXiv.2610.18220](https://doi.org/10.48550/arXiv.2610.18220).
+
 ## Usage with atomipy
 
 To fetch parameters, you must specify the blocks you want to load (e.g., a mineral block, an ion set, and a water model).
