@@ -6,24 +6,70 @@ The package now supports generating GROMACS n2t (atom name to type) files for bo
 
 ## Contents
 - [Overview](#overview)
-- [Two ways to use atomipy (web-module app vs. Python library)](#two-ways-to-use-atomipy)
+- [Two ways to use atomipy](#two-ways-to-use-atomipy)
 - [Project Structure](#project-structure)
 - [Common Variables](#common-variables)
   - [Structure Containers](#structure-containers)
   - [Atom dictionary fields](#atom-dictionary-fields)
-- [Configuration & Performance](#configuration--performance)
 - [Key Features](#key-features)
 - [Requirements](#requirements)
 - [Installation](#installation)
-- [MINFF atom typing & topology generation](#minff-atom-typing--topology-generation)
-- [XRD pattern simulation](#xrd-pattern-simulation)
-- [CIF to PDB helper script](#cif-to-pdb-helper-script)
-- [Bond valence analysis](#bond-valence-analysis)
-- [Ionic/crystal radii and bond estimates (Shannon radii)](#ioniccrystal-radii-and-bond-estimates-shannon-radii)
+  - [Step 1: Install Python](#step-1-install-python)
+  - [Step 2: Install atomipy](#step-2-install-atomipy)
+  - [Step 3: Verify Installation](#step-3-verify-installation)
+- [Configuration & Performance](#configuration--performance)
+  - [Global Thresholds](#global-thresholds)
+  - [Customizing Settings](#customizing-settings)
+- [Getting Started for Python Beginners](#getting-started-for-python-beginners)
+  - [Gromacs .n2t File Generation Example](#gromacs-n2t-file-generation-example)
+  - [Dihedrals and 1–4 pair detection](#dihedrals-and-14-pair-detection)
+  - [Import existing .itp files](#import-existing-itp-files)
+  - [MINFF atom typing & topology generation](#minff-atom-typing--topology-generation)
+  - [Force Field Parameters (JSON)](#force-field-parameters-json)
+  - [XRD pattern simulation](#xrd-pattern-simulation)
+  - [CIF to PDB helper script](#cif-to-pdb-helper-script)
+  - [Common Issues for Beginners](#common-issues-for-beginners)
+- [Function Documentation](#function-documentation)
+  - [File I/O](#file-io)
+  - [Bundled Molecule Library](#bundled-molecule-library)
+  - [Force Field](#force-field)
+  - [Molecular Topology](#molecular-topology)
+  - [Atom Properties](#atom-properties)
+  - [Structure Analysis](#structure-analysis)
+  - [Coordinate Transformations](#coordinate-transformations)
+  - [Diffraction](#diffraction)
+  - [Structure Building](#structure-building)
+  - [Local GROMACS engine (`atomipy.gromacs`)](#local-gromacs-engine-atomipygromacs)
+  - [Cell Utilities](#cell-utilities)
+  - [Charges](#charges)
+  - [Oxidation states (rules + charge balance)](#oxidation-states-rules--charge-balance)
+  - [The Dummy FF — frozen model for inorganics not covered by the built-in force fields](#the-dummy-ff--frozen-model-for-inorganics-not-covered-by-the-built-in-force-fields)
+  - [Additional Functions](#additional-functions)
+- [Data Structure](#data-structure)
+- [Common Workflow Examples](#common-workflow-examples)
+- [Box Parameter Handling](#box-parameter-handling)
+  - [High-Performance Structural Analysis](#high-performance-structural-analysis)
+  - [Basic Structure Processing](#basic-structure-processing)
+  - [Calculating Center of Mass](#calculating-center-of-mass)
+  - [Creating a Topology File for Molecular Dynamics](#creating-a-topology-file-for-molecular-dynamics)
+  - [Creating a Supercell](#creating-a-supercell)
+  - [Isomorphous Substitution in Clay Minerals](#isomorphous-substitution-in-clay-minerals)
+- [Example Scripts](#example-scripts)
+  - [Bond valence analysis](#bond-valence-analysis)
+  - [Ionic/crystal radii and bond estimates (Shannon radii)](#ioniccrystal-radii-and-bond-estimates-shannon-radii)
+  - [Other Examples](#other-examples)
+- [Molecular Dynamics Simulations with OpenMM](#molecular-dynamics-simulations-with-openmm)
+  - [What `load_minff_into_openmm` does](#what-load_minff_into_openmm-does)
+  - [Example](#example)
+- [Differences from atom MATLAB library](#differences-from-atom-matlab-library)
+- [Citing](#citing)
+- [Acknowledgements & External Tools](#acknowledgements--external-tools)
+- [Disclaimer](#disclaimer)
+- [License](#license)
 
 ## Overview
 
-This toolbox is designed to import, export, and analyze molecular structures with a focus on mineral slabs containing the elements Si, Al, Fe, Mg, Ca, Ti, Li, F, O, H. It handles periodic and triclinic simulation cells, and provides functions for calculating bonds, angles, and distances while taking periodic boundary conditions into account, and hence is ideal for generating molecular topology files for mineral bulk/slab systems that can be modelled using the [**MINFF**](https://github.com/mholmboe/minff) forcefield. However it also has the capability to handle clay minerals, hydroxides, and oxyhydroxides using CLAYFF (Cygan, R.T.; Liang, J.J.; Kalinichev, A.G. Molecular Models of Hydroxide, Oxyhydroxide, and Clay Phases and the Development of a General Force Field. *J. Phys. Chem. B* **2004**, *108*, 1255-1266).
+This toolbox is designed to import, export, and analyze molecular structures with a focus on mineral slabs containing the elements Si, Al, Fe, Mg, Ca, Ti, Li, F, O, H. It handles periodic and triclinic simulation cells, and provides functions for calculating bonds, angles, and distances while taking periodic boundary conditions into account, and hence is ideal for generating molecular topology files for mineral bulk/slab systems that can be modelled using the [**MINFF**](https://github.com/mholmboe/minff) forcefield (Holmboe, M.; Lavauzelle, N.; Swai, R. E. MINFF: A Family of Classical Force Fields for Minerals with Tunable Angle Terms. *arXiv preprint* **2026**, [doi:10.48550/arXiv.2610.18220](https://doi.org/10.48550/arXiv.2610.18220)). However it also has the capability to handle clay minerals, hydroxides, and oxyhydroxides using CLAYFF (Cygan, R.T.; Liang, J.J.; Kalinichev, A.G. Molecular Models of Hydroxide, Oxyhydroxide, and Clay Phases and the Development of a General Force Field. *J. Phys. Chem. B* **2004**, *108*, 1255-1266).
 
 Built-in atom typing for MINFF and CLAYFF is a core feature: you can assign atom types, charges, and generate ITP/PSF/LAMMPS topologies directly from structures. For quick runs without local setup, use the molecular system and topology builder at [www.atomipy.io](https://www.atomipy.io).
 
@@ -67,33 +113,55 @@ atomipy code.
 atominpython/                # Repository root
 ├── atomipy/                 # Core package files
 │   ├── data/                # Reference data (Shannon radii, BV params)
-│   ├── ffparams/            # Force field parameters (GMINFF/TMINFF JSONs & ITPs)
-│   ├── structures/          # Bundled library of mineral structures
+│   ├── ffparams/            # Force field parameters (GMINFF/TMINFF JSONs & ITPs, min.ff)
 │   ├── gromacs/             # Local GROMACS engine (detect gmx, .mdp, grompp/mdrun, trjconv, energy)
+│   ├── structures/          # Bundled libraries of crystals and organic molecules
+│   ├── topology/            # Topology interchange layer (README inside)
 │   ├── __init__.py          # Package init, public API exports
-│   ├── analysis.py          # High-performance analysis (RDF, CN, unwrap)
+│   ├── analysis.py          # High-performance analysis (RDF, CN, MSD, VACF, H-bonds, unwrap)
 │   ├── bond_angle.py        # Topology analysis (bonds, angles, dihedrals)
 │   ├── bond_valence.py      # Bond valence sum analysis (BVS, GII)
 │   ├── build.py             # Structure manipulation, merge & substitutions
 │   ├── cell_utils.py        # Box_dim ↔ Cell conversion utilities
 │   ├── charge.py            # Charge assignment logic
+│   ├── charge_formal.py     # Formal-charge assignment (ions, water)
+│   ├── charge_minff.py      # MINFF charge assignment by coordination environment
+│   ├── classify.py          # System-component classifier (mineral / water / ion / organic)
 │   ├── composition.py       # System composition / atom classification (water/ion/organic)
+│   ├── config.py            # Global settings (e.g. SPARSE_THRESHOLD)
+│   ├── crystal_library.py   # Bundled inorganic crystal library (CIF)
 │   ├── dcd.py               # Zero-dependency pure-Python DCD trajectory reader
 │   ├── diffraction.py       # XRD pattern calculation
 │   ├── distances.py         # O(N) Sparse & O(N²) Direct distance dispatchers
+│   ├── distortion.py        # Phyllosilicate structural-distortion analysis
 │   ├── dummy_mineral.py     # Dummy FF (frozen framework) for non-MINFF/CLAYFF inorganics
 │   ├── element.py           # Chemical element assignment
+│   ├── ffparams.py          # Force field parameter (JSON) loading and unit conversion
 │   ├── forcefield.py        # MINFF/CLAYFF force field logic
+│   ├── import_conf.py       # File importers (PDB, GRO, XYZ, CIF, etc.)
+│   ├── import_top.py        # GROMACS .itp/.top readers
+│   ├── import_topology.py   # Topology readers returning a `Topology` object
+│   ├── lattice.py           # Parametric lattice / unit-cell builder
+│   ├── mass.py              # Atomic masses
 │   ├── merge_top.py         # Merge mineral + organic/water/ion topologies into one .top
+│   ├── miller.py            # Miller-plane geometry
+│   ├── minff_defines.py     # GROMACS defines that select a MINFF parameter set
+│   ├── molecule_library.py  # Bundled organic molecule library (Chemical JSON)
 │   ├── move.py              # Translate, rotate, place, center, bend
+│   ├── node_cache.py        # Persist/restore workflow-node outputs (used by the web-module)
 │   ├── openmm_interface.py  # OpenMM topology/system loader
 │   ├── oxidation.py         # Oxidation-state guessing (Shannon/ionic)
+│   ├── radius.py            # Atomic radii
 │   ├── replicate.py         # Supercell replication
+│   ├── resname.py           # Residue-name assignment
+│   ├── shapes.py            # Region cuts (nanoparticles, nanowires, slabs)
 │   ├── solvent.py           # Solvation & water molecule repairs
+│   ├── surface.py           # Surface/slab builder for a Miller (hkl) face
 │   ├── transform.py         # Coordinate transformations (frac/cart/wrap)
 │   ├── write_conf.py        # File exporters (PDB, GRO, XYZ, etc.)
-│   ├── import_conf.py       # File importers (PDB, GRO, XYZ, CIF, etc.)
-│   └── write_top.py         # Topology exporters (ITP, PSF, LMP)
+│   ├── write_top.py         # Topology exporters (ITP, PSF, LMP)
+│   ├── write_topology.py    # Topology writers that consume a `Topology` object
+│   └── xdrfile.py           # Optional ctypes wrapper for libxdrfile (.xtc/.trr)
 ├── scripts/                 # Example workflow scripts (run_*.py)
 ├── setup.py                 # Installation script
 └── README.md                # This documentation
@@ -268,8 +336,8 @@ The package features a central function, `ap.distances.get_neighbor_list()`, whi
 ### Global Thresholds
 
 By default, the dispatcher uses a size-based switching logic:
-- **Systems < 5,000 atoms**: Use the **Direct** $O(N^2)$ method (faster for small systems due to NumPy vectorization).
-- **Systems ≥ 5,000 atoms**: Use the **Sparse Neighbor List** $O(N)$ method (memory-efficient and scalable to hundreds of thousands of atoms).
+- **Systems < 3,000 atoms**: Use the **Direct** $O(N^2)$ method (faster for small systems due to NumPy vectorization).
+- **Systems ≥ 3,000 atoms**: Use the **Sparse Neighbor List** $O(N)$ method (memory-efficient and scalable to hundreds of thousands of atoms).
 
 ### Customizing Settings
 
@@ -278,11 +346,12 @@ You can easily customize this threshold or force a specific method at runtime:
 ```python
 import atomipy as ap
 
-# Change the sparse method threshold globally
-ap.config.SPARSE_THRESHOLD = 5000
+# Change the sparse method threshold globally (the default is 3000 atoms)
+ap.config.SPARSE_THRESHOLD = 10000
 
 # Or force a specific method for a single call
-atoms, bonds, angles = ap.bond_angle(atoms, Box=cell, dm_method='sparse')
+atoms, cell = ap.import_pdb("Kaolinite_GII_0.0487.pdb")
+atoms, bonds, angles = ap.bond_angle(atoms, Box=cell, dm_method='sparse')   # atoms, cell from e.g. ap.import_pdb(...)
 ```
 
 This ensures that even on memory-constrained systems, you can safely process large structures without risk of $O(N^2)$ memory bottlenecks.
@@ -354,6 +423,8 @@ The `Box` argument accepts orthogonal `[lx, ly, lz]` vectors, 1×6 Cell paramete
 Use `bond_angle_dihedral` to build bonds/angles and derive dihedrals plus 1–4 pairs in one call:
 
 ```python
+import atomipy as ap
+
 atoms, Box_dim = ap.import_gro("NMA_element.gro")
 ap.element(atoms)
 atoms, Bond_index, Angle_index, Dihedral_index, Pairlist = ap.bond_angle_dihedral(
@@ -408,6 +479,8 @@ ap.write_lmp(typed, Box=cell, file_path="minff_Kao.data")
 If your input is GRO, pass the returned `Box_dim` to `minff`/writers (they accept 1×3 Box_dim, 1×6 Cell, or 1×9 triclinic boxes interchangeably):
 
 ```python
+import atomipy as ap
+
 atoms, Box_dim = ap.import_gro("structure.gro")
 typed = ap.minff(atoms, Box=Box_dim)
 ap.write_itp(typed, Box=Box_dim, file_path="structure.itp")
@@ -440,7 +513,7 @@ ap.write_lmp(atoms, Box, "system.data", forcefield=ff)
 
 Available JSON files in `ffparams`:
 - **GMINFF**: `GMINFF/gminff_all.json` (General MINFF)
-- **TMINFF**: `TMINFF/tminff_k*.json` (Tailored MINFF for specific minerals)
+- **TMINFF**: `TMINFF/tminff_k*_all.json` (Tailored MINFF for specific minerals, one file per angle force constant)
 
 See `atomipy/ffparams/README.md` for a full list of available blocks (minerals, ions, water models).
 
@@ -519,7 +592,7 @@ What it supports:
 - `write_cif(atoms, Box, file_path)`: Write atoms to a CIF file.
 - `write_pqr(atoms, Box, file_path)`: Write atoms to a PQR file.
 - `write_poscar(atoms, Box, file_path)`: Write atoms to a VASP POSCAR file.
-- `write_sdf(atoms, Box, file_path)`: Write atoms to an SDF file.
+- `write_sdf(atoms, file_path)`: Write atoms to an SDF file.
 - `write_cjson(atoms, Box, file_path, name=None)`: Write atoms to a Chemical JSON (`.cjson`) file (coordinates, atomic numbers, bonds, formal + partial charges, optional unit cell).
 - `write_traj(frames, file_path)`: Write multiple frames to a trajectory file.
 
@@ -539,7 +612,7 @@ groups. Stored under `atomipy/structures/molecules/` with an `index.json` manife
 
 ```python
 import atomipy as ap
-ap.molecule_categories()             # ['alcohols', 'amino_acids', 'aromatics', ...]
+ap.molecule_categories()             # ['alcohols', 'aldehydes', 'alkanes', ...]
 ap.list_molecules('nucleobases')     # adenine, cytosine, guanine, thymine, uracil
 atoms, cell = ap.load_molecule('L-tryptophan')   # 27 atoms, resname 'LTRY'
 ```
@@ -571,10 +644,10 @@ atoms, cell = ap.load_molecule('L-tryptophan')   # 27 atoms, resname 'LTRY'
 - `dist_matrix(atoms, Box)`: Calculate a full distance matrix (N x N) for small systems.
 - `cell_list_dist_matrix(atoms, Box)`: Full cell-list based distance analysis returning sparse arrays.
 - `neighbor_list_fast(atoms, Box, cutoff)`: Extreme-performance sparse neighbor list ($O(N)$), capable of handling > 1,000,000 atoms.
-- `calculate_rdf(atoms, Box, rmax, dr, typeA=None, typeB=None, return_cn=False)`: radial distribution function; with `return_cn=True` also returns the running coordination number *n(r)*.
-- `coordination_number(atoms, Box, cutoff)`: Efficient per-atom coordination analysis via sparse indexing.
-- `closest_atom(atoms, reference, Box)`: Find the neighbor closest to a target point or atom.
-- `find_H2O(atoms, Box_dim=None, rmin=1.25)`: Automated water discovery and molecule ID assignment.
+- `calculate_rdf(atoms, Box, rmax=15.0, dr=0.1, atom_types=None, pair_types=None, typeA=None, typeB=None, return_cn=False)`: radial distribution function (`pair_types=(['Si'], ['O'])` or `typeA`/`typeB` select the pair; `rmax` is capped at half the shortest box edge); with `return_cn=True` also returns the running coordination number *n(r)*.
+- `coordination_number(atoms, Box, cutoff=3.0, atom_types=None, neighbor_types=None)`: Efficient per-atom coordination analysis via sparse indexing.
+- `closest_atom(atoms, reference, Box=None)`: Find the neighbor closest to a target point or atom.
+- `find_H2O(atoms, Box_dim=None, rmin=1.3)`: Automated water discovery and molecule ID assignment.
 - `get_structure_stats(atoms, Box, ...)`: Comprehensive geometry and topology diagnostics.
 
 **Trajectory analysis** (operate on a list of `(atoms, Box)` frames, e.g. from `import_traj`):
@@ -650,7 +723,7 @@ standalone wherever a `gmx` binary is available.
 - `assign_formal_charges(atoms)`: Assign formal charges to ions and water molecules based on residue names (SOL, ION) and element types
 - `charge_minff(atoms, Box, atom_labels=None, charges=None, resname=None)`: Assign MINFF charges to atoms based on coordination environment
 - `charge_clayff(atoms, Box, atom_labels=None, charges=None, resname=None)`: Assign CLAYFF charges to atoms based on coordination environment
-- `balance_charges(atoms, resname=None)`: Balance the total charge of the system by adjusting oxygen charges
+- `balance_charges(atoms, target_total_charge=None)`: Balance the total charge to an integer (or to `target_total_charge`) by distributing the excess or deficit evenly over the oxygen atoms
 
 ### Oxidation states (rules + charge balance)
 
@@ -676,7 +749,7 @@ present, else the ionic engine. Results are written to `atom['oxidation_state']`
 
 ```python
 import atomipy as ap
-atoms, cell = ap.import_auto('UC_conf/Pyrophyllite_GII_0.0.pdb')
+atoms, cell = ap.import_auto('Pyrophyllite_GII_0.071.pdb')
 ap.guess_oxidation_states(atoms)        # Si=+4, Al=+3, O=-2, H=+1 (neutral)
 atoms, _ = ap.load_molecule('L-alanine')
 ap.guess_oxidation_states(atoms)        # methyl C=-3, alpha C=0, carboxyl C=+3, N=-3
@@ -695,7 +768,7 @@ builds a crude qualitative model. Charges follow one of two modes:
   +0.95 / Fe³⁺ +1.43. Hydrogen is fixed at +0.4, and the anion (O, F) charges
   follow the coordination-resolved formula `q_O = oxidation + Σ_j (oxidation_j −
   partial_j)/CN_j` over each coordinating cation/H, so each framework stays
-  neutral (`ap.pauling_effective_charge(ox, element)` exposes the cation formula).
+  neutral (`ap.pauling_effective_charge(oxidation_state, element)` exposes the cation formula).
 - **`half`** — legacy `charge_scale × oxidation state` for every atom.
 
 Lennard-Jones parameters come from `lj_mode` (all van der Waals data is from
@@ -722,10 +795,10 @@ The framework is flagged **frozen**. Freezing means **no bonded parameters are
 needed**, so only nonbonded terms remain — the material interacts with
 water/solutes via electrostatics + LJ. In OpenMM the frozen particles get mass 0;
 in the local GROMACS engine they are held rigid via `freezegrps`/`freezedim` in
-the `.mdp` plus an index group written by `ap.gromacs.write_freeze_ndx`.
+the `.mdp` plus an index group written by `atomipy.gromacs.write_freeze_ndx` (`from atomipy import gromacs`).
 
 - `assign_dummy_mineral_params(atoms, Box=None, charge_mode='pauling', lj_mode='shannon', metal_site='Alo', rmaxlong=2.45, rmaxH=1.2)`: assign per-atom charge/LJ + the frozen flag (in place). Pass `Box` (needed by `shannon` for coordination) and for the coordination-resolved oxygen charges. Returns `(atoms, report)`.
-- `write_dummy_mineral_itp(atoms, 'dummy.itp', mol_name='DUM')`: a self-contained `.itp` (own `[ atomtypes ]` + bond-free `[ moleculetype ]`) that `#include`s like an organic itp.
+- `write_dummy_mineral_itp(atoms, file_path, mol_name='DUM')`: a self-contained `.itp` (own `[ atomtypes ]` + bond-free `[ moleculetype ]`) that `#include`s like an organic itp.
 - `write_dummy_system_top(atoms, box, out_top, out_gro, water_model='spce', organic_itps=None)`: a complete `.top` + `.gro` for a frozen framework **plus organics, water and ions** — multiple dummy minerals, several different organics (each `#include`d), and Na/Cl etc. are all supported; returns `(ordered_atoms, n_frozen)` so the caller freezes the leading framework particles. Atoms are ordered framework → organics → ions → water (SOL last).
 
 Run **EM / NVT only** (a frozen rigid body is incompatible with an NPT
@@ -733,6 +806,53 @@ barostat). Intended for qualitative questions (wetting, ion adsorption), not
 quantitative energetics. In the web builder, select **Forcefield → Dummy FF**;
 the structure node's *Preview & Validate* scan flags elements with no built-in
 force-field type and steers you here.
+
+### Additional Functions
+
+Further public functions, grouped by task (see each function's docstring for all arguments):
+
+**Cutting and shaping**
+- `cut_sphere(atoms, Box=None, radius=10.0, center=None, side='inside', ...)` / `cut_cylinder(atoms, Box=None, radius=10.0, axis='z', ...)`: carve a spherical nanoparticle or a nanowire (or the complementary pore).
+- `cut_miller(atoms, Box, h, k, l, level='auto', offset=0.0, side='below', ...)` / `cut_planes(atoms, Box, planes, ...)`: keep atoms on one side of a Miller plane, or inside the intersection of several half-spaces.
+- `make_slab(atoms, Box, hkl, layers=1, vacuum=0.0, gromacs_box=False, ...)`: build an oriented supercell/slab exposing the (hkl) face along z.
+- `miller_planes(h, k, l, Box=(1, 1, 1), ...)`, `d_spacing(h, k, l, Box)`, `hkil_to_hkl(h, k, i=None, l=0)`: Miller-plane geometry helpers.
+- `fit_box(atoms, padding=10.0, cubic=False, center=True)` / `condense(atoms, Box=None)`: size a box to the atoms' bounding box, or shrink a box and centre the atoms to remove vacuum.
+- `reduce_supercell(atoms, box, replicate=[1, 1, 1], merge=True, ...)`: reduce a replicated system back to one unit cell.
+
+**Editing atoms and atom lists**
+- `delete_sites(atoms, atom_type=None, index=None, molid=None, x=None, y=None, z=None, logic='and', ...)` (alias `remove`): delete atoms matching selection rules.
+- `translate(atoms, trans_vec, resname='all')`: translate atoms by a vector.
+- `reorder(atoms, neworder, by=None)`, `update(*atoms_list, molid=None, use_resname=True, force=False)`, `join_and_reorder(*atom_lists)`: reorder atoms and renumber indices/molids when combining lists.
+- `create_grid(atom_type, density, limits, resname='ION', molid=None)`: fill a region with atoms on a grid at a target density.
+- `split_slabs_by_molid(atoms, base_resname=None)`: give each mineral molecule its own residue name so topologies can treat them separately.
+- `min_distances(atoms, Box, group_by='molid', n_pairs=10, cutoff=None)`: smallest distances between different molecules/residues.
+- `occupancy_atom(atoms, Box, rmax=1.0)`: occupancy of atomic sites within a radius.
+- `tetrahedral_rotation(atoms, Box, ...)` / `tetrahedral_rotation_files(files, ...)`: tetrahedral rotation angle of a phyllosilicate, for one structure or aggregated over many files.
+- `spc2tip4p(atoms, Box=None, om_dist=0.15)` (alias `tip3p2tip4p`): convert three-site water to TIP4P by adding the M site.
+
+**Coordinates and boxes**
+- `normalize_box(Box)`: normalise a 1×3, 1×6 or 1×9 box to both `Box_dim` and `Cell`.
+- `direct_cartesian_to_fractional(...)` / `direct_fractional_to_cartesian(...)` / `wrap_coordinates(...)`: direct coordinate conversions and wrapping.
+
+**Crystal library**
+- `list_crystals(category=None)`, `crystal_categories()`, `load_crystal(name_or_file, expand_symmetry=True)`: browse and load the bundled inorganic crystal library (CIF).
+- `lattice_types()`: names of the preset lattices for the parametric lattice builder.
+- `import_mmcif(file_path, expand_symmetry=True)`: CIF/mmCIF import (same reader as `import_cif`).
+
+**Bond valence and diffraction helpers**
+- `analyze_bvs(atoms, Box, ...)` / `conf2bvs(file_path, ...)`: one-call BVS/GII analysis of a structure or file, optionally writing a CSV.
+- `global_instability_index(results)`, `add_hydrogens_bvs(atoms, Box, ...)`, `load_shannon_radii(path=None)`: GII from BVS results, protonation of under-bonded oxygen, and the Shannon radii table.
+- `bragg_law(wavelength, value, mode='distance', n=1)`, `atomic_scattering_factors(atom_label, wavelength, two_theta, b_iso=0.0)`, `calculate_multiplicity(h_target, k_target, l_target, hkl_array)`: building blocks used by `xrd`.
+
+**Topology, force-field files and I/O**
+- `write_auto(atoms, Box, file_path)`: choose the writer from the file extension.
+- `write_gmx_top(atoms, Box=None, file_path=None, ...)`: complete, self-contained GROMACS system `.top` (the `top` function of the `write_top` module; `ap.write_top` itself is the module).
+- `import_gro_coords(gro_path, atoms=None)`: read only coordinates from a `.gro` file into an existing atom list.
+- `import_gaff_top(top_path, itp_path=None)`: import an ACPYPE-generated GROMACS topology.
+- `merge_top_files(*top_gro_pairs, out_top, out_gro, defines=None, ...)` / `write_merged_top(...)`: merge several `.top`/`.gro` pairs into one system.
+- `get_mol_sequence(atoms)` / `get_mol_sequence_typed(atoms)`: the ordered GROMACS `[ molecules ]` sequence of an atom list.
+- `get_ffparams_dir()`, `list_ff_blocks(json_path)`: location of the bundled `ffparams` and the blocks available in a force-field JSON.
+- `have_xdrfile()`, `save_node_state(...)`, `load_node_state(...)`: optional `libxdrfile` check, and the node cache used by the web-module.
 
 ## Data Structure
 
@@ -777,6 +897,11 @@ Atomipy now uses a standardized approach for handling simulation Box parameters 
 Example usage with the different formats:
 
 ```python
+import atomipy as ap
+
+atoms, _ = ap.import_pdb("Kaolinite_GII_0.0487.pdb")
+atoms = ap.element(atoms)
+
 # Using orthogonal Box format
 Box_ortho = [30.0, 30.0, 30.0]  # lx, ly, lz in Angstroms
 atoms, bonds, angles = ap.bond_angle(atoms, Box=Box_ortho)
@@ -800,6 +925,7 @@ import matplotlib.pyplot as plt
 
 # Load a large mineral-water system
 atoms, Box = ap.import_gro("large_system.gro")
+atoms = ap.element(atoms)   # the analysis functions select atoms by element/type
 
 # 1. Calculate Radial Distribution Function g(r)
 # Only compute for Si-O pairs up to 15 Å
@@ -918,50 +1044,49 @@ ap.write_gro(replicated_atoms, Box=new_Box, file_path="supercell.gro")
 ```python
 import atomipy as ap
 
-# Load a clay mineral structure (e.g., pyrophyllite or montmorillonite)
+# Load a clay mineral structure (e.g., pyrophyllite or montmorillonite) and build a supercell
 atoms, Cell = ap.import_pdb("Pyrophyllite_GII_0.071.pdb")
+atoms, Box, _ = ap.replicate_system(atoms, Cell, replicate=[6, 4, 1])
 
-# The substitute function now automatically detects if a structure is centrosymmetric
+# The substitute function automatically detects if a structure is centrosymmetric
 # and centers it appropriately during substitution (important for pyrophyllite)
 
-# Perform octahedral substitution: Replace 16 Al atoms with Mg atoms
-# Using the mineral-specific atom types (will automatically look up by element if type not found)
-atoms, Cell, _ = ap.substitute(
-    atoms, 
-    Cell, 
-    num_oct_subst=16, 
-    o1_type='Alo',   # Uses 'Alo' atom type for octahedral Al
-    o2_type='Mgo',   # Will become Mg in octahedral position
-    min_o2o2_dist=5.2  # Minimum distance between Mg atoms in Angstroms
+# Octahedral substitution: replace 6 Al atoms with Mg
+# (atom types are matched first; if a type is not found it falls back to matching by element)
+atoms, Box, _ = ap.substitute(
+    atoms,
+    Box,
+    num_oct_subst=6,
+    o1_type='Alo',   # octahedral Al
+    o2_type='Mgo',   # becomes Mg in the octahedral position
+    min_o2o2_dist=5.2  # minimum distance between Mg atoms in Angstroms
 )
 
-# Perform both octahedral and tetrahedral substitutions
-# Replace 4 Al with Mg (octahedral) and 8 Si with Al (tetrahedral)
-# If atom types aren't found, it will try to match by element instead
-atoms, Cell, _ = ap.substitute(
-    atoms, 
-    Cell, 
-    num_oct_subst=4, 
-    o1_type='Al',    # Will find atoms by element if 'Al' type not found
-    o2_type='Mgo', 
+# Octahedral and tetrahedral substitutions in one call:
+# replace 2 more Al with Mg (octahedral) and 4 Si with Al (tetrahedral)
+atoms, Box, _ = ap.substitute(
+    atoms,
+    Box,
+    num_oct_subst=2,
+    o1_type='Alo',
+    o2_type='Mgo',
     min_o2o2_dist=5.5,
-    num_tet_subst=8,
+    num_tet_subst=4,
     t1_type='Si',
-    t2_type='Alt',   # Will become Al in tetrahedral position
+    t2_type='Alt',   # becomes Al in the tetrahedral position
     min_t2t2_dist=5.5
 )
 
-# Limit substitutions to specific region (e.g., only z > 10 Å)
-# The function ensures even distribution between upper and lower parts
+# Limit substitutions to a region along one axis (here only the central octahedral sheet, z in [-2, 2] Å)
 atoms, Box, _ = ap.substitute(
-    atoms, 
-    Box, 
-    num_oct_subst=4, 
-    o1_type='Al', 
-    o2_type='Mgo', 
-    min_o2o2_dist=5.5,
-    lo_limit=10.0,
-    hi_limit=50.0,
+    atoms,
+    Box,
+    num_oct_subst=2,
+    o1_type='Alo',
+    o2_type='Mgo',
+    min_o2o2_dist=5.2,
+    lo_limit=-2.0,
+    hi_limit=2.0,
     dimension=3  # 1=x, 2=y, 3=z (MATLAB-style indexing)
 )
 
@@ -970,41 +1095,44 @@ is_symmetric = ap.is_centrosymmetric_along_z(atoms)
 print(f"Is the structure centrosymmetric along z? {is_symmetric}")
 
 # Save the substituted structure
-ap.write_pdb(atoms, Box=Box_dim, file_path="substituted_clay.pdb")
+ap.write_pdb(atoms, Box=Box, file_path="substituted_clay.pdb")
 ```
+
+`substitute` prints whether it could place all requested substitutions (`✓ ... successful!` or `⚠ ... not optimal!`); if the minimum-distance constraint cannot be met it places as many as it can, so check the printed summary.
 
 ## Example Scripts
 
-### Example Scripts
-
-The package includes example scripts that demonstrate comprehensive workflows for processing mineral structures using atomipy:
+The package includes example scripts in `scripts/` that demonstrate complete workflows for processing mineral structures with atomipy.
 
 #### scripts/run_minff_atomi.py and scripts/run_clayff_atomi.py
 
-These scripts demonstrate workflows for using MINFF and CLAYFF forcefields respectively. Both serve as excellent starting points for users new to the package.
+These scripts demonstrate workflows for using the MINFF and CLAYFF forcefields respectively. Both serve as excellent starting points for users new to the package.
 
-#### What the script does:
+#### What the scripts do:
 
-1. **Imports a structure file** (`scripts/run_minff_atomi.py` uses `Kaolinite_GII_0.0487.pdb`, `scripts/run_clayff_atomi.py` uses `Kaolinite_GII_0.0487.gro`)
-2. **Assigns chemical elements** to each atom using chemical knowledge-based rules
-3. **Creates a supercell** by replicating the unit cell to a target size (about 30 Å in each dimension)
-4. **Saves the replicated structure** in both GRO and PDB formats
-5. **Calculates bonds and angles** based on distance criteria with periodic boundary awareness
-6. **Assigns specialized MINFF/CLAYFF atom types** based on their chemical environment and coordination
-7. **Generates a molecular topology file** (ITP) for use in molecular dynamics simulations
-8. **Writes the final structure** with all assigned properties to output files
+1. **Import a structure file** (`run_minff_atomi.py` uses `Kaolinite_GII_0.0487.pdb`, `run_clayff_atomi.py` uses `Kaolinite_GII_0.0487.gro`)
+2. **Assign chemical elements** to each atom using chemical knowledge-based rules
+3. **Create a supercell** by replicating the unit cell to a target size (about 30 Å in each dimension)
+4. **Save the replicated structure** in both GRO and PDB formats
+5. **Calculate bonds and angles** based on distance criteria with periodic boundary awareness
+6. **Assign specialized MINFF/CLAYFF atom types** based on their chemical environment and coordination
+7. **Generate molecular topology files** (ITP, PSF and LAMMPS data) for use in molecular dynamics simulations
+8. **Write the final structure** with all assigned properties to output files
 
 #### Running the scripts:
 
-Simply execute `python scripts/run_minff_atomi.py` or `python scripts/run_clayff_atomi.py` from the command line.
-The first expects `Kaolinite_GII_0.0487.pdb`; the second expects `Kaolinite_GII_0.0487.gro` in the working directory.
+Run `python scripts/run_minff_atomi.py` or `python scripts/run_clayff_atomi.py` from the repository root, where the input structures live
+(the first expects `Kaolinite_GII_0.0487.pdb`, the second `Kaolinite_GII_0.0487.gro` in the working directory).
 
 #### Output files:
 
-- `replicated_structure.gro` - The enlarged supercell in GROMACS format
-- `replicated_structure.pdb` - The enlarged supercell in PDB format
-- `molecular_topology.itp` - GROMACS topology file with bond and angle definitions
-- `preem.gro` - Final structure with MINFF typing and calculated properties
+- `replicated_structure.gro` / `replicated_structure.pdb` - The enlarged supercell
+- `bonded_structure.gro` - The supercell after the bond search
+- `minff_structure_stats.log` (or `clayff_structure_stats.log`) - Structure statistics: dimensions, density, bonds, angles
+- `minff_topology.itp` (or `clayff_topology.itp`) - GROMACS topology file with bond and angle definitions
+- `minff_topology.psf` / `minff_topology.data` (or `clayff_topology.psf` / `clayff_topology.data`) - NAMD and LAMMPS topology files
+- `minff_atomtypes.n2t` - GROMACS atom name to type file for `gmx x2top` (MINFF script only)
+- `preem.gro` (and `preem.pdb` for the MINFF script) - Final structure with the assigned atom types and charges
 
 ### Bond valence analysis
 
@@ -1079,56 +1207,57 @@ ap.write_gro(replicated_atoms, Box=new_Box, file_path="structure.gro")
 
 ## Molecular Dynamics Simulations with OpenMM
 
-`atomipy` now supports setting up and running **Molecular Dynamics (MD) simulations** directly from Python using **OpenMM**! It automates the force field setup, system parameterization, platform selection, and execution of NVT/NPT molecular dynamics.
+atomipy writes self-contained GROMACS `.top`/`.gro` files for MINFF/CLAYFF systems and can load them
+straight into **OpenMM** with `ap.load_minff_into_openmm`, which returns the OpenMM `Topology`, `System`
+and positions. (The OpenMM package itself is optional and is only imported when this function is called.)
+You then run the simulation with ordinary OpenMM code.
 
-### Key Features
-* **Automated Force Field Setup**: Directly converts your mineral slab and solvated systems to OpenMM topology and system objects using the MINFF or CLAYFF force fields.
-* **Automatic Platform Selector**: Intelligent GPU/CPU acceleration selector. It automatically detects and uses the fastest available platform on your machine (prioritizing **CUDA**, **OpenCL**, **Metal**, then falling back to **CPU** or **Reference**).
-* **Empty Box Safety**: The system has robust edge-case handling. If a box has no atoms, it instantiates a dummy atom at `(0, 0, 0)` with zero charge and mass to guarantee visualizer and MD engine compatibility without throwing errors.
-* **Seamless GROMACS Integration**: Generates top/itp files, validates bond/angle structures, handles periodic boundary wrapping, and executes the simulation without external dependencies.
+### What `load_minff_into_openmm` does
+* Reads the atomipy-written `.top` + `.gro` pair with `openmm.app.GromacsTopFile`/`GromacsGroFile`.
+* Activates the force-field variant you choose through `defines` (the same names as the GROMACS `define = -D...` line, e.g. `MINFF_k500`, `OPC3`).
+* Uses MINFF defaults: flexible bonds/angles on the mineral body (`constraints=None`), PME electrostatics, a 1.0 nm cutoff, Lorentz–Berthelot mixing and the long-range LJ correction. Pass `rigid_water=True` for rigid water models.
+* `include_dir` must point to the folder holding the MINFF `.itp` files (`ap.get_ffparams_dir()`).
 
-### Basic MD Simulation Example
-
-Here is how you can set up and run a 5,000-step NVT molecular dynamics simulation:
+### Example
 
 ```python
 import atomipy as ap
-from atomipy.openmm_interface import load_minff_into_openmm, run_openmm_simulation
+from openmm import LangevinIntegrator, Platform
+from openmm.app import Simulation, PDBReporter, StateDataReporter
+from openmm.unit import kelvin, picosecond, femtoseconds
 
-# 1. Load your mineral-water system
+# 1. Load a mineral system and assign MINFF atom types/charges
 atoms, Box = ap.import_gro("system.gro")
-
-# 2. Assign MINFF/CLAYFF force field types
 atoms = ap.minff(atoms, Box=Box)
 
-# 3. Write out files for GROMACS/OpenMM
-ap.write_itp(atoms, Box=Box, file_path="system_minff.top.itp")
-# write_top generates the main top file including the forcefield definition
-ap.write_top(atoms, Box=Box, file_path="system_minff.top")
+# 2. Write a complete, self-contained GROMACS topology and the matching coordinates
+ap.write_gmx_top(atoms, Box=Box, file_path="system_minff.top")
+ap.write_gro(atoms, Box=Box, file_path="system_minff.gro")
 
-# 4. Initialize OpenMM Topology and System
-# This function automatically handles special parameters (e.g. flexible water models OPC3/SPC/TIP3P, 
-# dynamic mineral bond/angle parameters, and ion corrections)
-topology, system, positions = load_minff_into_openmm(
+# 3. Build the OpenMM Topology / System / positions
+topology, system, positions = ap.load_minff_into_openmm(
     top_path="system_minff.top",
-    gro_path="system.gro"
+    gro_path="system_minff.gro",
+    defines=["MINFF_k500", "OPC3_IOD_LM", "OPC3"],   # parameter set (angle k=500) and water model
+    include_dir=ap.get_ffparams_dir(),
+    nonbonded_cutoff_nm=0.9,    # must be less than half the shortest box edge
+    constraints=None,           # MINFF needs flexible bonds and angles
+    rigid_water=True,
 )
 
-# 5. Run NVT MD Simulation
-# This automatically selects the best available GPU/CPU acceleration platform (OpenCL, CUDA, etc.)
-# and outputs a standard PDB trajectory
-run_openmm_simulation(
-    topology=topology,
-    system=system,
-    positions=positions,
-    dt_fs=1.0,               # Time step (fs)
-    temperature_k=298.15,    # Temperature (K)
-    num_steps=5000,          # Steps
-    report_interval=1000,    # Output frequency
-    traj_pdb_path="trajectory.pdb",
-    result_pdb_path="final_nvt.pdb"
-)
+# 4. Run the dynamics with plain OpenMM
+integrator = LangevinIntegrator(298.15 * kelvin, 1 / picosecond, 1.0 * femtoseconds)
+simulation = Simulation(topology, system, integrator)   # OpenMM picks the fastest available platform
+simulation.context.setPositions(positions)
+simulation.minimizeEnergy()
+simulation.reporters.append(PDBReporter("trajectory.pdb", 1000))
+simulation.reporters.append(StateDataReporter("log.csv", 1000, step=True, potentialEnergy=True, temperature=True))
+simulation.step(5000)
 ```
+
+`scripts/run_openmm_minff.py` shows the loading step (build, replicate, type, write, load into OpenMM and evaluate the initial energy). To run simulations without
+writing OpenMM code, use the visual builder at [www.atomipy.io](https://www.atomipy.io) (OpenMM or a local GROMACS
+engine), or the `atomipy.gromacs` module described above for GROMACS.
 
 ---
 
@@ -1148,7 +1277,7 @@ atomipy relies on and interoperates with several external projects, each the pro
 respective authors and used under its own license:
 
 - **Numerics** — [NumPy](https://numpy.org/), [Numba](https://numba.pydata.org/) (optional), [tqdm](https://tqdm.github.io/).
-- **Structure & trajectory I/O** — [GEMMI](https://gemmi.readthedocs.io/) (CIF/mmCIF, optional); GROMACS `libxdrfile` (`.xtc`/`.trr`) and [MDTraj](https://www.mdtraj.org/) (optional binary trajectories). The bundled inorganic crystal library derives from the [Avogadro](https://avogadro.cc/) collection.
+- **Structure & trajectory I/O** — [GEMMI](https://gemmi.readthedocs.io/) (CIF/mmCIF, required); GROMACS `libxdrfile` (`.xtc`/`.trr`) and [MDTraj](https://www.mdtraj.org/) (optional binary trajectories). The bundled inorganic crystal library derives from the [Avogadro](https://avogadro.cc/) collection.
 - **Simulation** — [OpenMM](https://openmm.org/) and [GROMACS](https://www.gromacs.org/).
 - **Organic force fields** — [OpenFF Toolkit / Interchange](https://openforcefield.org/) (Sage, Parsley), [openmmforcefields](https://github.com/openmm/openmmforcefields) + [ParmEd](https://parmed.github.io/ParmEd/) and/or [ACPYPE](https://github.com/alanwilter/acpype) + AmberTools *antechamber* (GAFF), with [RDKit](https://www.rdkit.org/) / [Open Babel](https://openbabel.org/).
 - **Force fields** — [MINFF](https://github.com/mholmboe/minff); CLAYFF (Cygan, Liang & Kalinichev, *J. Phys. Chem. B* **2004**, *108*, 1255); GAFF; OpenFF (Sage/Parsley).
