@@ -78,6 +78,7 @@ two_theta, intensity, fig = xrd(
 ```
 """
 
+import warnings
 import numpy as np
 from .distances import dist_matrix
 from .cell_utils import normalize_box
@@ -338,8 +339,11 @@ def atomic_scattering_factors(atom_label, wavelength, two_theta, b_iso=0.0):
         atom_label = atom_label[1:]
 
         # Handle common ionic forms
-    if atom_label in ['O', 'O1-', 'O2-']:
-        atom_label = atom_label + '1-'
+    if atom_label == 'O':
+        # A bare oxygen is O1-, as in the MATLAB implementation. Explicit 'O1-' and 'O2-' are
+        # used as given; they used to become 'O1-1-' / 'O2-1-', match nothing, and silently fall
+        # back to neutral oxygen.
+        atom_label = 'O1-'
 
 
     # Handle common ionic forms
@@ -401,7 +405,8 @@ def atomic_scattering_factors(atom_label, wavelength, two_theta, b_iso=0.0):
             if row[0] == 'O':
                 idx = i
                 break
-        print(f"Warning: Could not find element {atom_label} in Waasmaier-Kirfel table. Using O (Oxygen) instead.")
+        warnings.warn(f"Could not find element {atom_label} in Waasmaier-Kirfel table. "
+                      f"Using O (Oxygen) instead.", RuntimeWarning, stacklevel=2)
     
     # Extract coefficients from the selected row
     # Label, AtomicNumber, Charge, AtomicWeight, Debye, a1, a2, a3, a4, a5, c, b1, b2, b3, b4, b5
@@ -900,33 +905,16 @@ def xrd(atoms, Box, wavelength=1.54187, angle_step=0.02,
         if neutral_atoms:
             scattering_label = f"{atom_type}0"
         else:
-            # Use ionic forms for common ions
-            if atom_type == 'Na':
-                scattering_label = 'Na+1'
-            elif atom_type == 'Cl':
-                scattering_label = 'Cl-1'
-            elif atom_type == 'K':
-                scattering_label = 'K+1'
-            elif atom_type == 'Ca':
-                scattering_label = 'Ca+'
-            elif atom_type == 'Mg':
-                scattering_label = 'Mg+1'
-            elif atom_type == 'Al':
-                scattering_label = 'Al+1.5'
-            elif atom_type == 'Fe':
-                scattering_label = 'Fe+1.5'
-            elif atom_type == 'Si':
-                scattering_label = 'Si+2'
-            elif atom_type == 'O':
-                scattering_label = 'O-2'
-            elif atom_type == 'F':
-                scattering_label = 'F-1'
-            elif atom_type == 'S':
-                scattering_label = 'S-2'
-            # Add more ionic forms as needed
-            # If no ionic form is defined, use neutral atom
-            else:
-                scattering_label = atom_type
+            # Ionic forms for common ions, in the Waasmaier-Kirfel table's
+            # number-first spelling ('Na1+', not 'Na+1'). The old sign-first labels
+            # matched nothing and every ion silently fell back to its NEUTRAL form.
+            # Oxidation states follow the MATLAB xrd_atom reference (O1-, Mg2+). 'S'
+            # has no ionic entry in the table, so it stays neutral by design.
+            _ionic = {
+                'Na': 'Na1+', 'Cl': 'Cl1-', 'K': 'K1+', 'Ca': 'Ca2+', 'Mg': 'Mg2+',
+                'Al': 'Al1.5+', 'Fe': 'Fe1.5+', 'Si': 'Si2+', 'O': 'O1-', 'F': 'F1-',
+            }
+            scattering_label = _ionic.get(atom_type, atom_type)
         
         # Calculate scattering factors
         f_values, _, _ = atomic_scattering_factors(scattering_label, wavelength, two_theta_disc, 0.0)

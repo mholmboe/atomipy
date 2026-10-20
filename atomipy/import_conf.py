@@ -208,6 +208,7 @@ def gro(file_path):
             "element": None,
             "type": atname,  # Store atom name in type field
             "fftype": atname,  # Store atom name in type field
+            "occupancy": 1.0,  # GRO has no occupancy column; default to 1.0 (matches import_pdb)
             "is_nm": False  # Mark that coordinates are now in Angstroms
         }
         atoms.append(atom)
