@@ -362,14 +362,33 @@ def atomic_scattering_factors(atom_label, wavelength, two_theta, b_iso=0.0):
     # Handle special cases in line with MATLAB implementation
     if atom_label.startswith('Nc'):
         atom_label = 'N'
-    elif atom_label in ['Al']:
-        atom_label = 'Al1.5+'
-    elif atom_label in ['Si']:
-        atom_label = 'Si2+'
-    elif atom_label in ['Fe']:
-        # Bare Fe -> Fe1.5+ (CLAYFF octahedral-Fe charge), matching the MATLAB
-        # atom toolbox and consistent with the Al/Si clay-cation remaps above.
-        atom_label = 'Fe1.5+'
+
+    # CLAYFF/MINFF structural site types -> their partial-charge scattering label
+    # (case-insensitive): the octahedral / tetrahedral / edge Al, Si, Mg, Fe, Li,
+    # Ti and Ca forcefield atom types. Settled jointly with the mholmboe/atom
+    # MATLAB toolbox from the actual force-field charges.
+    #   NOTE: a label's partial charge is FORCE-FIELD DEPENDENT -- MINFF and CLAYFF
+    #   disagree on the same label (e.g. Sit 1.884 vs 2.100, Mgh 1.740 vs 1.050,
+    #   Alo 1.782 vs 1.575) -- but one fixed label->ion mapping suffices only
+    #   because the tabulated Waasmaier-Kirfel rows are coarse enough that both
+    #   charges round to the same row. Adding finer partial-charge rows would break
+    #   that assumption.
+    #   Mn / Mn2 / Mn3 / Mn4 are deliberately NOT remapped: their CLAYFF digits
+    #   (2.1 / 1.36 / 1.575 / 2.1) are site labels, not oxidation states and not
+    #   monotonic in charge, so they stay neutral rather than guess an ion.
+    _CLAY_TYPES = {
+        'al': 'Al1.5+', 'alt': 'Al1.5+', 'alo': 'Al1.5+', 'ale': 'Al1.5+',
+        'alr': 'Al1.5+', 'am': 'Al1.5+', 'ao': 'Al1.5+', 'ae': 'Al1.5+', 'at': 'Al1.5+',
+        'si': 'Si2+', 'sit': 'Si2+', 'sio': 'Si2+', 'st': 'Si2+',
+        'mgo': 'Mg1+', 'mgh': 'Mg1+', 'mge': 'Mg1+',
+        'fe': 'Fe1.5+', 'feo': 'Fe1.5+', 'fet': 'Fe1.5+', 'feo2': 'Fe1.5+',
+        'feo3': 'Fe1.5+', 'fet2': 'Fe1.5+', 'fet3': 'Fe1.5+', 'fee': 'Fe1.5+',
+        'fee2': 'Fe1.5+', 'fee3': 'Fe1.5+', 'fe2': 'Fe1.5+', 'dfeo': 'Fe1.5+',
+        'lio': 'Li1+', 'tio': 'Ti2+', 'cao': 'Ca2+', 'cah': 'Ca2+',
+    }
+    if atom_label.lower() in _CLAY_TYPES:
+        atom_label = _CLAY_TYPES[atom_label.lower()]
+
     idx = -1
     if isinstance(atom_label, str):
         # Try exact match first

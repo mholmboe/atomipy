@@ -2,6 +2,29 @@
 
 All notable changes to **atomipy** are documented here.
 
+## 1.0
+
+### Diffraction / scattering factors
+- **Comprehensive clay-forcefield atom-type remap in `atomic_scattering_factors`.**
+  All CLAYFF/MINFF structural site types now resolve to their intended
+  partial-charge scattering factor (case-insensitively) instead of silently
+  falling through to the neutral element or oxygen:
+  - `Al / Alt / Alo / Ale / Alr / Am / ao / ae / at → Al1.5+`
+  - `Si / Sit / Sio / st → Si2+`
+  - `Mgo / Mgh / Mge → Mg1+`
+  - `Fe / Feo / Fet / Feo2 / Feo3 / Fet2 / Fet3 / Fee / Fee2 / Fee3 / Fe2 / DFeo → Fe1.5+`
+  - `Lio → Li1+`, `Tio → Ti2+`, `Cao / Cah → Ca2+`
+  Bare `Mg / Ca / Sr / Ba / Cu` stay aqueous 2+; `Mn / Mn2 / Mn3 / Mn4` are left
+  neutral on purpose (their CLAYFF digits are site labels, not oxidation states,
+  and not monotonic in charge). Previously only bare `Al` / `Si` / `Fe` (and
+  `Feo` / `Fet`) were handled — the rest gave the wrong element (e.g. `Sit` read
+  as neutral Si, +17%; many types fell back to oxygen). Only direct
+  `atomic_scattering_factors` calls are affected; `xrd()` already collapsed these
+  via `element()`. The intended partial charge is force-field dependent (MINFF and
+  CLAYFF disagree per label); a single fixed mapping works only because the
+  tabulated Waasmaier–Kirfel rows are coarse enough that both charges round to the
+  same row. Settled jointly with the canonical `mholmboe/atom` MATLAB toolbox.
+
 ## 0.99
 
 ### Diffraction / scattering factors
