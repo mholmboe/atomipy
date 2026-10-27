@@ -2,6 +2,24 @@
 
 All notable changes to **atomipy** are documented here.
 
+## 1.2 (in progress)
+
+### Diffraction / scattering factors
+- **Corrected and refit the `Glycol` scattering row.** The row is a *half*-glycol
+  united site (one `-CH2OH` end, 17 e, M=31.034; place two per ethylene-glycol
+  molecule) — its weight (31.035) and f(0)=16.99 both said half-molecule, but two
+  metadata fields were wrong: `Z=34` (whole-molecule) and `debye=11` (the
+  coefficient count mis-entered). Both are fixed (`Z=17`, `debye=0`). The
+  coefficients were a valid Waasmaier–Kirfel fit of the independent-atom sum
+  `f_C + 3·f_H + f_O` over Cu Kα, but a negative `b` made the curve turn upward
+  past Mo Kα (unphysical extrapolation outside the fit domain). They are refit
+  over a wider s-range (through Ag Kα) with all-positive `b`: f(0)=17 exact,
+  accurate to 0.02% of the IAM sum, and monotonically decreasing on Cu/Co/Mo/Ag Kα.
+  The row is reachable only by a literal `Glycol` atom type; no bundled structure
+  uses it. Settled jointly with the canonical `mholmboe/atom` MATLAB toolbox and
+  the MLMnC XRD code (which uses a whole-molecule, one-site-per-molecule
+  convention — atomipy keeps the atom-toolbox half-glycol convention).
+
 ## 1.1
 
 ### Diffraction / scattering factors (`xrd`)
