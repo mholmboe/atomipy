@@ -90,6 +90,11 @@ from .element import element
 # Waasmaier-Kirfel coefficients table for atomic scattering factors
 WAASMAIER_KIRFEL_DATA = [ # Plain Python list for mixed types
  # Label, AtomicNumber, Charge, AtomicWeight, Debye, a1, a2, a3, a4, a5, c, b1, b2, b3, b4, b5
+ # f(s) = c + sum_i a_i*exp(-b_i*s^2), with s = sin(theta)/lambda.
+ # COLUMN ORDER: c follows a5 here ([a1..a5, c, b1..b5]). The mholmboe/atom MATLAB table
+ # uses c-FIRST ([c, a1..a5, b1..b5]); do NOT paste rows between the two codes without
+ # permuting c. f(0) = c + sum(a) is order-invariant, so it will NOT catch a mispaste --
+ # check a non-zero point (e.g. f at s=0.6491) when exchanging coefficients.
 ['H', 1, 0.0, 1.00794, 0.0, 0.413048, 0.294953, 0.187491, 0.080701, 0.023736, 4.90E-05, 15.569946, 32.398468, 5.711404, 61.889874, 1.334118],
 ['H1-', 1, -1.0, 1.00794, 2.0, 0.70226, 0.763666, 0.248678, 0.261323, 0.023017, 0.000425, 23.945604, 74.897919, 6.773289, 233.58345, 1.337531],
 ['He', 2, 0.0, 4.00260, 0.0, 0.732354, 0.753896, 0.283819, 0.190003, 0.039139, 0.000487, 11.553918, 4.595831, 1.546299, 26.463964, 0.377523],
