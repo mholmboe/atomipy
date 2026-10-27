@@ -2,6 +2,25 @@
 
 All notable changes to **atomipy** are documented here.
 
+## 1.1
+
+### Diffraction / scattering factors (`xrd`)
+- **Virtual / dummy sites now contribute zero scattering.** TIP4P `MW`, TIP5P
+  `LP*`, and `Du`/`DUM`/`MY1` sites carry charge but no electrons; `xrd()`
+  previously let them fall through to the oxygen fallback and silently add
+  spurious scattering (and they could mis-size the structure-factor sum). They
+  are now given f = 0, so e.g. a TIP4P/TIP5P water box gives the correct pattern.
+- **Explicit tabulated ion labels are honored.** `xrd()` ran `element()` first,
+  which collapsed an atom typed `Fe2+` to `Fe` (→ Fe1.5+), `Hf4+` to `H`, etc.
+  It now uses the atom's original label verbatim when it is a tabulated
+  Waasmaier–Kirfel row (e.g. `Fe2+`, `Fe3+`, `Hf4+`, `K1+`) before falling back to
+  the element collapse — so explicit oxidation states scatter correctly, matching
+  the MATLAB toolbox. Clay forcefield types (`Feo`, `Si`, …), which are not table
+  rows, are unchanged.
+- **Lowercase aqueous-ion labels resolve correctly.** The bare-ion remap in
+  `atomic_scattering_factors` is now case-insensitive, so `cu`/`na`/`mg` give the
+  aqueous ion instead of the oxygen fallback.
+
 ## 1.0
 
 ### Diffraction / scattering factors

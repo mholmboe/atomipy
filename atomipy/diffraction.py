@@ -353,11 +353,12 @@ def atomic_scattering_factors(atom_label, wavelength, two_theta, b_iso=0.0):
         atom_label = 'O1-'
 
 
-    # Handle common ionic forms
-    if atom_label in ['Li', 'Na', 'K', 'Cs']:
-        atom_label = atom_label + '1+'
-    elif atom_label in ['Mg', 'Ca', 'Sr', 'Ba', 'Cu']:
-        atom_label = atom_label + '2+'
+    # Handle common ionic forms (case-insensitive, so lowercase forcefield
+    # spellings like 'cu'/'na'/'mg' get the aqueous ion, not the oxygen fallback).
+    if atom_label.capitalize() in ['Li', 'Na', 'K', 'Cs']:
+        atom_label = atom_label.capitalize() + '1+'
+    elif atom_label.capitalize() in ['Mg', 'Ca', 'Sr', 'Ba', 'Cu']:
+        atom_label = atom_label.capitalize() + '2+'
     
     # Handle special cases in line with MATLAB implementation
     if atom_label.startswith('Nc'):
@@ -755,9 +756,18 @@ def xrd(atoms, Box, wavelength=1.54187, angle_step=0.02,
 
     print("Starting XRD calculation...")
     
+    # Capture each atom's ORIGINAL forcefield label before element() collapses it
+    # to a bare element. Used below so that (a) explicit tabulated ions like 'Fe2+'
+    # or 'Hf4+' are used as-is instead of being collapsed (Fe2+ -> Fe -> Fe1.5+),
+    # and (b) massless virtual/dummy sites (TIP4P 'MW', TIP5P 'LP*', 'Du') are given
+    # a zero scattering factor instead of silently scattering as oxygen.
+    _orig_labels = [str(a.get('type') or a.get('fftype') or a.get('element') or '') for a in atoms]
+    _WK_LABELS = frozenset(row[0] for row in WAASMAIER_KIRFEL_DATA)
+    _VIRTUAL_SITES = frozenset(['MW', 'MW1', 'LP', 'LP1', 'LP2', 'LP3', 'DU', 'DUM', 'MY1'])
+
     # Standardize atom types/elements using atomipy.element
     # We do this on a shallow copy of the list to avoid modifying the original list
-    # but the atom dicts themselves might still be modified. 
+    # but the atom dicts themselves might still be modified.
     # For XRD, this is generally desired to ensure correct scattering factors.
     atoms = element(list(atoms))
 
@@ -819,10 +829,17 @@ def xrd(atoms, Box, wavelength=1.54187, angle_step=0.02,
     y_frac = np.array([atom['yfrac'] for atom in atoms])
     z_frac = np.array([atom['zfrac'] for atom in atoms])
     
-    # Get atom types
+    # Get atom types. Prefer the atom's original forcefield label when it is a
+    # virtual/dummy site (-> no scattering) or an explicit tabulated ion (-> used
+    # verbatim); otherwise fall back to the element() result.
     atom_types = []
-    for atom in atoms:
-        if 'element' in atom and atom['element']:
+    for i, atom in enumerate(atoms):
+        orig = _orig_labels[i] if i < len(_orig_labels) else ''
+        if orig.upper() in _VIRTUAL_SITES:
+            atom_types.append('__VIRTUAL__')
+        elif orig in _WK_LABELS:
+            atom_types.append(orig)
+        elif 'element' in atom and atom['element']:
             atom_types.append(atom['element'])
         elif 'type' in atom:
             atom_types.append(atom['type'])
@@ -930,6 +947,18 @@ def xrd(atoms, Box, wavelength=1.54187, angle_step=0.02,
         # Find all atoms of this type
         type_indices = [i for i, at in enumerate(atom_types) if at == atom_type]
         
+        # Virtual / dummy sites (TIP4P MW, TIP5P lone pairs, Du): charge but no
+        # electrons, so they contribute nothing to an X-ray structure factor.
+        if atom_type == '__VIRTUAL__':
+            atomic_scattering_data[atom_type] = {
+                'scattering_label': '(virtual site, f=0)',
+                'f_values': np.zeros_like(two_theta_disc, dtype=float),
+                'two_theta': two_theta_disc,
+                'atom_count': len(type_indices),
+            }
+            print(f"Processing {len(type_indices)} virtual/dummy site(s) of type {atom_type} (f=0)")
+            continue
+
         # Get scattering factors for this atom type
         scattering_label = atom_type
         if neutral_atoms:
