@@ -2,7 +2,21 @@
 
 All notable changes to **atomipy** are documented here.
 
-## Unreleased
+## 0.99
+
+### Diffraction / scattering factors
+- **Corrected the Fe1.5+ scattering-factor row.** The CLAYFF partial-charge
+  `Fe1.5+` row (octahedral Fe carries Al's 1.575 charge) had f(0)=23.976 e,
+  ~2% below the correct 24.5, and was the sole outlier among the curated
+  partial-charge rows (Si2+, Al1.5+, Mg1+, O1-). Re-fit to the same recipe as
+  its siblings — a Waasmaier–Kirfel fit to mean(Fe⁰, Fe³⁺) with f(0) pinned to
+  24.5 — so f(0)=24.500 and the XRD intensities of Fe-bearing clays are no
+  longer biased low at low angle. Coordinated with the canonical `mholmboe/atom`
+  MATLAB toolbox (same corrected row).
+- **`atomic_scattering_factors` now remaps bare `Fe`/`Feo`/`Fet` → `Fe1.5+`**
+  (was neutral Fe), consistent with the existing `Al→Al1.5+` / `Si→Si2+`
+  clay-cation remaps and the MATLAB toolbox. `xrd()` already applied this remap,
+  so only direct `atomic_scattering_factors` calls change.
 
 ### Force field (MINFF v1.0 define names)
 MINFF v1.0 selects parameter sets with different GROMACS defines: the angle force
