@@ -78,6 +78,7 @@ two_theta, intensity, fig = xrd(
 ```
 """
 
+import re
 import warnings
 import numpy as np
 from .distances import dist_matrix
@@ -147,7 +148,7 @@ WAASMAIER_KIRFEL_DATA = [ # Plain Python list for mixed types
 ['Mn3+', 25, 3.0, 54.93805, 1.5, 6.926972, 2.081342, 11.128379, 2.375107, -0.419287, -0.093713, 0.378315, 0.015054, 5.379957, 14.429586, 0.004939],
 ['Mn4+', 25, 4.0, 54.93805, 1.5, 12.409131, 7.466993, 1.809947, -12.138477, 10.780248, 0.672146, 0.3004, 0.112814, 12.520756, 0.168653, 5.173237],
 ['Fe', 26, 0.0, 55.84500, 0.0, 12.311098, 1.876623, 3.066177, 2.070451, 6.975185, -0.304931, 5.009415, 0.014461, 18.74304, 82.767876, 0.346506],
-['Fe1.5+', 26, 1.5, 55.84500, 1.5, 12.78432135, 62.56327581, 1.683751473, 1.432130736, 6.958358598, -61.44564969, 6.234159837, -0.000399296, 1.063292887, 21.58593936, 0.374772458],
+['Fe1.5+', 26, 1.5, 55.84500, 1.5, 12.16796984, 2.93541306, 2.74435628, 1.05974975, 7.00626983, -1.41375875, 4.9525849, 0.00772244, 16.37702218, 82.38092108, 0.34251264],
 ['Fe2+', 26, 2.0, 55.84500, 1.5, 11.776765, 11.165097, 3.533495, 0.165345, 7.036932, -9.676919, 4.912232, 0.001748, 14.166556, 42.381958, 0.341324],
 ['Fe3+', 26, 3.0, 55.84500, 1.5, 9.721638, 63.403847, 2.141347, 2.629274, 7.033846, -61.930725, 4.869297, 0.000293, 4.867602, 13.539076, 0.33852],
 ['Co', 27, 0.0, 58.93320, 0.0, 12.91451, 2.481908, 3.466894, 2.106351, 6.960892, -0.936572, 4.507138, 0.009126, 16.438129, 76.98732, 0.314418],
@@ -338,7 +339,13 @@ def atomic_scattering_factors(atom_label, wavelength, two_theta, b_iso=0.0):
         # Handle labels that start with a digit
         atom_label = atom_label[1:]
 
-        # Handle common ionic forms
+        # Every form of Hs, He, Ho and Hw (force-field hydrogen types, water hydrogen) is hydrogen. Hf and
+    # Hg stay the real elements. This runs before the exact table match, which would otherwise give
+    # helium or holmium. (Oc is neutral oxygen and Nc is nitrogen, handled below.)
+    if re.match(r'^h[eows]', atom_label, re.IGNORECASE):
+        atom_label = 'H'
+
+    # Handle common ionic forms
     if atom_label == 'O':
         # A bare oxygen is O1-, as in the MATLAB implementation. Explicit 'O1-' and 'O2-' are
         # used as given; they used to become 'O1-1-' / 'O2-1-', match nothing, and silently fall
@@ -359,6 +366,10 @@ def atomic_scattering_factors(atom_label, wavelength, two_theta, b_iso=0.0):
         atom_label = 'Al1.5+'
     elif atom_label in ['Si']:
         atom_label = 'Si2+'
+    elif atom_label in ['Fe']:
+        # Bare Fe -> Fe1.5+ (CLAYFF octahedral-Fe charge), matching the MATLAB
+        # atom toolbox and consistent with the Al/Si clay-cation remaps above.
+        atom_label = 'Fe1.5+'
     idx = -1
     if isinstance(atom_label, str):
         # Try exact match first
@@ -380,16 +391,16 @@ def atomic_scattering_factors(atom_label, wavelength, two_theta, b_iso=0.0):
             # Special cases for common forcefield-specific atom types (e.g. CLAYFF, MINFF)
             if element_symbol in ['Sit', 'St']:
                 element_symbol = 'Si'
-            elif element_symbol in ['Op', 'Oh', 'Ob', 'Od', 'Oe', 'Ow', 'Owc', 'Owh']:
+            elif element_symbol in ['Op', 'Oh', 'Ob', 'Od', 'Oe', 'Oc', 'Ow', 'Owc', 'Owh']:
                 element_symbol = 'O'
             elif element_symbol in ['Alo', 'Alt', 'Alr', 'Am']:
                 element_symbol = 'Al'
             elif element_symbol in ['Mgo', 'Mgt']:
                 element_symbol = 'Mg'
             elif element_symbol in ['Fet', 'Feo']:
-                element_symbol = 'Fe'
-            elif element_symbol in ['Hw', 'Ho', 'He']:
-                element_symbol = 'H'
+                # Octahedral/tetrahedral Fe forcefield types -> Fe1.5+ (CLAYFF charge),
+                # matching the MATLAB atom toolbox. (Was neutral 'Fe' before.)
+                element_symbol = 'Fe1.5+'
             elif element_symbol in ['Cao', 'Cat']:
                 element_symbol = 'Ca'
             
