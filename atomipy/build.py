@@ -300,7 +300,8 @@ def substitute(atoms, Box, num_oct_subst, o1_type, o2_type, min_o2o2_dist,
         n_oct_lo = 0
         n_oct_hi = 0
         n_oct_mid = 0
-        
+        n_oct_fallback = 0
+
         # Track which local o1_atoms indices have been converted to o2_type
         placed_o2_indices = set(j for j, atom in enumerate(o1_atoms) if atom['type'] == o2_type)
         
@@ -346,7 +347,35 @@ def substitute(atoms, Box, num_oct_subst, o1_type, o2_type, min_o2o2_dist,
                     placed_o2_indices.add(rand_o1_index[i])
             
             i += 1
-        
+
+        # Structural fallback: when the symmetry-balanced top/bottom distribution
+        # cannot place all requested substitutions -- a single sheet, a
+        # non-centrosymmetric layer, an odd count, or a dimension with no two-sheet
+        # split -- place the remainder on any remaining valid candidate, still
+        # honoring the minimum O2-O2 separation and the lo/hi limits, just without
+        # the top/bottom balancing.
+        n_oct_placed = n_oct_lo + n_oct_hi + n_oct_mid
+        if n_oct_placed < num_oct_subst:
+            for i2 in range(len(o1_atoms)):
+                if n_oct_placed + n_oct_fallback >= num_oct_subst:
+                    break
+                curr_idx = rand_o1_index[i2]
+                if o1_atoms[curr_idx]['type'] == o2_type:
+                    continue
+                if any(nb in placed_o2_indices for nb in o1_neighbors[curr_idx]):
+                    continue
+                current_pos = o1_data[curr_idx, dim_index]
+                if not (lo_limit < current_pos < hi_limit):
+                    continue
+                oct_subst_index.append(curr_idx)
+                o1_atoms[curr_idx]['type'] = o2_type
+                o1_atoms[curr_idx]['element'] = o2_element
+                placed_o2_indices.add(curr_idx)
+                n_oct_fallback += 1
+            if n_oct_fallback:
+                print(f"Structural fallback: placed {n_oct_fallback} additional "
+                      f"octahedral substitution(s) without top/bottom balancing.")
+
         # Update main atoms list with octahedral substitutions
         for idx, global_idx in enumerate(ind_o1):
             atoms[global_idx]['type'] = o1_atoms[idx]['type']
@@ -360,15 +389,15 @@ def substitute(atoms, Box, num_oct_subst, o1_type, o2_type, min_o2o2_dist,
         o2_atoms = [atoms[idx] for idx in o2_indices]
         
         # Report octahedral substitution results
-        print(f"Octahedral substitutions: {n_oct_lo} in lower half, {n_oct_hi} in upper half, {n_oct_mid} at center")
-        
-        if i >= len(o1_atoms):
-            print("Warning: Stopped the loop - ran out of candidate atoms")
-        
-        if (n_oct_lo == n_oct_hi and (n_oct_lo + n_oct_hi) == num_oct_subst) or n_oct_mid == num_oct_subst:
+        n_oct_total = n_oct_lo + n_oct_hi + n_oct_mid + n_oct_fallback
+        fb_str = f", {n_oct_fallback} by structural fallback" if n_oct_fallback else ""
+        print(f"Octahedral substitutions: {n_oct_lo} in lower half, {n_oct_hi} in upper half, {n_oct_mid} at center{fb_str}")
+
+        if n_oct_total == num_oct_subst:
             print("✓ Octahedral substitution successful!")
         else:
-            print("⚠ Octahedral substitution not optimal!")
+            print(f"⚠ Octahedral substitution incomplete: placed {n_oct_total} of {num_oct_subst} "
+                  f"(ran out of candidates satisfying min {o2_type}-{o2_type} = {min_o2o2_dist} Å and the spatial limits)")
     
     # ========== TETRAHEDRAL SUBSTITUTION ==========
     if num_tet_subst > 0:
@@ -424,8 +453,9 @@ def substitute(atoms, Box, num_oct_subst, o1_type, o2_type, min_o2o2_dist,
         i = 0
         n_tet_lo = 0
         n_tet_hi = 0
+        n_tet_fallback = 0
         tet_subst_index = []
-        
+
         # Track which local t1_atoms indices have been converted to t2_type
         placed_t2_indices = set()
         
@@ -461,7 +491,34 @@ def substitute(atoms, Box, num_oct_subst, o1_type, o2_type, min_o2o2_dist,
                     placed_t2_indices.add(rand_t1_index[i])
             
             i += 1
-        
+
+        # Structural fallback (see octahedral note): place any remainder on any
+        # remaining valid T1 candidate, honoring min T2-T2 separation and the
+        # T2-O2 separation, without top/bottom balancing.
+        n_tet_placed = n_tet_lo + n_tet_hi
+        if n_tet_placed < num_tet_subst:
+            for i2 in range(len(t1_atoms)):
+                if n_tet_placed + n_tet_fallback >= num_tet_subst:
+                    break
+                curr_idx = rand_t1_index[i2]
+                if t1_atoms[curr_idx]['type'] == t2_type:
+                    continue
+                if any(nb in placed_t2_indices for nb in t1_neighbors[curr_idx]):
+                    continue
+                if len(t1o2_neighbors[curr_idx]) > 0:
+                    continue
+                current_pos = t1_data[curr_idx, dim_index]
+                if not (lo_limit < current_pos < hi_limit):
+                    continue
+                tet_subst_index.append(curr_idx)
+                t1_atoms[curr_idx]['type'] = t2_type
+                t1_atoms[curr_idx]['element'] = t2_element
+                placed_t2_indices.add(curr_idx)
+                n_tet_fallback += 1
+            if n_tet_fallback:
+                print(f"Structural fallback: placed {n_tet_fallback} additional "
+                      f"tetrahedral substitution(s) without top/bottom balancing.")
+
         # Update main atoms list with tetrahedral substitutions
         for idx, global_idx in enumerate(ind_t1):
             atoms[global_idx]['type'] = t1_atoms[idx]['type']
@@ -471,15 +528,16 @@ def substitute(atoms, Box, num_oct_subst, o1_type, o2_type, min_o2o2_dist,
                 atoms[global_idx]['fftype'] = t1_atoms[idx]['type']
         
         # Report tetrahedral substitution results
-        print(f"Tetrahedral substitutions: {n_tet_lo} in lower half, {n_tet_hi} in upper half")
-        
-        if i >= len(t1_atoms):
-            print("Warning: Stopped the loop - ran out of candidate atoms")
-        
-        if n_tet_lo == n_tet_hi and (n_tet_lo + n_tet_hi) == num_tet_subst:
+        n_tet_total = n_tet_lo + n_tet_hi + n_tet_fallback
+        fb_str_t = f", {n_tet_fallback} by structural fallback" if n_tet_fallback else ""
+        print(f"Tetrahedral substitutions: {n_tet_lo} in lower half, {n_tet_hi} in upper half{fb_str_t}")
+
+        if n_tet_total == num_tet_subst:
             print("✓ Tetrahedral substitution successful!")
         else:
-            print("⚠ Tetrahedral substitution not optimal!")
+            print(f"⚠ Tetrahedral substitution incomplete: placed {n_tet_total} of {num_tet_subst} "
+                  f"(ran out of candidates satisfying min {t2_type}-{t2_type} = {min_t2t2_dist} Å, "
+                  f"the {t2_type}-{o2_type} separation, and the spatial limits)")
     
     # Shift structure back to original position if it was translated
     if abs(shift_z) > 0:

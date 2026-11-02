@@ -15,6 +15,14 @@ All notable changes to **atomipy** are documented here.
   only worked for literal element names, is replaced). The matched level is
   printed when it is not exact, and a type that matches nothing at any level
   raises a clear error.
+- **Structural fallback placement in `substitute()`.** When the symmetry-balanced
+  top/bottom distribution cannot place all requested substitutions (a single
+  sheet, a non-centrosymmetric layer, an odd count, or a dimension with no
+  two-sheet split), the remainder is now placed on any remaining valid candidate
+  — still honoring the minimum O2-O2 / T2-T2 and T2-O2 separations and the lo/hi
+  spatial limits, just without the top/bottom balancing. The report states how
+  many were placed by fallback, and an unsatisfiable request now reports "placed
+  N of M" with the reason instead of a vague "not optimal".
 
 ### Diffraction / scattering factors
 - **Corrected and refit the `Glycol` scattering row.** The row is a *half*-glycol
