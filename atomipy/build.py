@@ -10,6 +10,45 @@ import numpy as np
 from .move import translate
 
 
+def _match_type_cascade(atoms, target):
+    """Find atom indices whose ``type`` matches ``target``, element-agnostically.
+
+    The user always specifies the precise atom type to substitute; this resolves
+    it against the structure with a three-level cascade, returning the first
+    level that matches any atom:
+
+      1. exact        : ``type == target`` (case-sensitive, the precise type)
+      2. first-2-char : ``type`` starts with ``target[:2]`` (case-insensitive)
+      3. first-1-char : ``type`` starts with ``target[:1]`` (case-insensitive)
+
+    This makes substitution atom-type agnostic (no built-in Al/Si or octahedral/
+    tetrahedral element assumptions) and structure agnostic: e.g. ``'Feo'`` on a
+    nontronite resolves exactly, while ``'Fe'`` or ``'Al'`` on a structure whose
+    octahedral cation is spelled differently still resolves by prefix.
+
+    Returns
+    -------
+    (indices, how) : (list[int], str or None)
+        ``how`` is ``'exact'``, ``"first-2-char prefix 'Fe'"``,
+        ``"first-1-char prefix 'F'"``, or ``(``[]``, None)`` if nothing matches.
+    """
+    target = str(target or '')
+    if not target:
+        return [], None
+    exact = [i for i, a in enumerate(atoms) if str(a.get('type', '')) == target]
+    if exact:
+        return exact, 'exact'
+    tl = target.lower()
+    for n in (2, 1):
+        if len(target) >= n:
+            pref = tl[:n]
+            m = [i for i, a in enumerate(atoms)
+                 if str(a.get('type', '')).lower().startswith(pref)]
+            if m:
+                return m, f"first-{n}-char prefix '{target[:n]}'"
+    return [], None
+
+
 def is_centrosymmetric_along_z(atoms, tolerance=0.1):
     """
     Check if a structure is approximately centrosymmetric along the z-axis.
@@ -81,6 +120,16 @@ def substitute(atoms, Box, num_oct_subst, o1_type, o2_type, min_o2o2_dist,
     (octahedral sites) and optionally T1->T2 atom types (tetrahedral sites).
     Substitutions are distributed equally between the top and bottom halves of
     the structure along the specified dimension.
+
+    Matching is atom-type agnostic: there is no built-in assumption that the
+    octahedral cation is Al or the tetrahedral cation is Si. You specify the
+    precise source type (``o1_type`` / ``t1_type``) for the mineral at hand (e.g.
+    ``'Feo'`` for a nontronite). Each source type is resolved with a three-level
+    cascade and the first level that matches any atom is used:
+    (1) exact type, (2) first-two-character prefix, (3) first-character prefix
+    (prefix levels are case-insensitive). So ``'Fe'`` or even ``'F'`` resolves to
+    ``Feo``/``Fet`` when the exact spelling is unknown. The chosen level is
+    printed when it is not an exact match.
     
     Parameters
     ----------
@@ -94,7 +143,9 @@ def substitute(atoms, Box, num_oct_subst, o1_type, o2_type, min_o2o2_dist,
     num_oct_subst : int
         Number of octahedral substitutions to perform (O1->O2).
     o1_type : str
-        Atom type to be replaced in octahedral sites.
+        Atom type to be replaced in octahedral sites. Resolved by the exact ->
+        first-2-char -> first-char cascade described above (e.g. 'Feo', 'Mgo',
+        'Al'); not restricted to any element.
     o2_type : str
         Replacement atom type for octahedral sites.
     min_o2o2_dist : float
@@ -102,7 +153,8 @@ def substitute(atoms, Box, num_oct_subst, o1_type, o2_type, min_o2o2_dist,
     num_tet_subst : int, optional
         Number of tetrahedral substitutions to perform (T1->T2). Default is 0.
     t1_type : str, optional
-        Atom type to be replaced in tetrahedral sites.
+        Atom type to be replaced in tetrahedral sites. Resolved by the same
+        exact -> first-2-char -> first-char cascade (e.g. 'Si', 'Sit').
     t2_type : str, optional
         Replacement atom type for tetrahedral sites.
     min_t2t2_dist : float, optional
@@ -206,23 +258,20 @@ def substitute(atoms, Box, num_oct_subst, o1_type, o2_type, min_o2o2_dist,
         element([dummy_atom])
         o2_element = dummy_atom.get('element', '')
 
-        # Find all O1 and O2 atoms
-        ind_o1 = [i for i, atom in enumerate(atoms) if atom['type'] == o1_type or atom['type'] == o2_type]
-        
-        # If no atoms found by type, try to look by element
-        if not ind_o1:
-            print(f"No atoms with type '{o1_type}' found. Trying to match by element instead...")
-            # Ensure element field is populated for all atoms
-            atoms = element(atoms)
-            
-            # Try to match by element field
-            ind_o1 = [i for i, atom in enumerate(atoms) if atom.get('element', '').upper() == o1_type.upper() 
-                      or atom.get('element', '').upper() == o2_type.upper()]
-            
-            if ind_o1:
-                print(f"Found {len(ind_o1)} atoms by element match.")
-            else:
-                raise ValueError(f"No atoms of type or element '{o1_type}' or '{o2_type}' found for octahedral substitution")
+        # Resolve the source type with the element-agnostic cascade (exact type ->
+        # first-2-char prefix -> first-char prefix). Any atoms already of o2_type are
+        # added so a partially substituted structure resumes and existing o2 atoms
+        # still count toward the minimum-separation spacing.
+        src_idx, how = _match_type_cascade(atoms, o1_type)
+        if not src_idx:
+            raise ValueError(
+                f"No atoms matching '{o1_type}' (exact type, first-2-char, or "
+                f"first-char prefix) found for octahedral substitution")
+        if how != 'exact':
+            print(f"No exact '{o1_type}' atoms found; matched {len(src_idx)} "
+                  f"atom(s) by {how}.")
+        o2_existing = [i for i, atom in enumerate(atoms) if atom['type'] == o2_type]
+        ind_o1 = sorted(set(src_idx) | set(o2_existing))
         
         # Extract O1 atoms
         o1_atoms = [atoms[i] for i in ind_o1]
@@ -334,25 +383,15 @@ def substitute(atoms, Box, num_oct_subst, o1_type, o2_type, min_o2o2_dist,
         element([dummy_atom])
         t2_element = dummy_atom.get('element', '')
         
-        # Find all T1 atoms
-        ind_t1 = [i for i, atom in enumerate(atoms) if atom['type'] == t1_type]
-        
-        # If no atoms found by type, try to look by element
+        # Resolve the source type with the same element-agnostic cascade.
+        ind_t1, how_t = _match_type_cascade(atoms, t1_type)
         if not ind_t1:
-            print(f"No atoms with type '{t1_type}' found. Trying to match by element instead...")
-            # Element function should already be called from octahedral section if needed
-            # Make sure element field is populated for all atoms
-            if not any('element' in atom for atom in atoms[:10]):
-                from .element import element
-                atoms = element(atoms)
-            
-            # Try to match by element field
-            ind_t1 = [i for i, atom in enumerate(atoms) if atom.get('element', '').upper() == t1_type.upper()]
-            
-            if ind_t1:
-                print(f"Found {len(ind_t1)} atoms by element match.")
-            else:
-                raise ValueError(f"No atoms of type or element '{t1_type}' found for tetrahedral substitution")
+            raise ValueError(
+                f"No atoms matching '{t1_type}' (exact type, first-2-char, or "
+                f"first-char prefix) found for tetrahedral substitution")
+        if how_t != 'exact':
+            print(f"No exact '{t1_type}' atoms found; matched {len(ind_t1)} "
+                  f"atom(s) by {how_t}.")
         
         # Extract T1 atoms
         t1_atoms = [atoms[i] for i in ind_t1]

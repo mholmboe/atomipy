@@ -4,6 +4,18 @@ All notable changes to **atomipy** are documented here.
 
 ## 1.2 (in progress)
 
+### Build / isomorphous substitution
+- **`substitute()` is now atom-type agnostic.** The source types (`o1_type`
+  octahedral, `t1_type` tetrahedral) are resolved by a three-level cascade —
+  exact type, then first-2-character prefix, then first-character prefix
+  (prefix levels case-insensitive) — so e.g. `o1_type='Feo'` substitutes Fe→Mg
+  in a nontronite, and `'Fe'`/`'F'` resolve by prefix when the exact spelling is
+  unknown. There is no longer any built-in assumption that the octahedral cation
+  is Al or the tetrahedral cation is Si (the old element-symbol fallback, which
+  only worked for literal element names, is replaced). The matched level is
+  printed when it is not exact, and a type that matches nothing at any level
+  raises a clear error.
+
 ### Diffraction / scattering factors
 - **Corrected and refit the `Glycol` scattering row.** The row is a *half*-glycol
   united site (one `-CH2OH` end, 17 e, M=31.034; place two per ethylene-glycol
