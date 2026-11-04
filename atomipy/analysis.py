@@ -1098,22 +1098,55 @@ def condense_supercell(atoms, Box, replicate, translate=None, pre_translate=None
     nx, ny, nz = int(replicate[0]), int(replicate[1]), int(replicate[2])
     rep_vec = np.array([nx, ny, nz], dtype=float)
 
+    def _vectors_to_cell(v):
+        """Cell vectors (rows a,b,c) -> [a, b, c, alpha, beta, gamma]."""
+        a = float(np.linalg.norm(v[0]))
+        b = float(np.linalg.norm(v[1]))
+        c = float(np.linalg.norm(v[2]))
+        alpha = float(np.degrees(np.arccos(np.clip(np.dot(v[1], v[2]) / (b * c), -1.0, 1.0))))
+        beta  = float(np.degrees(np.arccos(np.clip(np.dot(v[0], v[2]) / (a * c), -1.0, 1.0))))
+        gamma = float(np.degrees(np.arccos(np.clip(np.dot(v[0], v[1]) / (a * b), -1.0, 1.0))))
+        return [a, b, c, alpha, beta, gamma]
+
     # ------------------------------------------------------------------ #
-    # 1. Cell parameters (from first frame with valid box, else fallback)  #
+    # 1. Cell parameters                                                   #
+    #    For a trajectory whose box breathes or shears frame-to-frame the  #
+    #    reported UC cell (and the M matrix used for the ADPs below) is the #
+    #    mean of the box vectors over every frame that carries a valid box, #
+    #    not the first frame alone.  Averaging the cell *vectors* (rather   #
+    #    than lengths/angles) stays correct for a triclinic cell and for a  #
+    #    box whose angles vary between frames.  For a single snapshot or a  #
+    #    constant box this is identical to the first-frame cell.  ref_box   #
+    #    is still kept as the per-frame fallback for any frame that carries #
+    #    no box of its own (folding itself always uses each frame's box).   #
     # ------------------------------------------------------------------ #
     ref_box = next((b for _, b in frames if b is not None), Box)
     _, super_Cell = normalize_box(ref_box)
     if super_Cell is None:
         raise ValueError("No valid Box found in input or frames.")
 
-    a_uc = super_Cell[0] / nx
-    b_uc = super_Cell[1] / ny
-    c_uc = super_Cell[2] / nz
-    uc_Cell = [a_uc, b_uc, c_uc, super_Cell[3], super_Cell[4], super_Cell[5]]
+    super_vecs_sum = np.zeros((3, 3))
+    n_box_frames = 0
+    for _, b in frames:
+        if b is None:
+            continue
+        _, c_fr = normalize_box(b)
+        if c_fr is None:
+            continue
+        super_vecs_sum += get_cell_vectors(c_fr)   # rows = a,b,c vectors
+        n_box_frames += 1
+    if n_box_frames == 0:                          # no frame carried a box
+        super_vecs_sum = get_cell_vectors(super_Cell)
+        n_box_frames = 1
+    mean_super_vecs = super_vecs_sum / n_box_frames
+
+    # Fold the (mean) supercell vectors down to one unit cell.
+    uc_vecs = mean_super_vecs / rep_vec[:, None]   # a-row/nx, b-row/ny, c-row/nz
+    uc_Cell = _vectors_to_cell(uc_vecs)
+    a_uc, b_uc, c_uc = uc_Cell[0], uc_Cell[1], uc_Cell[2]
     uc_Box_dim = Cell2Box_dim(uc_Cell)
 
-    cell_vecs = get_cell_vectors(uc_Cell)   # rows are cell vectors
-    M = cell_vecs.T                         # columns = a_vec, b_vec, c_vec
+    M = uc_vecs.T                           # columns = a_vec, b_vec, c_vec
     M_inv = np.linalg.inv(M)
 
     # ------------------------------------------------------------------ #
@@ -1158,45 +1191,104 @@ def condense_supercell(atoms, Box, replicate, translate=None, pre_translate=None
     # 3. Optional: merge nearby same-type sites                            #
     # ------------------------------------------------------------------ #
     if merge_tol is not None:
-        # Compute current mean position for every group
+        # Merge initial grid sites of the SAME atom type whose mean positions
+        # lie within merge_tol (Cartesian Å) of each other -- typically one
+        # crystallographic site split across adjacent grid cells by the 0/1
+        # fractional boundary or by thermal noise.
+        #
+        # Each group's mean is computed once (periodic, minimum-image) and
+        # cached; a spatial hash over UC-fractional space with a cell edge of
+        # merge_tol restricts the search to nearby groups, and a union-find
+        # coalesces every connected cluster in a single pass -- near-linear in
+        # the number of groups.  (The previous implementation recomputed both
+        # group means on every pair comparison and restarted an O(G^2) scan
+        # after each merge -- O(G^3) with a large inner constant, intractable
+        # for the thousands of mobile water/ion grid sites in an MD trajectory.)
+        # Connectivity is transitive (A~B, B~C merges A,B,C); for the intended
+        # coalescing of near-coincident split sites that matches the old greedy
+        # result while being order-independent.
         def _mean_frac(fracs):
-            arr = np.array(fracs)
+            arr = np.asarray(fracs)
             ref = arr[0].copy()
             d = arr - ref
             d -= np.round(d)
             return ((ref + d).mean(axis=0)) % 1.0
 
-        changed = True
-        while changed:
-            changed = False
-            keys = list(groups.keys())
-            for i in range(len(keys)):
-                if keys[i] not in groups:
-                    continue
-                for j in range(i + 1, len(keys)):
-                    if keys[j] not in groups:
-                        continue
-                    # Only merge same atom type
-                    if keys[i][0] != keys[j][0]:
-                        continue
-                    m1 = _mean_frac(groups[keys[i]]['fracs'])
-                    m2 = _mean_frac(groups[keys[j]]['fracs'])
-                    d = m1 - m2
-                    d -= np.round(d)              # minimum image
-                    dist_cart = float(np.linalg.norm(M @ d))
-                    if dist_cart < merge_tol:
-                        groups[keys[i]]['fracs'].extend(groups[keys[j]]['fracs'])
-                        del groups[keys[j]]
-                        changed = True
-                        break
-                if changed:
-                    break
+        mkeys = list(groups.keys())
+        gmean = {k: _mean_frac(groups[k]['fracs']) for k in mkeys}
+
+        # Bucket edge >= merge_tol along each axis, in UC-fractional units.
+        edge = np.array([merge_tol / max(a_uc, 1e-9),
+                         merge_tol / max(b_uc, 1e-9),
+                         merge_tol / max(c_uc, 1e-9)])
+        edge = np.minimum(np.maximum(edge, 1e-6), 1.0)
+        nbin = [max(int(np.floor(1.0 / edge[ax])), 1) for ax in range(3)]
+
+        def _cell(mf):
+            return (int(mf[0] // edge[0]) % nbin[0],
+                    int(mf[1] // edge[1]) % nbin[1],
+                    int(mf[2] // edge[2]) % nbin[2])
+
+        buckets = {}
+        for k in mkeys:
+            buckets.setdefault(_cell(gmean[k]), []).append(k)
+
+        # Union-find over group keys.
+        parent = {k: k for k in mkeys}
+
+        def _find(x):
+            while parent[x] != x:
+                parent[x] = parent[parent[x]]
+                x = parent[x]
+            return x
+
+        def _union(x, y):
+            rx, ry = _find(x), _find(y)
+            if rx != ry:
+                parent[ry] = rx
+
+        tol2 = merge_tol * merge_tol
+        for k in mkeys:
+            base = _cell(gmean[k])
+            mk = gmean[k]
+            for dx in (-1, 0, 1):
+                for dy in (-1, 0, 1):
+                    for dz in (-1, 0, 1):
+                        nb = ((base[0] + dx) % nbin[0],
+                              (base[1] + dy) % nbin[1],
+                              (base[2] + dz) % nbin[2])
+                        for k2 in buckets.get(nb, ()):
+                            if k2 == k or k2[0] != k[0]:   # same atom type only
+                                continue
+                            d = mk - gmean[k2]
+                            d -= np.round(d)               # minimum image
+                            dc = M @ d
+                            if float(dc @ dc) < tol2:
+                                _union(k, k2)
+
+        # Coalesce every group into its union-find root (if any merged).
+        if any(_find(k) != k for k in mkeys):
+            merged = {}
+            for k in mkeys:
+                r = _find(k)
+                if r not in merged:
+                    merged[r] = groups[r]
+                if k != r:
+                    merged[r]['fracs'].extend(groups[k]['fracs'])
+            groups = merged
 
     # ------------------------------------------------------------------ #
     # 4. Compute crystallographic quantities for each site                 #
     # ------------------------------------------------------------------ #
     total_images = n_frames * nx * ny * nz
-    cell_lengths = np.array([a_uc, b_uc, c_uc])
+    # Reciprocal cell-vector lengths a*_i = |rows of M_inv| (columns of the
+    # reciprocal matrix M* = M_inv^T).  The CIF anisotropic ADP is defined as
+    # U^ij such that the Debye-Waller factor is exp(-2 pi^2 sum_ij U^ij a*_i a*_j
+    # h_i h_j); converting the Cartesian covariance gives U^ij = (M_inv U_cart
+    # M_inv^T)_ij / (a*_i a*_j).  (For orthogonal axes a*_i = 1/a_i, so this
+    # equals the direct-length form; they diverge for an oblique cell, where the
+    # old direct-length scaling inflated U_11/U_22 by 1/sin^2(gamma) etc.)
+    recip_lengths = np.linalg.norm(M_inv, axis=1)
     uc_atoms = []
 
     for atom_idx, (key, grp) in enumerate(groups.items(), start=1):
@@ -1219,9 +1311,9 @@ def condense_supercell(atoms, Box, replicate, translate=None, pre_translate=None
         U_iso  = float(np.trace(U_cart) / 3.0)
         B_iso  = 8.0 * np.pi**2 * U_iso
 
-        # Crystallographic ADPs (Å²)
+        # Crystallographic ADPs (Å²): U^ij = (M_inv U_cart M_inv^T) / (a*_i a*_j)
         U_cif = M_inv @ U_cart @ M_inv.T
-        U_cif = U_cif * np.outer(cell_lengths, cell_lengths)
+        U_cif = U_cif / np.outer(recip_lengths, recip_lengths)
 
         r_cart = M @ f_mean
 

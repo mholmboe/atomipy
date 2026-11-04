@@ -24,6 +24,34 @@ All notable changes to **atomipy** are documented here.
   many were placed by fallback, and an unsatisfiable request now reports "placed
   N of M" with the reason instead of a vague "not optimal".
 
+### Diffraction / trajectory folding (`condense_supercell`)
+- **Triclinic cells in trajectory folding.** Confirmed and hardened
+  `condense_supercell` for sheared / oblique boxes (the folding itself already
+  used each frame's full cell including angles; these fixes cover the reported
+  cell and the ADPs).
+  - **UC cell is now the mean over all frames.** For a box that breathes or
+    shears frame-to-frame the returned unit cell (and the `M` matrix used for
+    the ADPs) is the mean of the box *vectors* over every frame carrying a valid
+    box, not the first frame alone. Vector averaging is correct for a triclinic
+    cell and for a box whose angles vary between frames. Single snapshots and
+    constant-box trajectories are unaffected (identical to the old first-frame
+    cell).
+  - **Corrected the CIF anisotropic ADPs (`U_11…U_23`) for oblique cells.** The
+    Cartesian-to-CIF conversion scaled by the direct cell-vector lengths
+    (`a_i·a_j`) where the definition requires the reciprocal lengths
+    (`1/(a*_i·a*_j)`); the two agree only for orthogonal axes. For an in-plane γ
+    the old `U_11`/`U_22` were too large by `1/sin²γ` (≈3 % at γ=80°, ≈33 % at
+    γ=120°). Now divided by the reciprocal lengths so the stored `U^ij` reproduce
+    the Cartesian Debye–Waller factor exactly. Orthogonal cells are unchanged;
+    positions, occupancies, `U_iso`/`B_iso` and XRD intensities were never
+    affected.
+  - **`merge_tol` is now near-linear.** The same-type site-merge replaced an
+    O(G³) full-restart scan that recomputed both group means on every pair
+    comparison (intractable for the thousands of mobile water/ion grid sites in
+    an MD trajectory) with a cached-mean spatial-hash + union-find pass. A
+    ~13 000-site clay trajectory now merges in seconds. Merging is transitive
+    and order-independent.
+
 ### Diffraction / scattering factors
 - **Corrected and refit the `Glycol` scattering row.** The row is a *half*-glycol
   united site (one `-CH2OH` end, 17 e, M=31.034; place two per ethylene-glycol
