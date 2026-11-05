@@ -17,6 +17,23 @@ def pdb(file_path):
     atoms, Cell = pdb("structure.pdb")
     atoms, Cell = pdb(file_path="structure.pdb")
     """
+    # A multi-model (trajectory) PDB must not be read as a single structure: the
+    # per-line parse below would concatenate every MODEL's atoms into one list and
+    # keep only the last frame's CRYST1 (n_models x the atoms, wrong cell, silently).
+    # Count MODEL records first and reject more than one, pointing to import_traj.
+    n_model = 0
+    with open(file_path, 'r', encoding='utf-8') as _f:
+        for _line in _f:
+            if _line.startswith("MODEL"):
+                n_model += 1
+    if n_model > 1:
+        raise ValueError(
+            f"{file_path!r} contains {n_model} MODEL records (a multi-model / "
+            "trajectory PDB). atomipy's single-structure PDB reader would merge them "
+            "into one structure with the wrong atom count and cell. Read a trajectory "
+            "with ap.import_traj(...), or extract a single MODEL first."
+        )
+
     atoms = []
     Cell = None
     # atomipy-written PDBs stash the real molid in the segID column (cols 73-76) and mark

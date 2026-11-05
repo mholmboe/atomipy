@@ -24,6 +24,17 @@ All notable changes to **atomipy** are documented here.
   many were placed by fallback, and an unsatisfiable request now reports "placed
   N of M" with the reason instead of a vague "not optimal".
 
+### Trajectory / file I/O
+- **`import_pdb` now rejects multi-model (trajectory) PDBs.** The single-structure
+  PDB reader (`import_conf.pdb`, and therefore `import_conf.auto` and the
+  `reduce_pdb` path) previously concatenated every `MODEL` block's atoms into one
+  structure and kept only the last frame's `CRYST1` — silently wrong atom count
+  and cell. It now counts `MODEL` records up front and raises `ValueError` naming
+  the count and pointing to `ap.import_traj(...)` for trajectories. Single-model
+  PDBs are unaffected; `import_traj` already read multi-model PDBs (with each
+  frame's own `CRYST1`, including `gmx trjconv`'s per-model records) and is
+  unchanged.
+
 ### Diffraction / trajectory folding (`condense_supercell`)
 - **Triclinic cells in trajectory folding.** Confirmed and hardened
   `condense_supercell` for sheared / oblique boxes (the folding itself already
