@@ -353,7 +353,14 @@ def reduce_supercell(atoms, box, replicate=[1, 1, 1], merge=True,
 
     Working in fractional coordinates rather than on cartesian z matters for a
     triclinic cell, where the axes are not orthogonal and a cartesian fold
-    would shear the result.
+    would shear the result.  Confirmed on a genuinely triclinic cell
+    (alpha/beta/gamma = 80/85/100 deg): a replicate -> reduce round-trip
+    recovers the original fractional sites exactly and leaves the angles
+    unchanged.
+
+    This folds a *single* snapshot with one box.  For a trajectory (many
+    frames, or time-averaged ADPs) use :func:`atomipy.analysis.condense_supercell`
+    instead.
 
     Parameters
     ----------
@@ -385,9 +392,16 @@ def reduce_supercell(atoms, box, replicate=[1, 1, 1], merge=True,
     -----
     For a snapshot of a mobile species such as interlayer water the images do
     *not* coincide: the molecules occupy different positions in each cell.
-    Merging then averages them into one site, which is meaningful only if you
-    want a mean structure.  Set ``merge=False`` to keep every atom with a
-    fractional occupancy instead, which preserves the distribution.
+    Merging then averages them into one site (the periodic *mean*, not the
+    median, of the coincident images), which is meaningful only if you want a
+    mean structure.  Set ``merge=False`` to keep every atom with a fractional
+    occupancy instead, which preserves the distribution.
+
+    The merge tolerance is applied as a per-axis fractional box
+    (``tol / cell_length`` along each axis) rather than a true cartesian
+    distance.  For coincident images this is exact; for a strongly oblique cell
+    it is slightly anisotropic, affecting only which near-coincident atoms get
+    grouped, never the folded positions.
     """
     import numpy as np
     from .transform import cartesian_to_fractional, fractional_to_cartesian
