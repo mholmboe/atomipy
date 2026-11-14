@@ -17,6 +17,13 @@ All notable changes to **atomipy** are documented here.
   the oxygen-charge formula is correct. Default behaviour (`assign_types=True`)
   is unchanged. Exposed in the web module's Forcefield node as an "Assign atom
   types" toggle.
+- **`assign_dummy_mineral_params()` gains the same charges-only mode
+  (`assign_types=True`).** With `assign_types=False` the Dummy FF computes only
+  the charges and leaves the LJ (`sigma`/`epsilon`), the synthetic
+  `_dummy_type`, `mass`, `resname` and `frozen` exactly as the caller set them
+  (use when LJ / atom types were assigned by hand). The charge values are
+  identical to the full run; default behaviour is unchanged. Surfaced in the
+  Forcefield node's "Assign LJ & atom types" toggle for the Dummy FF.
 
 ### Build / isomorphous substitution
 - **`substitute()` is now atom-type agnostic.** The source types (`o1_type`

@@ -244,7 +244,7 @@ def _shannon_rmin_lj(element, ox_candidates, coordination, radii, r_O_crystal,
 def assign_dummy_mineral_params(atoms, Box=None, charge_mode='pauling', charge_scale=0.5,
                                 h_charge=0.4, lj_mode='shannon', metal_site='Alo',
                                 resname='DUM', rmaxlong=2.45, rmaxH=1.2,
-                                freeze=True, verbose=True):
+                                freeze=True, assign_types=True, verbose=True):
     """Assign Dummy FF parameters to a mineral framework in place.
 
     Sets on every atom: ``charge``, ``sigma``/``epsilon`` (nm, kJ/mol),
@@ -303,6 +303,12 @@ def assign_dummy_mineral_params(atoms, Box=None, charge_mode='pauling', charge_s
         (default 2.45 — the MINFF global cutoff).
     rmaxH : float
         Hydrogen bond cutoff in Å (default 1.2 — the MINFF global cutoff).
+    assign_types : bool
+        If True (default), assign the full Dummy FF parametrization — LJ
+        (``sigma``/``epsilon``), the synthetic ``_dummy_type``, ``mass``,
+        ``resname`` and ``frozen``. If False, compute ONLY the charges and leave
+        all of that exactly as the caller set it (use when LJ / atom types were
+        set by hand). Mirrors ``minff``/``clayff`` ``assign_types=False``.
     resname, freeze, verbose : see above.
 
     Returns
@@ -371,6 +377,31 @@ def assign_dummy_mineral_params(atoms, Box=None, charge_mode='pauling', charge_s
             wsum = sum(weights) or 1.0
             for i, w in zip(anion_idx, weights):
                 framework[i]['charge'] = round(-assigned * w / wsum, 6)
+
+    # Charges-only mode: the charges are now set; leave the Dummy FF "typing"
+    # (LJ sigma/epsilon, the synthetic '_dummy_type', mass, resname and freeze)
+    # exactly as the caller set it, mirroring minff()/clayff(assign_types=False).
+    if not assign_types:
+        net_charge = round(sum(a['charge'] for a in framework), 6)
+        report = {
+            'non_minff_elements': sorted({e for e in elements
+                                          if e not in MINFF_FRAMEWORK_ELEMENTS}),
+            'net_charge': net_charge,
+            'n_atoms': len(framework),
+            'n_skipped': n_skipped,
+            'lj_mode': 'skipped',
+            'lj_source': 'n/a (assign_types=False, charges only)',
+            'metal_site': metal_site,
+            'charge_mode': charge_mode,
+        }
+        if verbose:
+            print(f"[dummy mineral] charges-only (assign_types=False): "
+                  f"{len(framework)} framework atoms, net charge {net_charge:+.3f} e, "
+                  f"charge '{charge_mode}'. LJ / atom types / mass left untouched.")
+            if abs(net_charge) > 1e-3:
+                print(f"  NOTE: net charge is non-zero ({net_charge:+.3f} e) — "
+                      f"add neutralizing ions before production.")
+        return atoms, report
 
     # --- LJ, type, mass, freeze ---
     # lj_mode controls where Lennard-Jones parameters come from:
