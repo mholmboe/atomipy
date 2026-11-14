@@ -4,6 +4,20 @@ All notable changes to **atomipy** are documented here.
 
 ## 1.2 (in progress)
 
+### Force fields
+- **`minff()` and `clayff()` gain a charges-only mode (`assign_types=True`).**
+  With `assign_types=False` the structural typing pass is skipped entirely, so
+  the caller's manually assigned `type` labels are kept and only the MINFF /
+  CLAYFF charges are computed from them. Useful when atom types were set by hand
+  and should not be overwritten. The full pipeline is otherwise unchanged
+  (element/mass setup, counter-ion formal-charge restore, and the per-type
+  charge tables all still run); the manual types are snapshotted before
+  `element()` (which would overwrite `type`) and restored for the charge pass,
+  `fftype` is mirrored from `type` for export, and neighbours are populated so
+  the oxygen-charge formula is correct. Default behaviour (`assign_types=True`)
+  is unchanged. Exposed in the web module's Forcefield node as an "Assign atom
+  types" toggle.
+
 ### Build / isomorphous substitution
 - **`substitute()` is now atom-type agnostic.** The source types (`o1_type`
   octahedral, `t1_type` tetrahedral) are resolved by a three-level cascade —

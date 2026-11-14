@@ -377,7 +377,7 @@ def _is_solvent_or_ion(atom):
     return False
 
 
-def minff(atoms, Box, ffname='minff', rmaxlong=2.45, rmaxH=1.2, log=False, log_file=None, dm_method=None):
+def minff(atoms, Box, ffname='minff', rmaxlong=2.45, rmaxH=1.2, log=False, log_file=None, dm_method=None, assign_types=True):
     """Assign MINFF forcefield specific atom types to atoms based on their coordination environment.
     
     This function updates the 'fftype' field based on the atom's element and its bonding environment,
@@ -404,7 +404,11 @@ def minff(atoms, Box, ffname='minff', rmaxlong=2.45, rmaxH=1.2, log=False, log_f
         log: If True, generate statistics and write to a log file, default is False.
         log_file: Optional path to a log file. If provided and log is True, statistics will be
                  written to this file instead of the default filename.
-    
+        assign_types: If True (default), assign MINFF atom types from the coordination
+                 environment. If False, skip the structural typing entirely and keep the
+                 caller's manually assigned 'type' labels, computing only the MINFF charges
+                 from those existing types (use when atom types were set by hand).
+
     Returns:
         The updated atoms list with 'fftype' fields assigned.
 
@@ -425,6 +429,12 @@ def minff(atoms, Box, ffname='minff', rmaxlong=2.45, rmaxH=1.2, log=False, log_f
         for a in atoms if a.get('index') is not None
     }
     _ion_formal_charges = {k: v for k, v in _ion_formal_charges.items() if v is not None}
+
+    # Charges-only mode: element() below overwrites 'type' with the element symbol
+    # (e.g. 'Sit' -> 'Si'), which would discard the caller's manual labels. Snapshot
+    # them now (keyed by stable index) and restore before the charge pass.
+    _saved_types = ({a.get('index'): a.get('type') for a in atoms if a.get('index') is not None}
+                    if not assign_types else None)
 
     # Set the atoms chemical element names
     atoms = element(atoms)  # Use correct function name 'element'
@@ -455,7 +465,9 @@ def minff(atoms, Box, ffname='minff', rmaxlong=2.45, rmaxH=1.2, log=False, log_f
     # Run the entire process twice to ensure all atoms have proper typing
     # This is especially important for oxygen atoms which need to know
     # whether their metal neighbors are tetrahedral or octahedral
-    for _ in range(2):  # Run the typing process twice
+    # assign_types=False -> 0 passes: skip structural typing, keep the caller's
+    # manual 'type' labels, and run only the charge pass below.
+    for _ in range(2 if assign_types else 0):  # Run the typing process twice
         # First, ensure all atoms have element types defined
         for atom in atoms:
             #if 'element' not in atom:
@@ -931,6 +943,22 @@ def minff(atoms, Box, ffname='minff', rmaxlong=2.45, rmaxH=1.2, log=False, log_f
         for atom in atoms:
             atom['type'] = atom['fftype']
     
+    # Charges-only mode: typing was skipped, so restore the caller's manual 'type'
+    # labels (element() clobbered them) and mirror them into any empty 'fftype'
+    # (downstream itp export reads fftype). charge_minff below reads 'type'.
+    if not assign_types:
+        for atom in atoms:
+            t = _saved_types.get(atom.get('index'))
+            if t:
+                atom['type'] = t
+            if not atom.get('fftype'):
+                atom['fftype'] = atom.get('type', '')
+        # The typing pass normally populates each atom's 'neigh'; charge_minff
+        # needs those for the oxygen-charge formula and will NOT recompute them
+        # when a (here empty) 'neigh' key already exists on the atoms. Populate
+        # bonds/neigh now so the oxygen charges come out right.
+        atoms, _, _ = bond_angle(atoms, Box, rmaxH=rmaxH, rmaxM=rmaxlong)
+
     # Apply charges based on the MINFF forcefield after atom typing is complete
     atom_labels = ['Alo', 'Alt', 'Ale', 'Tio', 'Feo3', 'Fet3', 'Fee3', 'Feo2', 'Fet2', 'Fee2', 'Fs',
                   'Na', 'K', 'Cs', 'Mgo', 'Mgh', 'Mge', 'Cao', 'Cah', 'Ca', 'Sit', 
@@ -1073,7 +1101,7 @@ def minff(atoms, Box, ffname='minff', rmaxlong=2.45, rmaxH=1.2, log=False, log_f
 
 
 
-def clayff(atoms, Box, ffname='clayff', rmaxlong=2.45, rmaxH=1.2, log=False, log_file=None):
+def clayff(atoms, Box, ffname='clayff', rmaxlong=2.45, rmaxH=1.2, log=False, log_file=None, assign_types=True):
     """Assign CLAYFF forcefield specific atom types to atoms based on their coordination environment.
     
     This function updates the 'fftype' field based on the atom's element and its bonding environment,
@@ -1095,7 +1123,11 @@ def clayff(atoms, Box, ffname='clayff', rmaxlong=2.45, rmaxH=1.2, log=False, log
         ffname: The forcefield name, default is 'clayff'.
         rmaxlong: Maximum bond distance for non-hydrogen bonds, default is 2.45 Å.
         rmaxH: Maximum bond distance for hydrogen bonds, default is 1.2 Å.
-    
+        assign_types: If True (default), assign CLAYFF atom types from the coordination
+                 environment. If False, skip the structural typing entirely and keep the
+                 caller's manually assigned 'type' labels, computing only the CLAYFF charges
+                 from those existing types (use when atom types were set by hand).
+
     Returns:
         The updated atoms list with 'fftype' fields assigned.
 
@@ -1115,6 +1147,12 @@ def clayff(atoms, Box, ffname='clayff', rmaxlong=2.45, rmaxH=1.2, log=False, log
         for a in atoms if a.get('index') is not None
     }
     _ion_formal_charges = {k: v for k, v in _ion_formal_charges.items() if v is not None}
+
+    # Charges-only mode: element() below overwrites 'type' with the element symbol
+    # (e.g. 'Sit' -> 'Si'), which would discard the caller's manual labels. Snapshot
+    # them now (keyed by stable index) and restore before the charge pass.
+    _saved_types = ({a.get('index'): a.get('type') for a in atoms if a.get('index') is not None}
+                    if not assign_types else None)
 
     atoms = element(atoms)  # Use correct function name 'element'
 
@@ -1149,7 +1187,9 @@ def clayff(atoms, Box, ffname='clayff', rmaxlong=2.45, rmaxH=1.2, log=False, log
     # Run the entire process twice to ensure all atoms have proper typing
     # This is especially important for oxygen atoms which need to know
     # whether their metal neighbors are tetrahedral or octahedral
-    for _ in range(2):  # Run the typing process twice
+    # assign_types=False -> 0 passes: skip structural typing, keep the caller's
+    # manual 'type' labels, and run only the charge pass below.
+    for _ in range(2 if assign_types else 0):  # Run the typing process twice
         # First, ensure all atoms have element types defined
         for atom in atoms:
             #if 'element' not in atom:
@@ -1565,6 +1605,22 @@ def clayff(atoms, Box, ffname='clayff', rmaxlong=2.45, rmaxH=1.2, log=False, log
         for atom in atoms:
             atom['type'] = atom['fftype']
     
+    # Charges-only mode: typing was skipped, so restore the caller's manual 'type'
+    # labels (element() clobbered them) and mirror them into any empty 'fftype'
+    # (downstream itp export reads fftype). charge_clayff below reads 'type'.
+    if not assign_types:
+        for atom in atoms:
+            t = _saved_types.get(atom.get('index'))
+            if t:
+                atom['type'] = t
+            if not atom.get('fftype'):
+                atom['fftype'] = atom.get('type', '')
+        # The typing pass normally populates each atom's 'neigh'; charge_clayff
+        # needs those for the oxygen-charge formula and will NOT recompute them
+        # when a (here empty) 'neigh' key already exists on the atoms. Populate
+        # bonds/neigh now so the oxygen charges come out right.
+        atoms, _, _ = bond_angle(atoms, Box, rmaxH=rmaxH, rmaxM=rmaxlong)
+
     # Apply charges based on the clayff forcefield after atom typing is complete
     # CLAYFF octahedral iron is the single Fe3+ type Feo (q=+1.575); Fe3t kept for the
     # rare tetrahedral case. (Cygan 2004 — no Fe2+/Fe3+ octahedral split.)
