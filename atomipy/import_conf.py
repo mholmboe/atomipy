@@ -533,9 +533,18 @@ def cif(file_path, expand_symmetry=True):
 
     atoms = []
     for idx, site in enumerate(sites_iter, start=1):
-        # Cartesian coords from fractional via gemmi's orthogonalize
-        cart = cell.orthogonalize(gemmi.Fractional(
-            site.fract.x, site.fract.y, site.fract.z))
+        # Symmetry expansion (get_all_unit_cell_sites) can emit fractional
+        # coordinates outside [0, 1) — e.g. a 3_1 screw axis gives z + 1/3,
+        # z + 2/3. Wrap into the unit cell FIRST, then orthogonalize, so the
+        # cartesian x/y/z and the stored xfrac/yfrac/zfrac stay consistent and
+        # every atom sits inside the cell (matching the pre-wrapped mineral
+        # preset PDBs). Note: in a non-orthogonal cell (e.g. gamma = 120 deg)
+        # an in-cell atom can still have a negative cartesian x — that is the
+        # cell shape, not an un-wrapped atom.
+        fx = site.fract.x - np.floor(site.fract.x)
+        fy = site.fract.y - np.floor(site.fract.y)
+        fz = site.fract.z - np.floor(site.fract.z)
+        cart = cell.orthogonalize(gemmi.Fractional(fx, fy, fz))
         element_name = site.element.name if site.element else ""
         label = site.label or element_name or "X"
         atom = {
@@ -548,9 +557,9 @@ def cif(file_path, expand_symmetry=True):
             "x":       cart.x,
             "y":       cart.y,
             "z":       cart.z,
-            "xfrac":   site.fract.x - np.floor(site.fract.x),
-            "yfrac":   site.fract.y - np.floor(site.fract.y),
-            "zfrac":   site.fract.z - np.floor(site.fract.z),
+            "xfrac":   fx,
+            "yfrac":   fy,
+            "zfrac":   fz,
             "occupancy": float(site.occ) if site.occ else 1.0,
             "neigh": [], "bonds": [], "angles": [],
         }

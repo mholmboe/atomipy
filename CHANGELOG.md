@@ -35,6 +35,21 @@ All notable changes to **atomipy** are documented here.
   frame's own `CRYST1`, including `gmx trjconv`'s per-model records) and is
   unchanged.
 
+### Structure import (CIF)
+- **`import_conf.cif` now wraps symmetry-expanded atoms into the unit cell.**
+  Expanding the asymmetric unit (`get_all_unit_cell_sites`) can place atoms at
+  fractional coordinates outside `[0, 1)` — e.g. a 3₁/3₂ screw axis emits
+  `z + ⅓`, `z + ⅔`. The reader built the cartesian `x/y/z` from those raw
+  fractions while storing the `xfrac/yfrac/zfrac` *wrapped*, so the two
+  disagreed and atoms rendered outside the box (most visibly for trigonal /
+  hexagonal cells such as α-quartz, P3₁21). Fractions are now wrapped **before**
+  orthogonalizing, so cartesian and fractional stay consistent and every atom
+  sits in the cell — matching the pre-wrapped mineral preset PDBs. (In a
+  non-orthogonal cell an in-cell atom can still have a negative cartesian `x`;
+  that is the cell shape, not an un-wrapped atom.) Structure factors, BVS and
+  bond detection are invariant to the integer lattice shift, so results are
+  unchanged — only the coordinates' representative image, and the view, change.
+
 ### Diffraction / trajectory folding (`condense_supercell`)
 - **Triclinic cells in trajectory folding.** Confirmed and hardened
   `condense_supercell` for sheared / oblique boxes (the folding itself already
