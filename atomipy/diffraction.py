@@ -637,12 +637,29 @@ def _accumulate_profile(centres, weights, widths, grid, shape):
     return out
 
 
-def xrd(atoms, Box, wavelength=1.54187, angle_step=0.02, 
+def _scale_hkl_label(h_val, k_val, l_val, supercell):
+    """Relabel a single reflection for an n1 x n2 x n3 supercell.
+
+    Returns (label_hkl, is_superlattice): when every component divides its
+    replication factor exactly the reflection is a peak of the underlying cell
+    and is relabeled to the reduced (primitive) index; otherwise it is a
+    superlattice reflection and keeps its raw supercell index.
+    """
+    n1, n2, n3 = (int(supercell[0]), int(supercell[1]), int(supercell[2]))
+    if (n1, n2, n3) == (1, 1, 1):
+        return [int(h_val), int(k_val), int(l_val)], False
+    if (int(h_val) % n1 == 0) and (int(k_val) % n2 == 0) and (int(l_val) % n3 == 0):
+        return [int(h_val) // n1, int(k_val) // n2, int(l_val) // n3], False
+    return [int(h_val), int(k_val), int(l_val)], True
+
+
+def xrd(atoms, Box, wavelength=1.54187, angle_step=0.02,
         two_theta_range=(2, 90), b_all=0.0, lorentzian_factor=1.0,
-        neutral_atoms=False, hkl_max=0, fwhm_00l=1.0, fwhm_hk0=0.5, 
+        neutral_atoms=False, hkl_max=0, fwhm_00l=1.0, fwhm_hk0=0.5,
         fwhm_hkl=0.5, pref=0, preferred_orientation=(1, 1, 1),
-        sample_length=4.0, gonio_radius=24.0, div_slit=0.01, 
-        roughness=0.0, plot=True, save_output=True):
+        sample_length=4.0, gonio_radius=24.0, div_slit=0.01,
+        roughness=0.0, supercell=(1, 1, 1), max_labeled_peaks=60,
+        plot=True, save_output=True, return_peaks=False):
     """
     Calculate high-performance X-ray diffraction pattern from atomic structure.
     
@@ -700,17 +717,42 @@ def xrd(atoms, Box, wavelength=1.54187, angle_step=0.02,
         Divergence slit setting (default: 0.01)
     roughness : float, optional
         Surface roughness parameter (default: 0.0)
+    supercell : tuple of int, optional
+        Replication of the input cell along (a, b, c). When the structure is an
+        n1 x n2 x n3 supercell, the Miller indices computed against the large box
+        are n-times the underlying cell's indices, so e.g. a 2x2x1 supercell
+        indexes its (100) peak as (200). Set supercell=(n1, n2, n3) to relabel
+        each reflection to the underlying cell: h,k,l are divided by n1,n2,n3.
+        Reflections whose indices are exact multiples are shown with the reduced
+        (primitive) index; reflections that are not (superlattice reflections,
+        which only appear when the supercell's symmetry is broken, e.g. by
+        substitution) keep their raw supercell index. Affects only the Miller
+        labels, never the computed pattern. (default: (1, 1, 1), no relabeling)
+    max_labeled_peaks : int, optional
+        Maximum number of peaks to include in the returned/annotated Miller-index
+        label list, strongest first (default: 60)
     plot : bool, optional
-        Whether to generate professional XRD plot with Miller indices and 
+        Whether to generate professional XRD plot with Miller indices and
         multiplicities (default: True)
     save_output : bool, optional
         Whether to save output files (.dat, .mat, .txt, .png) (default: True)
-        
+    return_peaks : bool, optional
+        If True, append a list of labeled peaks to the returned tuple. Each peak
+        is a dict: {'two_theta', 'intensity', 'hkl' (supercell-scaled label),
+        'raw_hkl' (as indexed against the box), 'multiplicity', 'superlattice'}.
+        The list is built without scipy, so it is available in headless
+        (plot=False) runs. (default: False)
+
     Returns
     -------
     tuple
-        If plot=True: (two_theta_array, intensity_array, matplotlib_figure)
-        If plot=False: (two_theta_array, intensity_array)
+        Base return is (two_theta_array, intensity_array), with the matplotlib
+        figure appended when plot=True and the labeled-peak list appended when
+        return_peaks=True (figure before peaks):
+        - plot=False, return_peaks=False: (two_theta, intensity)
+        - plot=False, return_peaks=True:  (two_theta, intensity, peaks)
+        - plot=True,  return_peaks=False: (two_theta, intensity, fig)
+        - plot=True,  return_peaks=True:  (two_theta, intensity, fig, peaks)
         
     Output Files (when save_output=True):
     ------------------------------------
@@ -763,6 +805,13 @@ def xrd(atoms, Box, wavelength=1.54187, angle_step=0.02,
     """
     plt = None
     find_peaks = None
+
+    # Normalize the supercell replication so labels can be scaled back to the
+    # underlying cell. Non-positive / malformed input falls back to no scaling.
+    try:
+        supercell = (max(1, int(supercell[0])), max(1, int(supercell[1])), max(1, int(supercell[2])))
+    except (TypeError, ValueError, IndexError):
+        supercell = (1, 1, 1)
 
     print("Starting XRD calculation...")
     
@@ -1165,7 +1214,43 @@ def xrd(atoms, Box, wavelength=1.54187, angle_step=0.02,
     # Normalize intensity
     if np.max(intensity) > 0:
         intensity = np.real(intensity) / np.max(np.real(intensity))
-    
+
+    # Build a labeled peak list (scipy-free, so it is available even when
+    # plot=False). For every discrete reflection we read its height off the
+    # final normalized profile, then walk the reflections strongest-first,
+    # keeping one representative per 2theta cluster. The dominant reflection in
+    # a cluster (highest on-profile height) supplies the Miller label; nearby
+    # equivalents / Friedel mates are merged into it.
+    peak_list = []
+    if len(two_theta_disc) > 0 and np.max(intensity) > 0:
+        peak_heights = np.interp(two_theta_disc, exp_twotheta, intensity)
+        # Cluster width: the broadest peak a reflection can produce. Reflections
+        # closer than this in 2theta are the same observed peak.
+        merge_tol = max(fwhm_00l, fwhm_hk0, fwhm_hkl, 2.0 * angle_step)
+        order = np.argsort(peak_heights)[::-1]
+        kept_tt = []
+        for idx in order:
+            height = float(peak_heights[idx])
+            if height <= 1e-4:
+                break
+            tt = float(two_theta_disc[idx])
+            if any(abs(tt - u) < merge_tol for u in kept_tt):
+                continue
+            kept_tt.append(tt)
+            hh, kk, ll = int(h[idx]), int(k[idx]), int(l[idx])
+            label_hkl, is_super = _scale_hkl_label(hh, kk, ll, supercell)
+            peak_list.append({
+                'two_theta': round(tt, 4),
+                'intensity': round(height, 6),
+                'hkl': label_hkl,
+                'raw_hkl': [hh, kk, ll],
+                'multiplicity': int(calculate_multiplicity(hh, kk, ll, hkl)),
+                'superlattice': bool(is_super),
+            })
+            if len(peak_list) >= int(max_labeled_peaks):
+                break
+        peak_list.sort(key=lambda p: p['two_theta'])
+
     # Save output files
     if save_output:
         # Save XRD data
@@ -1266,7 +1351,8 @@ def xrd(atoms, Box, wavelength=1.54187, angle_step=0.02,
                 
                 if np.min(diffs) < 1.0:  # Only label if close enough
                     h_val, k_val, l_val = h[closest_idx], k[closest_idx], l[closest_idx]
-                    miller_str = f"({abs(h_val)}{abs(k_val)}{abs(l_val)})"
+                    label_hkl, _is_super = _scale_hkl_label(h_val, k_val, l_val, supercell)
+                    miller_str = f"({abs(label_hkl[0])}{abs(label_hkl[1])}{abs(label_hkl[2])})"
                     multiplicity = calculate_multiplicity(h_val, k_val, l_val, hkl)
                     
                     # Display Miller indices
@@ -1294,9 +1380,13 @@ def xrd(atoms, Box, wavelength=1.54187, angle_step=0.02,
             print("Saved xrd_pattern.png")
         
         plt.show()
-        
+
         print("XRD calculation completed!")
+        if return_peaks:
+            return exp_twotheta, intensity, fig, peak_list
         return exp_twotheta, intensity, fig
-    
+
     print("XRD calculation completed!")
+    if return_peaks:
+        return exp_twotheta, intensity, peak_list
     return exp_twotheta, intensity

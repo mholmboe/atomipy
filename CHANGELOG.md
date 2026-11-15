@@ -25,6 +25,31 @@ All notable changes to **atomipy** are documented here.
   identical to the full run; default behaviour is unchanged. Surfaced in the
   Forcefield node's "Assign LJ & atom types" toggle for the Dummy FF.
 
+### Diffraction / XRD
+- **`xrd()` can return a labeled peak list in headless runs (`return_peaks=True`).**
+  Previously the Miller-index / multiplicity labels were only drawn on the
+  `matplotlib` figure in `plot=True` mode, so callers running `plot=False` (e.g.
+  the web backend) had no access to them. With `return_peaks=True` the function
+  appends a list of peak dicts — `{'two_theta', 'intensity', 'hkl', 'raw_hkl',
+  'multiplicity', 'superlattice'}` — built without `scipy` by reading each
+  discrete reflection's height off the final normalized profile and keeping one
+  representative per 2θ cluster. The figure (when `plot=True`) is returned before
+  the peak list. Default behaviour (`return_peaks=False`) and the existing
+  `(two_theta, intensity[, fig])` return shape are unchanged.
+- **`xrd()` gains a `supercell=(n1, n2, n3)` parameter.** When the structure is an
+  n1×n2×n3 supercell, reflections index against the large box, so e.g. a 2×2×1
+  cell labels its (100) peak as (200). `supercell` divides each Miller index by
+  the matching factor to relabel peaks against the underlying cell; reflections
+  whose indices are exact multiples are shown with the reduced (primitive) index,
+  while non-dividing superlattice reflections keep their raw index and are flagged
+  `superlattice=True`. It affects only the labels, never the computed pattern, and
+  applies to both the returned peak list and the `matplotlib` annotations.
+- Both are surfaced in the web module's XRD node: the broadening, preferred-
+  orientation and B-factor controls (previously present but unwired) now reach
+  `ap.xrd`, grouped under a collapsible **Advanced options**, alongside a new
+  **Show (hkl) labels** toggle (labels drawn above peaks on the inline plot, plus a
+  `peaks.csv` export) and the supercell replication fields.
+
 ### Build / isomorphous substitution
 - **`substitute()` is now atom-type agnostic.** The source types (`o1_type`
   octahedral, `t1_type` tetrahedral) are resolved by a three-level cascade —
